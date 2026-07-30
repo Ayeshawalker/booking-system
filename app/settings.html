@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en" class="admin-auth-checking">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ayesha Jane Booking Settings</title>
+    <link rel="stylesheet" href="styles.css?v=20260727-medium-logo-all-pages" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="https://ayeshajane.com/">Ayesha Jane</a>
+      <nav class="admin-nav" aria-label="Private admin links">
+        <a href="clients.html">Clients</a>
+        <a href="calendar.html">Calendar</a>
+        <a href="ayesha.html">Bookings</a>
+        <a href="settings.html" aria-current="page">Settings</a>
+        <a href="notes.html">Notes</a>
+        <a href="index.html">Public page</a>
+        <span class="admin-user-email" data-admin-email></span>
+        <button class="nav-signout" type="button" data-admin-sign-out>
+          Sign out
+        </button>
+      </nav>
+    </header>
+
+    <main class="settings-shell">
+      <section class="booking-panel" aria-labelledby="page-title">
+        <div class="intro">
+          <p class="eyebrow">Internal booking settings</p>
+          <h1 id="page-title">Settings</h1>
+          <p>
+            Manage availability rules for the public booking page.
+          </p>
+        </div>
+
+        <section
+          id="in-person-availability-panel"
+          class="admin-control-panel"
+          aria-labelledby="in-person-availability-title"
+        >
+          <div>
+            <h2 id="in-person-availability-title">In-person days</h2>
+            <p>
+              Choose which days clients can book in-person sessions for a particular week.
+            </p>
+          </div>
+
+          <label>
+            Week containing
+            <input id="in-person-week-date" type="date" />
+          </label>
+
+          <div
+            id="in-person-day-options"
+            class="in-person-day-options"
+            aria-label="In-person days for selected week"
+          ></div>
+
+          <button id="save-in-person-availability" type="button">
+            Save in-person days
+          </button>
+          <p id="in-person-availability-message" class="field-note"></p>
+        </section>
+
+        <section
+          id="days-off-panel"
+          class="admin-control-panel"
+          aria-labelledby="days-off-title"
+        >
+          <div>
+            <h2 id="days-off-title">Days off</h2>
+            <p>
+              Block a single day or a run of dates when public clients should not be able to book any sessions.
+            </p>
+          </div>
+
+          <div class="settings-inline-controls">
+            <label>
+              First day off
+              <input id="day-off-start-date" type="date" />
+            </label>
+
+            <label>
+              Last day off
+              <input id="day-off-end-date" type="date" />
+            </label>
+
+            <button id="add-day-off" type="button">
+              Block dates
+            </button>
+          </div>
+
+          <ul id="days-off-list" class="settings-list"></ul>
+          <p id="days-off-message" class="field-note"></p>
+        </section>
+      </section>
+    </main>
+
+    <script src="config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="admin-auth.js"></script>
+    <script src="settings.js"></script>
+  </body>
+</html>

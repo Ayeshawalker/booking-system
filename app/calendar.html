@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en" class="admin-auth-checking">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ayesha Jane Calendar</title>
+    <link rel="stylesheet" href="styles.css?v=20260727-medium-logo-all-pages" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="https://ayeshajane.com/">Ayesha Jane</a>
+      <nav class="admin-nav" aria-label="Private admin links">
+        <a href="clients.html">Clients</a>
+        <a href="calendar.html" aria-current="page">Calendar</a>
+        <a href="ayesha.html">Bookings</a>
+        <a href="settings.html">Settings</a>
+        <a href="notes.html">Notes</a>
+        <a href="index.html">Public page</a>
+        <span class="admin-user-email" data-admin-email></span>
+        <button class="nav-signout" type="button" data-admin-sign-out>
+          Sign out
+        </button>
+      </nav>
+    </header>
+
+    <main class="admin-shell calendar-admin-shell">
+      <header class="admin-heading calendar-heading">
+        <div>
+          <p class="admin-kicker">Connected Google Calendar</p>
+          <h1>Calendar</h1>
+        </div>
+        <div class="calendar-legend" aria-label="Event types">
+          <span><i class="calendar-legend-booking"></i>Solo session</span>
+          <span><i class="calendar-legend-couple"></i>Couple session</span>
+          <span><i class="calendar-legend-personal"></i>Personal</span>
+          <span class="calendar-legend-format"><b>IP</b>In person</span>
+        </div>
+      </header>
+
+      <section class="calendar-toolbar" aria-label="Calendar controls">
+        <div class="calendar-date-controls">
+          <button
+            id="calendar-previous"
+            class="calendar-icon-button"
+            type="button"
+            title="Previous period"
+            aria-label="Previous period"
+          >
+            <i data-lucide="chevron-left"></i>
+          </button>
+          <button id="calendar-today" class="calendar-command-button" type="button">
+            Today
+          </button>
+          <button
+            id="calendar-next"
+            class="calendar-icon-button"
+            type="button"
+            title="Next period"
+            aria-label="Next period"
+          >
+            <i data-lucide="chevron-right"></i>
+          </button>
+        </div>
+
+        <h2 id="calendar-period-title" aria-live="polite"></h2>
+
+        <div class="calendar-toolbar-actions">
+          <div class="calendar-view-switcher" aria-label="Calendar view">
+            <button type="button" data-calendar-view="day">Day</button>
+            <button type="button" data-calendar-view="week">Week</button>
+            <button type="button" data-calendar-view="month">Month</button>
+          </div>
+          <button
+            id="calendar-refresh"
+            class="calendar-icon-button"
+            type="button"
+            title="Refresh calendar"
+            aria-label="Refresh calendar"
+          >
+            <i data-lucide="refresh-cw"></i>
+          </button>
+        </div>
+      </section>
+
+      <p id="calendar-message" class="calendar-message" role="status"></p>
+      <section
+        id="calendar-surface"
+        class="calendar-surface"
+        aria-label="Google Calendar events"
+        aria-busy="true"
+      ></section>
+    </main>
+
+    <dialog id="calendar-event-dialog" class="calendar-event-dialog">
+      <article>
+        <header>
+          <div>
+            <p id="event-source" class="admin-kicker"></p>
+            <h2 id="event-title"></h2>
+          </div>
+          <button
+            id="close-event-dialog"
+            class="dialog-close"
+            type="button"
+            title="Close"
+            aria-label="Close event details"
+          >
+            <i data-lucide="x"></i>
+          </button>
+        </header>
+        <dl>
+          <div>
+            <dt>When</dt>
+            <dd id="event-when"></dd>
+          </div>
+          <div id="event-location-row" hidden>
+            <dt>Location</dt>
+            <dd id="event-location"></dd>
+          </div>
+        </dl>
+        <form id="event-reschedule-form" class="calendar-reschedule-form" hidden>
+          <h3>Reschedule booking</h3>
+          <div>
+            <label>
+              New date
+              <input id="event-new-date" type="date" required />
+            </label>
+            <label>
+              New time
+              <input id="event-new-time" type="time" step="900" required />
+            </label>
+            <label class="calendar-reschedule-format">
+              Session format
+              <select id="event-new-format" required>
+                <option value="Online">Online</option>
+                <option value="In person">In person</option>
+              </select>
+            </label>
+          </div>
+          <p id="event-reschedule-message" role="status"></p>
+          <button class="calendar-reschedule-button" type="submit">
+            Review changes
+          </button>
+        </form>
+        <a
+          id="event-google-link"
+          class="calendar-google-link"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Open in Google Calendar
+        </a>
+      </article>
+    </dialog>
+
+    <script src="config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+    <script src="admin-auth.js"></script>
+    <script src="calendar.js?v=20260724-reschedule-errors"></script>
+  </body>
+</html>

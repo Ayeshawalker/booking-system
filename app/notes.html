@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en" class="admin-auth-checking">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ayesha Jane Client Notes</title>
+    <link rel="stylesheet" href="styles.css?v=20260727-medium-logo-all-pages" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="https://ayeshajane.com/">Ayesha Jane</a>
+      <nav class="admin-nav" aria-label="Private admin links">
+        <a href="clients.html">Clients</a>
+        <a href="calendar.html">Calendar</a>
+        <a href="ayesha.html">Bookings</a>
+        <a href="settings.html">Settings</a>
+        <a href="notes.html" aria-current="page">Notes</a>
+        <a href="index.html">Public page</a>
+        <span class="admin-user-email" data-admin-email></span>
+        <button class="nav-signout" type="button" data-admin-sign-out>
+          Sign out
+        </button>
+      </nav>
+    </header>
+
+    <main class="settings-shell">
+      <section class="booking-panel" aria-labelledby="page-title">
+        <div class="intro">
+          <p class="eyebrow">Private client notes</p>
+          <h1 id="page-title">Notes</h1>
+          <p>
+            Keep client notes separately from booking settings and tidy rough
+            notes into a clearer version before saving.
+          </p>
+        </div>
+
+        <section
+          id="client-notes-panel"
+          class="admin-control-panel client-notes-panel"
+          aria-labelledby="client-notes-title"
+        >
+          <div>
+            <h2 id="client-notes-title">Client note</h2>
+            <p>
+              This page is available only inside Ayesha's authenticated admin area.
+            </p>
+          </div>
+
+          <p class="privacy-note">
+            Therapy notes may include sensitive health information. For now,
+            notes are saved in this browser only. Use a private device and avoid
+            shared browser profiles.
+          </p>
+
+          <label class="checkbox-row private-setup-check">
+            <input id="client-note-private-setup" type="checkbox" />
+            <span>
+              I understand this is a private notes page for me only, and I will
+              review AI-improved text before saving it.
+            </span>
+          </label>
+
+          <div class="form-grid">
+            <label>
+              Client reference
+              <input
+                id="client-note-client"
+                type="text"
+                autocomplete="off"
+                placeholder="Initials or internal reference"
+              />
+            </label>
+
+            <label>
+              Note date
+              <input id="client-note-date" type="date" />
+            </label>
+          </div>
+
+          <div class="form-grid">
+            <label>
+              Note type
+              <select id="client-note-type">
+                <option value="Session note">Session note</option>
+                <option value="Admin note">Admin note</option>
+                <option value="Follow-up note">Follow-up note</option>
+                <option value="Risk/admin flag">Risk/admin flag</option>
+              </select>
+            </label>
+
+            <label>
+              Review by <span class="optional">(optional)</span>
+              <input id="client-note-retention-date" type="date" />
+            </label>
+          </div>
+
+          <label>
+            Rough note
+            <textarea
+              id="client-note-rough"
+              rows="8"
+              placeholder="Write quick bullet points, reminders or rough wording here."
+            ></textarea>
+          </label>
+
+          <div class="settings-button-row">
+            <button id="improve-client-note" type="button">Improve note</button>
+            <button id="save-client-note" type="button">Save note</button>
+            <button id="clear-client-note" class="secondary-button" type="button">Clear</button>
+          </div>
+
+          <label>
+            Improved note
+            <textarea
+              id="client-note-improved"
+              rows="10"
+              placeholder="The clearer version will appear here."
+            ></textarea>
+          </label>
+
+          <p id="client-note-message" class="field-note"></p>
+          <div class="settings-button-row">
+            <button id="export-client-notes" class="secondary-button" type="button">
+              Export notes
+            </button>
+            <button id="delete-all-client-notes" class="secondary-button danger-button" type="button">
+              Delete all notes
+            </button>
+          </div>
+          <ul id="client-notes-list" class="settings-list client-notes-list"></ul>
+        </section>
+      </section>
+    </main>
+
+    <script src="config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="admin-auth.js"></script>
+    <script src="notes.js"></script>
+  </body>
+</html>

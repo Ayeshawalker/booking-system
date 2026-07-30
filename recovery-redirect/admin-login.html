@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Opening Ayesha Jane password reset</title>
+  </head>
+  <body>
+    <p>Opening the secure password reset page...</p>
+    <p>
+      <a id="recovery-link" href="http://localhost:4175/admin-login.html">
+        Continue to password reset
+      </a>
+    </p>
+    <script>
+      const target = new URL("http://localhost:4175/admin-login.html");
+      target.search = window.location.search;
+      target.hash = window.location.hash;
+      document.querySelector("#recovery-link").href = target.href;
+      window.location.replace(target.href);
+    </script>
+  </body>
+</html>

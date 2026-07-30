@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en" class="admin-auth-checking">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ayesha Jane Clients</title>
+    <link rel="stylesheet" href="styles.css?v=20260727-medium-logo-all-pages" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="https://ayeshajane.com/">Ayesha Jane</a>
+      <nav class="admin-nav" aria-label="Private admin links">
+        <a href="clients.html" aria-current="page">Clients</a>
+        <a href="calendar.html">Calendar</a>
+        <a href="ayesha.html">Bookings</a>
+        <a href="settings.html">Settings</a>
+        <a href="notes.html">Notes</a>
+        <a href="index.html">Public page</a>
+        <span class="admin-user-email" data-admin-email></span>
+        <button class="nav-signout" type="button" data-admin-sign-out>
+          Sign out
+        </button>
+      </nav>
+    </header>
+
+    <main class="admin-shell">
+      <header class="admin-heading">
+        <div>
+          <p class="admin-kicker">Private client records</p>
+          <h1>Clients</h1>
+          <p>
+            Track client type, paperwork, areas of support and usual session preferences.
+          </p>
+        </div>
+        <button id="add-client" class="admin-primary-action" type="button">
+          Add client
+        </button>
+      </header>
+
+      <section class="client-stats" aria-label="Client totals">
+        <div><strong id="client-count-all">0</strong><span>All clients</span></div>
+        <div><strong id="client-count-active">0</strong><span>Active</span></div>
+        <div><strong id="client-count-individuals">0</strong><span>Individuals</span></div>
+        <div><strong id="client-count-couples">0</strong><span>Couples</span></div>
+      </section>
+
+      <section class="admin-workspace" aria-labelledby="client-list-title">
+        <div class="admin-toolbar">
+          <label class="admin-search">
+            <span>Search clients</span>
+            <input
+              id="client-search"
+              type="search"
+              placeholder="Name, email or speciality"
+              autocomplete="off"
+            />
+          </label>
+
+          <label>
+            <span>Status</span>
+            <select id="client-status-filter">
+              <option value="">All statuses</option>
+              <option value="Prospective">Prospective</option>
+              <option value="Active">Active</option>
+              <option value="Paused">Paused</option>
+              <option value="Former">Former</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Client type</span>
+            <select id="client-type-filter">
+              <option value="">All types</option>
+              <option value="Individual">Individuals</option>
+              <option value="Couple">Couples</option>
+            </select>
+          </label>
+        </div>
+
+        <div id="clients-loading" class="admin-state">Loading clients...</div>
+        <div id="clients-empty" class="admin-state" hidden>
+          No clients match these filters.
+        </div>
+
+        <div id="clients-table-wrap" class="client-table-wrap" hidden>
+          <table class="client-table">
+            <thead>
+              <tr>
+                <th scope="col">Client</th>
+                <th scope="col">Type</th>
+                <th scope="col">Paperwork</th>
+                <th scope="col">Support</th>
+                <th scope="col">Sessions</th>
+                <th scope="col">Fee</th>
+                <th scope="col">Status</th>
+                <th scope="col"><span class="visually-hidden">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody id="clients-table-body"></tbody>
+          </table>
+        </div>
+
+        <p id="clients-message" class="admin-message" role="status"></p>
+      </section>
+    </main>
+
+    <dialog id="client-dialog" class="client-dialog">
+      <form id="client-form" method="dialog">
+        <header class="dialog-header">
+          <div>
+            <p class="admin-kicker">Client record</p>
+            <h2 id="client-dialog-title">Add client</h2>
+          </div>
+          <button
+            id="close-client-dialog"
+            class="dialog-close"
+            type="button"
+            title="Close"
+            aria-label="Close client editor"
+          >
+            ×
+          </button>
+        </header>
+
+        <div class="client-form-body">
+          <fieldset>
+            <legend>Record type</legend>
+            <div class="compact-choice-group">
+              <label>
+                <input type="radio" name="recordType" value="Individual" checked />
+                <span>Individual</span>
+              </label>
+              <label>
+                <input type="radio" name="recordType" value="Couple" />
+                <span>Couple</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset class="client-form-section">
+            <legend id="first-person-legend">Individual</legend>
+            <div class="form-grid">
+              <label>
+                First name
+                <input name="firstName" autocomplete="given-name" required />
+              </label>
+              <label>
+                Surname
+                <input name="surname" autocomplete="family-name" required />
+              </label>
+              <label>
+                Email <span class="optional">(optional)</span>
+                <input name="email" type="email" autocomplete="email" />
+              </label>
+              <label>
+                Telephone <span class="optional">(optional)</span>
+                <input name="phone" type="tel" autocomplete="tel" />
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset id="second-person-fields" class="client-form-section" hidden>
+            <legend>Second person in couple</legend>
+            <div class="form-grid">
+              <label>
+                First name
+                <input name="secondFirstName" autocomplete="off" />
+              </label>
+              <label>
+                Surname
+                <input name="secondSurname" autocomplete="off" />
+              </label>
+              <label>
+                Email <span class="optional">(optional)</span>
+                <input name="secondEmail" type="email" autocomplete="off" />
+              </label>
+              <label>
+                Telephone <span class="optional">(optional)</span>
+                <input name="secondPhone" type="tel" autocomplete="off" />
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset class="client-form-section">
+            <legend>Paperwork</legend>
+            <div class="form-grid">
+              <label>
+                Contract
+                <select name="contractStatus">
+                  <option value="Not sent">Not sent</option>
+                  <option value="Sent">Sent</option>
+                  <option value="Signed">Signed</option>
+                  <option value="Not required">Not required</option>
+                </select>
+              </label>
+              <label id="contract-date-field" hidden>
+                Signed date
+                <input name="contractSignedDate" type="date" />
+              </label>
+              <label>
+                Intake form
+                <select name="intakeStatus">
+                  <option value="Not sent">Not sent</option>
+                  <option value="Sent">Sent</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Not required">Not required</option>
+                </select>
+              </label>
+              <label id="intake-date-field" hidden>
+                Completed date
+                <input name="intakeCompletedDate" type="date" />
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset class="client-form-section">
+            <legend>Areas of support</legend>
+            <div class="speciality-options">
+              <label><input type="checkbox" name="specialities" value="Relationships" />Relationships</label>
+              <label><input type="checkbox" name="specialities" value="Betrayal trauma" />Betrayal trauma</label>
+              <label><input type="checkbox" name="specialities" value="ADHD" />ADHD</label>
+              <label><input type="checkbox" name="specialities" value="Communication" />Communication</label>
+              <label><input type="checkbox" name="specialities" value="Intimacy" />Intimacy</label>
+              <label><input type="checkbox" name="specialities" value="Separation or divorce" />Separation or divorce</label>
+              <label><input type="checkbox" name="specialities" value="Life transitions" />Life transitions</label>
+              <label><input id="speciality-other-toggle" type="checkbox" name="specialities" value="Other" />Other</label>
+            </div>
+            <label id="speciality-other-field" hidden>
+              Other area
+              <input name="specialityOther" />
+            </label>
+          </fieldset>
+
+          <fieldset class="client-form-section">
+            <legend>Usual sessions</legend>
+            <div class="form-grid">
+              <label>
+                Frequency
+                <select name="sessionFrequency">
+                  <option value="To be agreed">To be agreed</option>
+                  <option value="Weekly">Weekly</option>
+                  <option value="Fortnightly">Fortnightly</option>
+                  <option value="Monthly">Monthly</option>
+                  <option value="Flexible">Flexible</option>
+                  <option value="Other">Other</option>
+                </select>
+              </label>
+              <label>
+                Preferred format
+                <select name="preferredFormat">
+                  <option value="Either">Either</option>
+                  <option value="Online">Online</option>
+                  <option value="In person">In person</option>
+                </select>
+              </label>
+            </div>
+            <label>
+              Frequency details <span class="optional">(optional)</span>
+              <input
+                name="frequencyNotes"
+                placeholder="For example, weekly during term time"
+              />
+            </label>
+          </fieldset>
+
+          <fieldset class="client-form-section">
+            <legend>Agreed fee</legend>
+            <div class="form-grid">
+              <label>
+                <span>
+                  <span id="agreed-fee-label">Online fee per session (£)</span>
+                  <span class="optional">(optional)</span>
+                </span>
+                <input
+                  name="agreedOnlineFee"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  inputmode="decimal"
+                />
+              </label>
+              <label>
+                <span>
+                  In-person fee per session (£)
+                  <span class="optional">(optional)</span>
+                </span>
+                <input
+                  name="agreedInPersonFee"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  inputmode="decimal"
+                />
+              </label>
+            </div>
+            <div class="form-grid">
+              <label>
+                Fee arrangement
+                <select name="feeArrangement">
+                  <option value="To be agreed">To be agreed</option>
+                  <option value="Standard">Standard</option>
+                  <option value="Reduced">Reduced</option>
+                  <option value="Complimentary">Complimentary</option>
+                  <option value="Other">Other</option>
+                </select>
+              </label>
+            </div>
+            <label>
+              Fee details <span class="optional">(optional)</span>
+              <input
+                name="feeNotes"
+                placeholder="For example, different fee for in-person sessions"
+              />
+            </label>
+          </fieldset>
+
+          <label>
+            Client status
+            <select name="status">
+              <option value="Prospective">Prospective</option>
+              <option value="Active" selected>Active</option>
+              <option value="Paused">Paused</option>
+              <option value="Former">Former</option>
+            </select>
+          </label>
+        </div>
+
+        <footer class="dialog-actions">
+          <button id="cancel-client" class="secondary-button" type="button">
+            Cancel
+          </button>
+          <button id="save-client" type="submit">Save client</button>
+        </footer>
+        <p id="client-form-message" class="admin-message" role="status"></p>
+      </form>
+    </dialog>
+
+    <script src="config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="admin-auth.js"></script>
+    <script src="clients.js?v=20260724-format-fees"></script>
+  </body>
+</html>
