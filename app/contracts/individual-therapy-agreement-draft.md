@@ -1,7 +1,4 @@
-# Individual Therapy Agreement — review draft
-
-> Working draft for Ayesha Jane Walker. This should be checked against current insurance,
-> professional-body and legal requirements before publication.
+# Individual Therapy Agreement
 
 ## Welcome and purpose
 
@@ -85,10 +82,8 @@ receive a therapeutic response. I may acknowledge the message and suggest that w
 it during a booked session, where there is sufficient time, privacy and context to work
 safely. Messages are not monitored continuously.
 
-Please select one option when signing:
-
-- [ ] I agree to WhatsApp being used for appointments, invoices, documents and other brief administrative communication.
-- [ ] I do not wish to use WhatsApp. Please communicate with me by email or another method we agree together.
+Please record your communication preference in the electronic-signature section at the
+end of this agreement.
 
 ## Online sessions
 

@@ -3527,17 +3527,24 @@ dd {
 .agreement-public-error { color: #bd1267; font-weight: 800; }
 .agreement-public-document { border: 2px solid #ffc8b2; border-top: 0; border-radius: 0 0 26px 26px; background: #fff; box-shadow: 0 20px 55px rgb(87 21 47 / 10%); }
 .agreement-copy { padding: clamp(28px, 7vw, 70px); }
-.agreement-copy h1 { color: #855408; font-family: "Kalnia", Georgia, serif; font-size: clamp(2rem, 5vw, 3rem); }
-.agreement-copy h2 { margin-top: 34px; padding-bottom: 8px; border-bottom: 1px solid #f4cfad; color: #bd1267; font-size: 1.2rem; }
-.agreement-copy h3 { color: #6e3c14; }
-.agreement-copy p, .agreement-copy li { color: #4d3740; line-height: 1.72; }
+.agreement-copy h1 { margin: 0 0 42px; color: #855408; font-family: "Kalnia", Georgia, serif; font-size: clamp(2rem, 5vw, 3rem); }
+.agreement-copy h2 { margin: 48px 0 18px; padding-bottom: 10px; border-bottom: 1px solid #f4cfad; color: #bd1267; font-size: 1.2rem; }
+.agreement-copy h3 { margin: 30px 0 14px; color: #6e3c14; }
+.agreement-copy p, .agreement-copy li { color: #4d3740; line-height: 1.78; }
+.agreement-copy p { margin: 0 0 18px; }
+.agreement-copy ul { margin: 12px 0 24px; padding-left: 26px; }
+.agreement-document-choice { display: flex; align-items: flex-start; gap: 12px; margin: 14px 0; color: #4d3740; line-height: 1.65; }
+.agreement-document-choice span { display: grid; place-items: center; width: 22px; height: 22px; flex: 0 0 22px; border: 2px solid #e91e83; border-radius: 5px; color: #e91e83; font-size: .85rem; font-weight: 900; }
 .agreement-signature-panel { padding: clamp(24px, 6vw, 58px); border-top: 10px solid #c18a2e; border-radius: 0 0 24px 24px; background: #fffaf1; }
 .agreement-signature-panel form { display: grid; gap: 20px; margin-top: 24px; }
 .agreement-privacy-link { margin: 24px 0; text-align: center; }
 .agreement-privacy-link a { color: #bd1267; font-weight: 800; }
 .agreement-signature-panel fieldset { display: grid; gap: 14px; padding: 20px; border: 2px solid #f4cfad; border-radius: 18px; }
+.agreement-signature-panel fieldset legend { padding: 0 8px; color: #6e3c14; font-weight: 900; }
 .agreement-choice { display: flex !important; align-items: flex-start; gap: 12px; }
-.agreement-choice input { width: 22px !important; height: 22px; flex: 0 0 22px; accent-color: #e91e83; }
+.agreement-choice input { width: 24px !important; height: 24px; flex: 0 0 24px; margin: 0; accent-color: #e91e83; }
+.agreement-signature-panel fieldset .agreement-choice { padding: 15px 16px; border: 2px solid #efd9be; border-radius: 14px; background: #fff; cursor: pointer; }
+.agreement-signature-panel fieldset .agreement-choice:has(input:checked) { border-color: #e91e83; background: #fff3f9; box-shadow: 0 0 0 3px rgb(233 30 131 / 10%); }
 .agreement-accept { padding: 18px; border-radius: 15px; background: #fff; font-weight: 800; }
 .agreement-signer-status { display: grid; gap: 6px; padding: 16px 18px; border-radius: 15px; background: #fff; }
 .agreement-signer-status p { margin: 0; }
