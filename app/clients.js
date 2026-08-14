@@ -304,7 +304,8 @@
   }
 
   function agreementSigningUrl(token) {
-    const url = new URL("sign-agreement.html", window.location.href);
+    const baseUrl = window.BOOKING_CONFIG?.publicClientBaseUrl || window.location.href;
+    const url = new URL("sign-agreement.html", baseUrl);
     url.searchParams.set("token", token);
     return url.href;
   }
@@ -421,7 +422,8 @@
   }
 
   function intakeSigningUrl(token) {
-    const url = new URL("sign-intake.html", window.location.href);
+    const baseUrl = window.BOOKING_CONFIG?.publicClientBaseUrl || window.location.href;
+    const url = new URL("sign-intake.html", baseUrl);
     url.searchParams.set("token", token);
     return url.href;
   }
