@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en" class="admin-auth-checking">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ayesha Jane Payments</title>
+    <link rel="stylesheet" href="styles.css?v=20260810-cancelled-payment-history" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="https://ayeshajane.com/">Ayesha Jane</a>
+      <nav class="admin-nav" aria-label="Private admin links">
+        <a href="clients.html">Clients</a>
+        <a href="calendar.html">Calendar</a>
+        <a href="ayesha.html">Bookings</a>
+        <a href="payments.html" aria-current="page">Payments</a>
+        <a href="settings.html">Settings</a>
+        <a href="notes.html">Notes</a>
+        <a href="index.html">Public page</a>
+        <span class="admin-user-email" data-admin-email></span>
+        <button class="nav-signout" type="button" data-admin-sign-out>Sign out</button>
+      </nav>
+    </header>
+
+    <main class="admin-shell">
+      <header class="admin-heading">
+        <div>
+          <p class="admin-kicker">Private payment records</p>
+          <h1>Payments</h1>
+          <p>Temporarily record payments after checking your bank account.</p>
+        </div>
+        <button id="add-payment" class="admin-primary-action" type="button">
+          Add payment record
+        </button>
+      </header>
+
+      <section class="payment-stats" aria-label="Payment totals">
+        <div><strong id="payments-fees-total">£0</strong><span>Fees in view</span></div>
+        <div><strong id="payments-received-total">£0</strong><span>Received</span></div>
+        <div><strong id="payments-outstanding-total">£0</strong><span>Outstanding</span></div>
+        <div><strong id="payments-credit-total">£0</strong><span>Client credit</span></div>
+        <div><strong id="payments-unpaid-count">0</strong><span>Clients owing</span></div>
+      </section>
+
+      <section class="admin-workspace invoice-list-panel" aria-labelledby="invoice-list-title">
+        <div class="invoice-list-heading">
+          <div><p class="admin-kicker">Booking invoices</p><h2 id="invoice-list-title">Invoices waiting to be sent</h2></div>
+          <a class="secondary-button" href="settings.html#invoice-settings-title">Invoice settings</a>
+        </div>
+        <p id="invoices-empty" class="admin-state">No invoices are waiting to be sent.</p>
+        <div id="invoices-table-wrap" class="client-table-wrap" hidden>
+          <table class="client-table">
+            <thead><tr><th>Invoice</th><th>Client</th><th>Session date</th><th>Due</th><th>Total</th><th>Status</th><th></th></tr></thead>
+            <tbody id="invoices-table-body"></tbody>
+          </table>
+        </div>
+        <details id="sent-invoices-archive" class="sent-invoices-archive" hidden>
+          <summary>Previously sent invoices</summary>
+          <div class="client-table-wrap">
+            <table class="client-table">
+              <thead><tr><th>Invoice</th><th>Client</th><th>Session date</th><th>Due</th><th>Total</th><th>Status</th><th></th></tr></thead>
+              <tbody id="sent-invoices-table-body"></tbody>
+            </table>
+          </div>
+        </details>
+      </section>
+
+      <section class="admin-workspace">
+        <div class="payment-toolbar">
+          <label>
+            <span>Period</span>
+            <select id="payment-period-filter">
+              <option value="tax-year" selected>Since 6 April 2026</option>
+              <option value="today">Today</option>
+              <option value="week">This week</option>
+              <option value="month">This month</option>
+              <option value="previous-month">Previous month</option>
+              <option value="custom">Choose dates</option>
+              <option value="all">All records</option>
+            </select>
+          </label>
+          <div id="payment-custom-dates" class="payment-custom-dates" hidden>
+            <label><span>From</span><input id="payment-date-from" type="date" /></label>
+            <label><span>To</span><input id="payment-date-to" type="date" /></label>
+          </div>
+          <label class="admin-search">
+            <span>Search</span>
+            <input id="payment-search" type="search" placeholder="Client name or note" />
+          </label>
+          <label>
+            <span>Payment status</span>
+            <select id="payment-status-filter">
+              <option value="">All payment positions</option>
+              <option value="Outstanding">Outstanding</option>
+              <option value="In credit">In credit</option>
+              <option value="Up to date">Up to date</option>
+              <option value="No records">No records</option>
+            </select>
+          </label>
+        </div>
+
+        <div id="payments-loading" class="admin-state">Loading payments...</div>
+        <div id="payments-empty" class="admin-state" hidden>No active clients match these filters.</div>
+        <div id="payment-client-table-wrap" class="client-table-wrap" hidden>
+          <table class="client-table payment-client-table">
+            <thead>
+              <tr>
+                <th>Active client</th><th>Current fee</th><th>Sessions</th><th>Latest session</th>
+                <th>Latest payment</th><th>Outstanding</th><th>Credit</th><th>Payment position</th>
+                <th>Weekly check</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="payment-client-table-body"></tbody>
+          </table>
+        </div>
+
+        <section id="payment-history-panel" class="payment-history-panel" hidden>
+          <header>
+            <div><p class="admin-kicker">Payment history</p><h2 id="payment-history-title"></h2></div>
+            <div class="payment-history-header-actions">
+              <button id="create-history-invoice" type="button">Create invoice from selected</button>
+              <button id="close-payment-history" type="button" class="secondary-button">Close history</button>
+            </div>
+          </header>
+          <div id="payments-table-wrap" class="client-table-wrap">
+          <table class="client-table payment-table">
+            <thead>
+              <tr>
+                <th>Session</th><th>Client</th><th>Format</th><th>Fee</th>
+                <th>Received</th><th>Balance</th><th>Status</th><th>Paid</th><th class="payment-history-actions-heading">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="payments-table-body"></tbody>
+          </table>
+          </div>
+        </section>
+        <p id="payments-message" class="admin-message" role="status"></p>
+      </section>
+    </main>
+
+    <dialog id="payment-dialog" class="client-dialog payment-dialog">
+      <form id="payment-form" method="dialog">
+        <header class="dialog-header">
+          <div><p class="admin-kicker">Payment record</p><h2 id="payment-dialog-title">Add payment</h2></div>
+          <button id="close-payment-dialog" class="dialog-close" type="button" aria-label="Close">×</button>
+        </header>
+        <div class="client-form-body payment-form-grid">
+          <label>Client
+            <select name="clientId" id="payment-client" required><option value="">Choose client</option></select>
+          </label>
+          <label>Session date<input name="sessionDate" type="date" required /></label>
+          <label>Session type
+            <select name="sessionType"><option>Individual</option><option>Couple</option></select>
+          </label>
+          <label>Format
+            <select name="sessionFormat"><option>Online</option><option>In person</option><option>Not recorded</option></select>
+          </label>
+          <label>Fee charged (£)<input name="feeDue" type="number" min="0" step="0.01" required /></label>
+          <label>Amount received (£)<input name="amountReceived" type="number" min="0" step="0.01" value="0" required /></label>
+          <label>Invoice sent date<input name="invoiceSentDate" type="date" /></label>
+          <label>Payment received date<input name="paymentDate" type="date" /></label>
+          <label class="payment-notes-field">Notes<textarea name="notes" rows="3"></textarea></label>
+        </div>
+        <footer class="dialog-actions">
+          <button id="cancel-payment" type="button" class="secondary-button">Cancel</button>
+          <button id="save-payment" type="submit">Save payment</button>
+        </footer>
+        <p id="payment-form-message" class="admin-message" role="status"></p>
+      </form>
+    </dialog>
+
+    <script src="config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="admin-auth.js?v=20260813-ten-hour-session"></script>
+    <script src="payments.js?v=20260810-pending-invoice-fix"></script>
+  </body>
+</html>

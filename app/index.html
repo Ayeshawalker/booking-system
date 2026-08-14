@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ayesha Jane Booking</title>
+    <link rel="stylesheet" href="styles.css?v=20260727-medium-logo-all-pages" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="https://ayeshajane.com/">Ayesha Jane</a>
+      <nav aria-label="Main website links">
+        <a href="https://ayeshajane.com/">Home</a>
+        <a href="https://ayeshajane.com/about-ayesha/">About</a>
+        <a href="https://ayeshajane.com/contact-ayesha-jane/">Contact</a>
+        <a href="privacy-notice.html">Privacy</a>
+      </nav>
+    </header>
+
+    <main class="page-shell">
+      <section class="booking-panel" aria-labelledby="page-title">
+        <div class="intro">
+          <p class="eyebrow">Relationship coaching and counselling</p>
+          <h1 id="page-title">Book your session</h1>
+          <p>
+            Start by choosing whether you are a new or existing client, then
+            follow the booking steps that appear. Ayesha will confirm your
+            appointment personally.
+          </p>
+        </div>
+
+        <form id="booking-form" class="booking-form">
+          <input type="hidden" name="bookingSource" value="Client booking" />
+
+          <fieldset>
+            <legend>Start here</legend>
+            <div class="session-options client-type-options">
+              <label class="session-card">
+                <input
+                  type="radio"
+                  name="clientType"
+                  value="New client"
+                  required
+                />
+                <span>
+                  <strong>New client</strong>
+                  <small>Please share your contact details</small>
+                </span>
+              </label>
+
+              <label class="session-card">
+                <input
+                  type="radio"
+                  name="clientType"
+                  value="Existing client"
+                />
+                <span>
+                  <strong>Existing client</strong>
+                  <small>Quick booking with your email only</small>
+                </span>
+              </label>
+            </div>
+          </fieldset>
+
+          <div id="booking-details" hidden>
+            <fieldset id="booking-type-fieldset" hidden>
+              <legend>What would you like to book?</legend>
+              <div class="session-options booking-type-options">
+                <label class="session-card">
+                  <input
+                    type="radio"
+                    name="bookingType"
+                    value="Single session"
+                  />
+                  <span>
+                    <strong>Single session</strong>
+                    <small>Request one appointment</small>
+                  </span>
+                </label>
+
+                <label class="session-card">
+                  <input
+                    type="radio"
+                    name="bookingType"
+                    value="Block booking"
+                  />
+                  <span>
+                    <strong>Block booking</strong>
+                    <small>Request several reserved sessions</small>
+                  </span>
+                </label>
+              </div>
+            </fieldset>
+
+            <fieldset id="session-type-fieldset">
+              <legend>Session type</legend>
+              <div class="session-options session-type-options">
+                <label class="session-card">
+                  <input
+                    type="radio"
+                    name="sessionType"
+                    value="Individual session"
+                    data-duration="50 minutes"
+                    required
+                  />
+                  <span>
+                    <strong>Individual session</strong>
+                    <small>50 minutes, for one person</small>
+                  </span>
+                </label>
+
+                <label class="session-card">
+                  <input
+                    type="radio"
+                    name="sessionType"
+                    value="Joint session"
+                    data-duration="80 minutes"
+                  />
+                  <span>
+                    <strong>Joint session</strong>
+                    <small>80 minutes, for couples or two people</small>
+                  </span>
+                </label>
+
+                <label class="session-card">
+                  <input
+                    type="radio"
+                    name="sessionType"
+                    value="Discovery call"
+                    data-duration="15 minutes"
+                    data-client-group="new"
+                  />
+                  <span>
+                    <strong>Discovery call</strong>
+                    <small>15 minutes, free, by telephone or Zoom</small>
+                  </span>
+                </label>
+              </div>
+            </fieldset>
+
+            <fieldset id="format-fieldset" hidden>
+              <legend>Session format</legend>
+              <div class="session-options format-options">
+                <label class="session-card format-card" data-format-group="therapy">
+                  <input
+                    type="radio"
+                    name="sessionFormat"
+                    value="Online"
+                    data-price-individual="80"
+                    data-price-joint="150"
+                    required
+                  />
+                  <span>
+                    <strong>Online</strong>
+                    <small id="online-price-label">Choose a session type to see price</small>
+                  </span>
+                </label>
+
+                <label class="session-card format-card" data-format-group="therapy">
+                  <input
+                    type="radio"
+                    name="sessionFormat"
+                    value="In person"
+                    data-price-individual="90"
+                    data-price-joint="165"
+                    required
+                  />
+                  <span>
+                    <strong>In person</strong>
+                    <small id="in-person-price-label">Cherry Tree Therapy Centre, Henley-on-Thames</small>
+                  </span>
+                </label>
+
+                <label class="session-card format-card" data-format-group="discovery">
+                  <input
+                    type="radio"
+                    name="sessionFormat"
+                    value="Telephone call"
+                    required
+                  />
+                  <span>
+                    <strong>Telephone call</strong>
+                    <small>Free discovery call</small>
+                  </span>
+                </label>
+
+                <label class="session-card format-card" data-format-group="discovery">
+                  <input
+                    type="radio"
+                    name="sessionFormat"
+                    value="Zoom call"
+                    required
+                  />
+                  <span>
+                    <strong>Zoom call</strong>
+                    <small>Free discovery call</small>
+                  </span>
+                </label>
+              </div>
+            </fieldset>
+
+            <div id="appointment-fields" class="form-grid">
+              <label>
+                <span id="date-label-text">Preferred date</span>
+                <input id="date" name="date" type="date" required />
+              </label>
+
+              <label>
+                Preferred time
+                <select id="time" name="time" required>
+                  <option value="">Choose a time</option>
+                </select>
+                <span id="availability-message" class="field-note"></span>
+              </label>
+            </div>
+
+            <fieldset id="block-booking-fields" hidden>
+              <legend>Block booking details</legend>
+              <fieldset class="nested-fieldset">
+                <legend>How would you like to choose your block dates?</legend>
+                <div class="session-options block-pattern-options">
+                  <label class="session-card">
+                    <input
+                      type="radio"
+                      name="blockDatePattern"
+                      value="Regular pattern"
+                    />
+                    <span>
+                      <strong>Same day and time</strong>
+                      <small>Weekly or fortnightly from a start date</small>
+                    </span>
+                  </label>
+
+                  <label class="session-card">
+                    <input
+                      type="radio"
+                      name="blockDatePattern"
+                      value="Flexible dates"
+                    />
+                    <span>
+                      <strong>Flexible dates</strong>
+                      <small>Preferred days and times to be agreed</small>
+                    </span>
+                  </label>
+                </div>
+              </fieldset>
+
+              <div class="form-grid">
+                <label>
+                  Number of sessions
+                  <select name="blockSessionCount">
+                    <option value="">Choose number of sessions</option>
+                    <option value="4">4 sessions</option>
+                    <option value="6">6 sessions</option>
+                    <option value="8">8 sessions</option>
+                    <option value="10">10 sessions</option>
+                    <option value="12">12 sessions</option>
+                  </select>
+                </label>
+
+                <label id="block-frequency-field">
+                  Preferred frequency
+                  <select name="blockFrequency">
+                    <option value="">Choose frequency</option>
+                    <option value="Weekly">Weekly</option>
+                    <option value="Fortnightly">Fortnightly</option>
+                  </select>
+                </label>
+              </div>
+
+              <label id="flexible-block-preferences-field" hidden>
+                Flexible date preferences
+                <textarea
+                  name="flexibleBlockPreferences"
+                  rows="4"
+                  placeholder="Please share preferred days, times, and anything that changes week to week."
+                ></textarea>
+              </label>
+
+              <div class="block-payment-notice">
+                <strong id="block-payment-label">Full block payment</strong>
+                <span>All reserved sessions are paid together when the block booking is confirmed.</span>
+                <input name="blockPaymentPreference" type="hidden" value="Pay all upfront" />
+              </div>
+
+              <label class="checkbox-row">
+                <input name="blockCancellationAgreement" type="checkbox" />
+                <span>
+                  I understand that this block booking reserves multiple appointments.
+                  If I cancel or reschedule any reserved session with less than 48 hours'
+                  notice, that session remains payable unless Ayesha agrees otherwise.
+                </span>
+              </label>
+            </fieldset>
+
+            <div id="contact-fields" hidden>
+              <div id="new-client-fields" class="form-grid">
+                <label>
+                  First person's first name
+                  <input name="firstName" autocomplete="given-name" />
+                </label>
+
+                <label>
+                  First person's surname
+                  <input name="surname" autocomplete="family-name" />
+                </label>
+              </div>
+
+              <div id="second-client-fields" class="form-grid" hidden>
+                <label>
+                  Second person's first name
+                  <input name="secondFirstName" autocomplete="given-name" />
+                </label>
+
+                <label>
+                  Second person's surname
+                  <input name="secondSurname" autocomplete="family-name" />
+                </label>
+              </div>
+
+              <div class="form-grid">
+                <label>
+                  Email address
+                  <input name="email" type="email" autocomplete="email" />
+                </label>
+
+                <label id="phone-field">
+                  Telephone number
+                  <input name="phone" type="tel" autocomplete="tel" />
+                </label>
+              </div>
+            </div>
+
+            <label id="message-field">
+              Anything helpful to know? <span class="optional">(optional)</span>
+              <textarea
+                name="message"
+                rows="4"
+                placeholder="Please avoid sharing detailed clinical information here."
+              ></textarea>
+            </label>
+
+            <label id="consent-field" class="checkbox-row">
+              <input name="consent" type="checkbox" required />
+              <span id="consent-label-text">I consent to being contacted about this booking.</span>
+            </label>
+
+            <button type="submit">Request booking</button>
+          </div>
+        </form>
+      </section>
+
+      <aside class="summary-panel" aria-labelledby="summary-title">
+        <h2 id="summary-title">Booking summary</h2>
+        <dl>
+          <div>
+            <dt>Session</dt>
+            <dd id="summary-session">Not chosen yet</dd>
+          </div>
+          <div>
+            <dt>Length</dt>
+            <dd id="summary-duration">Not chosen yet</dd>
+          </div>
+          <div>
+            <dt>Format</dt>
+            <dd id="summary-format">Not chosen yet</dd>
+          </div>
+          <div>
+            <dt>Price</dt>
+            <dd id="summary-price">Not chosen yet</dd>
+          </div>
+          <div>
+            <dt>Date</dt>
+            <dd id="summary-date">Not chosen yet</dd>
+          </div>
+          <div>
+            <dt>Time</dt>
+            <dd id="summary-time">Not chosen yet</dd>
+          </div>
+          <div>
+            <dt>Total cost</dt>
+            <dd id="summary-total-cost">Not chosen yet</dd>
+          </div>
+          <div>
+            <dt>Pay now</dt>
+            <dd>
+              <button
+                id="summary-pay-now"
+                class="payment-action-button"
+                type="button"
+                disabled
+              >
+                Choose session first
+              </button>
+            </dd>
+          </div>
+          <div>
+            <dt>Remaining balance</dt>
+            <dd id="summary-remaining-balance">Not chosen yet</dd>
+          </div>
+          <div>
+            <dt>Payment reminder</dt>
+            <dd id="summary-payment-reminder">Not chosen yet</dd>
+          </div>
+          <div id="summary-invoice-row" hidden>
+            <dt>Invoice</dt>
+            <dd id="summary-invoice">Not needed</dd>
+          </div>
+          <div id="summary-block-dates-row" hidden>
+            <dt>Proposed block dates</dt>
+            <dd>
+              <ol id="summary-block-dates" class="block-date-list"></ol>
+              <p id="summary-flexible-block-note" class="summary-note" hidden>
+                Flexible dates will be agreed manually with Ayesha.
+              </p>
+            </dd>
+          </div>
+        </dl>
+
+        <div id="confirmation" class="confirmation" role="status" hidden></div>
+
+        <section class="saved-bookings" aria-labelledby="saved-title">
+          <h2 id="saved-title">Recent booking requests</h2>
+          <ul id="booking-list"></ul>
+          <p id="empty-state">No booking requests yet.</p>
+        </section>
+      </aside>
+    </main>
+
+    <script src="config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="script.js?v=20260808-booking-schema-compatible"></script>
+  </body>
+</html>

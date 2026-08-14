@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en" class="admin-auth-checking">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ayesha Jane Agreement Preview</title>
+    <link rel="stylesheet" href="styles.css?v=20260810-agreement-feedback" />
+  </head>
+  <body class="agreement-preview-page">
+    <header class="site-header">
+      <a class="brand agreement-brand" href="clients.html">
+        <img src="assets/aj-logo-medium-preview.png" alt="Ayesha Jane Therapy, Counselling and Coaching" />
+      </a>
+      <nav class="admin-nav" aria-label="Private admin links">
+        <a href="clients.html">Clients</a><a href="calendar.html">Calendar</a>
+        <a href="payments.html">Payments</a>
+        <span class="admin-user-email" data-admin-email></span>
+        <button class="nav-signout" type="button" data-admin-sign-out>Sign out</button>
+      </nav>
+    </header>
+    <main class="agreement-preview-shell">
+      <header class="agreement-preview-heading">
+        <div><p class="admin-kicker">Agreement review</p><h1>Therapy agreements</h1>
+          <p>Review the client wording before electronic signing is activated.</p></div>
+        <a class="secondary-button agreement-back-link" href="clients.html">Back to clients</a>
+      </header>
+      <div class="agreement-preview-tabs" role="tablist" aria-label="Agreement type">
+        <button type="button" role="tab" data-agreement="individual" aria-selected="true">Individual agreement</button>
+        <button type="button" role="tab" data-agreement="couples" aria-selected="false">Couples agreement</button>
+      </div>
+      <p id="agreement-preview-status" class="admin-message" role="status"></p>
+      <article id="agreement-preview-document" class="agreement-document-card"></article>
+    </main>
+    <script src="config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="admin-auth.js?v=20260813-ten-hour-session"></script>
+    <script src="agreement-preview.js?v=20260814-personalised-fee-preview"></script>
+  </body>
+</html>

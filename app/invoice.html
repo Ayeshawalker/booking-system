@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en" class="admin-auth-checking">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ayesha Jane Invoice</title>
+    <link rel="stylesheet" href="styles.css?v=20260809-per-session-format" />
+  </head>
+  <body class="invoice-page">
+    <div class="invoice-page-actions">
+      <a href="payments.html" class="secondary-button">Back to payments</a>
+      <button id="invoice-download" type="button">Download PDF</button>
+      <button id="invoice-whatsapp" type="button" class="secondary-button">Open WhatsApp</button>
+      <button id="invoice-mark-sent" type="button" class="secondary-button">Mark as sent</button>
+      <button id="invoice-edit-details" type="button" class="secondary-button">Edit invoice details</button>
+    </div>
+
+    <form id="invoice-details-editor" class="invoice-details-editor" hidden>
+      <div class="invoice-editor-heading">
+        <div><strong>Sessions on this invoice</strong><small>Add joint and individual sessions separately.</small></div>
+        <button id="invoice-add-session-line" type="button" class="secondary-button">Add session</button>
+      </div>
+      <div id="invoice-edit-session-lines" class="invoice-edit-session-lines"></div>
+      <button type="submit">Save invoice details</button>
+      <button id="invoice-cancel-edit" type="button" class="secondary-button">Cancel</button>
+      <p id="invoice-edit-message" role="status"></p>
+    </form>
+
+    <p id="invoice-loading" class="admin-state">Loading invoice...</p>
+    <p id="invoice-error" class="admin-message" hidden></p>
+    <p id="invoice-page-message" class="admin-message" role="status"></p>
+
+    <article id="invoice-document" class="invoice-document" hidden>
+      <header class="invoice-document-header">
+        <img src="assets/aj-logo-medium-preview.png" alt="Ayesha Jane Therapy, Counselling and Coaching" />
+        <div><p>Private client invoice</p><h1>Invoice</h1></div>
+      </header>
+      <div class="invoice-document-body">
+        <section class="invoice-addresses">
+          <div><p class="invoice-label">From</p><strong id="invoice-issuer"></strong><p id="invoice-address"></p></div>
+          <div><p class="invoice-label">Invoice for</p><strong id="invoice-client"></strong><p id="invoice-client-contact"></p></div>
+        </section>
+        <section class="invoice-meta">
+          <div><p class="invoice-label">Invoice number</p><strong id="invoice-number"></strong></div>
+          <div><p class="invoice-label">Invoice date</p><strong id="invoice-date"></strong></div>
+          <div><p class="invoice-label">Payment due</p><strong id="invoice-due"></strong></div>
+        </section>
+        <table class="invoice-items">
+          <thead><tr><th>Description</th><th>Quantity</th><th>Amount</th></tr></thead>
+          <tbody id="invoice-items-body">
+            <tr id="invoice-session-row"><td><strong id="invoice-description"></strong><small id="invoice-description-note"></small></td><td id="invoice-quantity"></td><td id="invoice-amount"></td></tr>
+            <tr id="invoice-extra-row" hidden><td><strong id="invoice-extra-description"></strong><small>Additional session time.</small></td><td>1</td><td id="invoice-extra-amount"></td></tr>
+          </tbody>
+        </table>
+        <div class="invoice-total"><span>Total due</span><strong id="invoice-total"></strong></div>
+        <section class="invoice-payment-box">
+          <div class="invoice-payment-method">
+            <p class="invoice-label">Option 1 · Bank transfer</p>
+            <div class="invoice-bank-grid">
+              <p><strong>Account name</strong><br /><span id="invoice-account-name"></span></p>
+              <p><strong>Payment reference</strong><br /><span id="invoice-reference"></span></p>
+              <p><strong>Sort code</strong><br /><span id="invoice-sort-code"></span></p>
+              <p><strong>Account number</strong><br /><span id="invoice-account-number"></span></p>
+            </div>
+          </div>
+          <div class="invoice-payment-method invoice-paypal-method">
+            <p class="invoice-label">Option 2 · PayPal</p>
+            <p><strong>PayPal account</strong><br /><span>ayeshajane67@gmail.com</span></p>
+            <p class="invoice-payment-help">In PayPal, choose “Send money” and use the session date shown above as the payment reference.</p>
+          </div>
+        </section>
+        <p class="invoice-thanks">Thank you. Please use the session date as your payment reference for either payment method.<br />Ayesha Jane Therapy · Counselling · Coaching</p>
+      </div>
+    </article>
+
+    <form id="invoice-extra-form" class="invoice-extra-form">
+      <div><p class="admin-kicker">Invoice adjustment</p><h2>Add extra session time</h2><p>Use this when a session ran longer than originally booked.</p></div>
+      <label>Extra minutes<input name="extraMinutes" type="number" min="0" step="5" value="30" required /></label>
+      <label>Additional charge (£)<input name="extraAmount" type="number" min="0" step="0.01" required /></label>
+      <button type="submit">Update invoice</button>
+      <p id="invoice-extra-message" class="admin-message" role="status"></p>
+    </form>
+
+    <script src="config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="admin-auth.js?v=20260813-ten-hour-session"></script>
+    <script src="vendor/html2pdf.bundle.min.js?v=0.10.1"></script>
+    <script src="invoice.js?v=20260809-per-session-format"></script>
+  </body>
+</html>

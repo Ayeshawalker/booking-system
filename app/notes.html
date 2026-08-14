@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en" class="admin-auth-checking">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ayesha Jane Client Notes</title>
+    <link rel="stylesheet" href="styles.css?v=20260811-note-images" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="https://ayeshajane.com/">Ayesha Jane</a>
+      <nav class="admin-nav" aria-label="Private admin links">
+        <a href="clients.html">Clients</a>
+        <a href="calendar.html">Calendar</a>
+        <a href="ayesha.html">Bookings</a>
+        <a href="payments.html">Payments</a>
+        <a href="settings.html">Settings</a>
+        <a href="notes.html" aria-current="page">Notes</a>
+        <a href="supervision.html">Supervision</a>
+        <a href="index.html">Public page</a>
+        <span class="admin-user-email" data-admin-email></span>
+        <button class="nav-signout" type="button" data-admin-sign-out>
+          Sign out
+        </button>
+      </nav>
+    </header>
+
+    <main class="settings-shell">
+      <section class="booking-panel" aria-labelledby="page-title">
+        <div class="intro">
+          <p class="eyebrow">Private client notes</p>
+          <h1 id="page-title">Notes</h1>
+          <p>
+            Keep client notes separately from booking settings and tidy rough
+            notes into a clearer version before saving.
+          </p>
+        </div>
+
+        <section
+          id="client-notes-panel"
+          class="admin-control-panel client-notes-panel"
+          aria-labelledby="client-notes-title"
+        >
+          <div>
+            <h2 id="client-notes-title">Client note</h2>
+            <p>
+              This page is available only inside Ayesha's authenticated admin area.
+            </p>
+          </div>
+
+          <p class="privacy-note">
+            Notes are stored in the authenticated clinical-notes database. AI suggestions
+            are drafts only: compare them with your original and approve the final wording yourself.
+          </p>
+
+          <div class="form-grid">
+            <label>
+              Client
+              <select id="client-note-client" required><option value="">Choose client</option></select>
+            </label>
+
+            <label>
+              Note date
+              <input id="client-note-date" type="date" />
+            </label>
+          </div>
+
+          <div class="form-grid">
+            <label>
+              Note type
+              <select id="client-note-type">
+                <option value="Session note">Session note</option>
+                <option value="Admin note">Admin note</option>
+                <option value="Follow-up note">Follow-up note</option>
+                <option value="Risk/admin flag">Risk/admin flag</option>
+              </select>
+            </label>
+
+            <label>
+              Review by <span class="optional">(optional)</span>
+              <input id="client-note-retention-date" type="date" />
+            </label>
+          </div>
+
+          <label>
+            Rough note
+            <textarea
+              id="client-note-rough"
+              rows="8"
+              placeholder="Write quick bullet points, reminders or rough wording here."
+            ></textarea>
+          </label>
+
+          <section class="note-image-fields" aria-labelledby="note-images-title">
+            <div>
+              <h3 id="note-images-title">Images and diagrams within this note</h3>
+              <p>Paste a screenshot with Command + V, or choose an image. Images remain private and are not sent to the AI note-improvement service.</p>
+            </div>
+            <div id="note-image-dropzone" class="note-image-dropzone" tabindex="0">
+              <strong>Paste or add a screenshot</strong>
+              <span>Click here and press Command + V, drag an image here, or use the button.</span>
+              <button id="add-note-image" class="secondary-button" type="button">Add image</button>
+              <input id="note-image-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden />
+            </div>
+            <div id="note-image-list" class="note-image-list"><p>No images added to this note.</p></div>
+          </section>
+
+          <section class="note-structured-fields" aria-labelledby="note-work-title">
+            <div>
+              <h3 id="note-work-title">Tools, interventions and resources</h3>
+              <p>Record each item on a separate line. These will also appear in the client's overview below.</p>
+            </div>
+            <div class="form-grid">
+              <label>
+                Interventions or strategies used <span class="optional">(optional)</span>
+                <textarea id="client-note-interventions" rows="5" placeholder="For example: Introduced NVC&#10;Explored the drama triangle"></textarea>
+              </label>
+              <label>
+                Documents, diagrams or resources sent <span class="optional">(optional)</span>
+                <textarea id="client-note-resources" rows="5" placeholder="For example: NVC needs and feelings sheet&#10;Drama triangle diagram"></textarea>
+              </label>
+            </div>
+          </section>
+
+          <fieldset class="note-supervision-fields">
+            <legend>Supervision reminder</legend>
+            <label class="agreement-choice"><input id="client-note-needs-supervision" type="checkbox" /> Add something from this session to my supervision list</label>
+            <label id="client-note-supervision-wrap" hidden>
+              What would I like help thinking through?
+              <textarea id="client-note-supervision-question" rows="4" placeholder="Keep this concise and include only what you need for supervision."></textarea>
+            </label>
+            <p><a href="supervision.html">Open my supervision preparation list</a></p>
+          </fieldset>
+
+          <div class="note-ai-options" aria-labelledby="note-ai-title">
+            <strong id="note-ai-title">AI assistance</strong>
+            <label>How should it help?
+              <select id="client-note-ai-mode">
+                <option value="structure">Structure as a concise professional session note</option>
+                <option value="clarity">Improve clarity while keeping the existing structure</option>
+                <option value="neutral-language">Check for ambiguous or judgemental wording</option>
+                <option value="concise">Make it shorter without losing material facts</option>
+              </select>
+            </label>
+            <p>Names are not deliberately sent by the system, but remove unnecessary identifying details from the rough note before using AI.</p>
+          </div>
+
+          <section class="note-abc-builder" aria-labelledby="note-abc-title">
+            <div>
+              <h3 id="note-abc-title">Create an ABC diagram</h3>
+              <p>AI can suggest an ABC from the note. Review and edit every box before creating the diagram; missing information will be marked rather than invented.</p>
+            </div>
+            <button id="suggest-note-abc" class="secondary-button" type="button">Suggest ABC from note</button>
+            <div id="note-abc-review" class="note-abc-review" hidden>
+              <p class="privacy-note"><strong>Clinician review required.</strong> Check that each statement is supported by the session before saving it.</p>
+              <label>A — Activating event<textarea id="note-abc-a" rows="4" placeholder="What happened or triggered the response?"></textarea></label>
+              <label>B — Beliefs and interpretations<textarea id="note-abc-b" rows="4" placeholder="What beliefs, meanings or interpretations were identified?"></textarea></label>
+              <label>C — Consequences<textarea id="note-abc-c" rows="4" placeholder="What emotional, physical or behavioural consequences followed?"></textarea></label>
+              <label>Diagram title <span class="optional">(optional)</span><input id="note-abc-diagram-title" type="text" value="ABC explored in session" /></label>
+              <div class="settings-button-row">
+                <button id="create-note-abc" type="button">Create reviewed diagram</button>
+                <button id="cancel-note-abc" class="secondary-button" type="button">Cancel</button>
+              </div>
+            </div>
+          </section>
+
+          <div class="settings-button-row">
+            <button id="improve-client-note" type="button">Improve note</button>
+            <button id="save-client-note" type="button">Save draft</button>
+            <button id="finalise-client-note" type="button">Finalise note</button>
+            <button id="clear-client-note" class="secondary-button" type="button">Clear</button>
+          </div>
+          <p id="client-note-message" class="field-note note-save-message" aria-live="polite"></p>
+
+          <label>
+            Improved note
+            <textarea
+              id="client-note-improved"
+              rows="10"
+              placeholder="The clearer version will appear here."
+            ></textarea>
+          </label>
+
+          <section class="client-work-overview" aria-labelledby="client-work-overview-title">
+            <div class="notes-list-heading"><h3 id="client-work-overview-title">Client tools and resources overview</h3><small>Choose a client above to see what has already been covered.</small></div>
+            <div id="client-work-overview" class="client-work-overview-grid"><p>No client selected.</p></div>
+          </section>
+
+          <div class="notes-list-heading"><h3>Saved notes</h3><label>Show client<select id="client-note-list-filter"><option value="">All clients</option></select></label></div>
+          <ul id="client-notes-list" class="settings-list client-notes-list"></ul>
+        </section>
+      </section>
+    </main>
+
+    <dialog id="note-history-dialog" class="client-dialog">
+      <header class="dialog-header"><div><p class="admin-kicker">Audit history</p><h2>Earlier versions</h2></div><button id="close-note-history" class="dialog-close" type="button">×</button></header>
+      <div id="note-history-list" class="client-form-body"></div>
+    </dialog>
+
+    <script src="config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="admin-auth.js?v=20260813-ten-hour-session"></script>
+    <script src="notes.js?v=20260811-abc-diagrams"></script>
+  </body>
+</html>

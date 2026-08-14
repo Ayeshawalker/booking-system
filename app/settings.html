@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en" class="admin-auth-checking">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ayesha Jane Booking Settings</title>
+    <link rel="stylesheet" href="styles.css?v=20260727-medium-logo-all-pages" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="https://ayeshajane.com/">Ayesha Jane</a>
+      <nav class="admin-nav" aria-label="Private admin links">
+        <a href="clients.html">Clients</a>
+        <a href="calendar.html">Calendar</a>
+        <a href="ayesha.html">Bookings</a>
+        <a href="payments.html">Payments</a>
+        <a href="settings.html" aria-current="page">Settings</a>
+        <a href="notes.html">Notes</a>
+        <a href="index.html">Public page</a>
+        <span class="admin-user-email" data-admin-email></span>
+        <button class="nav-signout" type="button" data-admin-sign-out>
+          Sign out
+        </button>
+      </nav>
+    </header>
+
+    <main class="settings-shell">
+      <section class="booking-panel" aria-labelledby="page-title">
+        <div class="intro">
+          <p class="eyebrow">Internal booking settings</p>
+          <h1 id="page-title">Settings</h1>
+          <p>
+            Manage availability rules for the public booking page.
+          </p>
+        </div>
+
+        <section
+          id="in-person-availability-panel"
+          class="admin-control-panel"
+          aria-labelledby="in-person-availability-title"
+        >
+          <div>
+            <h2 id="in-person-availability-title">In-person days</h2>
+            <p>
+              Choose which days clients can book in-person sessions for a particular week.
+            </p>
+          </div>
+
+          <label>
+            Week containing
+            <input id="in-person-week-date" type="date" />
+          </label>
+
+          <div
+            id="in-person-day-options"
+            class="in-person-day-options"
+            aria-label="In-person days for selected week"
+          ></div>
+
+          <button id="save-in-person-availability" type="button">
+            Save in-person days
+          </button>
+          <p id="in-person-availability-message" class="field-note"></p>
+        </section>
+
+        <section
+          id="days-off-panel"
+          class="admin-control-panel"
+          aria-labelledby="days-off-title"
+        >
+          <div>
+            <h2 id="days-off-title">Days off</h2>
+            <p>
+              Block a single day or a run of dates when public clients should not be able to book any sessions.
+            </p>
+          </div>
+
+          <div class="settings-inline-controls">
+            <label>
+              First day off
+              <input id="day-off-start-date" type="date" />
+            </label>
+
+            <label>
+              Last day off
+              <input id="day-off-end-date" type="date" />
+            </label>
+
+            <button id="add-day-off" type="button">
+              Block dates
+            </button>
+          </div>
+
+          <ul id="days-off-list" class="settings-list"></ul>
+          <p id="days-off-message" class="field-note"></p>
+        </section>
+
+        <section class="admin-control-panel" aria-labelledby="zoom-settings-title">
+          <div>
+            <h2 id="zoom-settings-title">Zoom meetings</h2>
+            <p>Zoom is connected securely. Confirmed online bookings receive their own unique Zoom meeting link automatically; you do not need to paste a permanent link here.</p>
+          </div>
+          <form id="zoom-settings-form" class="invoice-settings-form" hidden>
+            <label class="invoice-settings-wide">Zoom meeting link<input id="zoom-confirmation-link" type="url" placeholder="https://zoom.us/j/…" autocomplete="off" /></label>
+            <div class="invoice-settings-actions">
+              <button id="save-zoom-settings" type="submit">Save Zoom link</button>
+              <span id="zoom-settings-message" class="field-note" role="status"></span>
+            </div>
+          </form>
+        </section>
+
+        <section class="admin-control-panel" aria-labelledby="invoice-settings-title">
+          <div>
+            <h2 id="invoice-settings-title">Invoice details</h2>
+            <p>
+              These details appear on invoices. Bank information is encrypted in Supabase and is not stored in the website files.
+            </p>
+          </div>
+
+          <form id="invoice-settings-form" class="invoice-settings-form">
+            <label>Invoice name<input name="issuerName" value="Ayesha Jane" required /></label>
+            <label>Invoice prefix<input name="invoicePrefix" value="AJ" maxlength="10" required /></label>
+            <label class="invoice-settings-wide">Address<input name="addressLine1" value="Suite 48, 275 New North Road" required /></label>
+            <label>Town and postcode<input name="cityPostcode" value="London N1 7AA" required /></label>
+            <label>Payment due after<input name="paymentTermsDays" type="number" value="2" min="0" max="90" required /><span class="field-note">days</span></label>
+
+            <div class="invoice-settings-divider invoice-settings-wide">
+              <h3>Bank transfer details</h3>
+              <p>Leave these blank unless adding or replacing them.</p>
+            </div>
+            <label>Account name<input name="accountName" autocomplete="off" /></label>
+            <label>Sort code<input name="sortCode" inputmode="numeric" autocomplete="off" placeholder="00-00-00" /></label>
+            <label>Account number<input name="accountNumber" inputmode="numeric" autocomplete="off" placeholder="00000000" /></label>
+            <div class="invoice-settings-actions">
+              <button id="save-invoice-settings" type="submit">Save invoice details</button>
+              <span id="invoice-settings-message" class="field-note" role="status"></span>
+            </div>
+          </form>
+        </section>
+      </section>
+    </main>
+
+    <script src="config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="admin-auth.js?v=20260813-ten-hour-session"></script>
+    <script src="settings.js?v=20260813-unique-zoom-links"></script>
+  </body>
+</html>

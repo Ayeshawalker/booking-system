@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en" class="admin-auth-checking">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <title>Ayesha Jane Calendar</title>
+    <link rel="stylesheet" href="styles.css?v=20260811-month-repeat-fix" />
+    <style>
+      .calendar-event-kind{display:grid!important;grid-template-columns:1fr 1fr!important;gap:12px!important}
+      .calendar-event-kind label{display:grid!important;grid-template-columns:24px 1fr!important;align-items:center!important;gap:10px!important;padding:12px 16px!important;border:2px solid #efd9bd!important;border-radius:14px!important;background:#fff!important;line-height:1.15!important}
+      .calendar-event-kind label:has(input:checked){border-color:#ec1d89!important;background:#fff2f8!important}
+      .calendar-event-kind input{width:20px!important;height:20px!important;margin:0!important;padding:0!important}
+    </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="https://ayeshajane.com/">Ayesha Jane</a>
+      <nav class="admin-nav" aria-label="Private admin links">
+        <a href="clients.html">Clients</a>
+        <a href="calendar.html" aria-current="page">Calendar</a>
+        <a href="ayesha.html">Bookings</a>
+        <a href="payments.html">Payments</a>
+        <a href="settings.html">Settings</a>
+        <a href="notes.html">Notes</a>
+        <a href="index.html">Public page</a>
+        <span class="admin-user-email" data-admin-email></span>
+        <button class="nav-signout" type="button" data-admin-sign-out>
+          Sign out
+        </button>
+      </nav>
+    </header>
+
+    <main class="admin-shell calendar-admin-shell">
+      <header class="admin-heading calendar-heading">
+        <div>
+          <p class="admin-kicker">Connected Google Calendar</p>
+          <h1>Calendar</h1>
+        </div>
+        <div class="calendar-legend" aria-label="Event types">
+          <span><i class="calendar-legend-booking"></i>Solo session</span>
+          <span><i class="calendar-legend-couple"></i>Couple session</span>
+          <span><i class="calendar-legend-pending"></i>Pending</span>
+          <span><i class="calendar-legend-personal"></i>Personal</span>
+          <span class="calendar-legend-format"><b>IP</b>In person</span>
+        </div>
+      </header>
+
+      <section class="calendar-toolbar" aria-label="Calendar controls">
+        <div class="calendar-date-controls">
+          <button
+            id="calendar-previous"
+            class="calendar-icon-button"
+            type="button"
+            title="Previous period"
+            aria-label="Previous period"
+          >
+            <i data-lucide="chevron-left"></i>
+          </button>
+          <button id="calendar-today" class="calendar-command-button" type="button">
+            Today
+          </button>
+          <button
+            id="calendar-next"
+            class="calendar-icon-button"
+            type="button"
+            title="Next period"
+            aria-label="Next period"
+          >
+            <i data-lucide="chevron-right"></i>
+          </button>
+        </div>
+
+        <h2 id="calendar-period-title" aria-live="polite"></h2>
+
+        <div class="calendar-toolbar-actions">
+          <div class="calendar-view-switcher" aria-label="Calendar view">
+            <button type="button" data-calendar-view="day">Day</button>
+            <button type="button" data-calendar-view="week">Week</button>
+            <button type="button" data-calendar-view="month">Month</button>
+          </div>
+          <button
+            id="calendar-refresh"
+            class="calendar-icon-button"
+            type="button"
+            title="Refresh calendar"
+            aria-label="Refresh calendar"
+          >
+            <i data-lucide="refresh-cw"></i>
+          </button>
+        </div>
+      </section>
+
+      <section class="calendar-people-totals" aria-label="Client totals for this calendar period">
+        <div>
+          <strong id="calendar-individual-sessions">0</strong>
+          <span>Individuals</span>
+        </div>
+        <div>
+          <strong id="calendar-couple-sessions">0</strong>
+          <span>Couples</span>
+        </div>
+        <div>
+          <strong id="calendar-online-sessions">0</strong>
+          <span>Online</span>
+        </div>
+        <div>
+          <strong id="calendar-in-person-sessions">0</strong>
+          <span>In person</span>
+        </div>
+        <div>
+          <strong id="calendar-session-earnings">£0</strong>
+          <span>Session earnings</span>
+        </div>
+      </section>
+
+      <p id="calendar-message" class="calendar-message" role="status"></p>
+      <div class="calendar-work-area">
+        <aside id="calendar-client-checklist" class="calendar-client-checklist" aria-labelledby="calendar-client-checklist-title">
+          <p class="admin-kicker">Weekly check</p>
+          <h2 id="calendar-client-checklist-title">Clients still to check</h2>
+          <p id="calendar-client-checklist-week" class="calendar-client-checklist-week"></p>
+          <p class="calendar-client-checklist-help">Clients disappear when they are booked into the displayed week.</p>
+          <div id="calendar-client-checklist-list"></div>
+          <p id="calendar-client-checklist-empty" class="calendar-client-checklist-empty" hidden>Everyone has a booking this week.</p>
+        </aside>
+        <section
+          id="calendar-surface"
+          class="calendar-surface"
+          aria-label="Google Calendar events"
+          aria-busy="true"
+        ></section>
+      </div>
+    </main>
+
+    <dialog id="calendar-event-dialog" class="calendar-event-dialog">
+      <article>
+        <header>
+          <div>
+            <p id="event-source" class="admin-kicker"></p>
+            <h2 id="event-title"></h2>
+          </div>
+          <button
+            id="close-event-dialog"
+            class="dialog-close"
+            type="button"
+            title="Close"
+            aria-label="Close event details"
+          >
+            <i data-lucide="x"></i>
+          </button>
+        </header>
+        <dl>
+          <div>
+            <dt>When</dt>
+            <dd id="event-when"></dd>
+          </div>
+          <div id="event-location-row" hidden>
+            <dt>Location</dt>
+            <dd id="event-location"></dd>
+          </div>
+        </dl>
+        <form id="event-colour-form" class="calendar-colour-form">
+          <label>
+            Display colour
+            <select id="event-display-colour">
+              <option value="automatic">Automatic</option>
+              <option value="solo">Solo client</option>
+              <option value="couple">Couple client</option>
+              <option value="personal">Personal</option>
+              <option value="pending">Pending</option>
+            </select>
+          </label>
+          <button type="submit">Save colour</button>
+        </form>
+        <form id="event-private-details-form" class="calendar-reschedule-form" hidden>
+          <h3>Edit private event</h3>
+          <label class="calendar-reschedule-format">
+            Event title
+            <input id="event-private-title" type="text" required />
+          </label>
+          <div id="event-private-time-fields">
+            <label>Start date<input id="event-private-start-date" type="date" required /></label>
+            <label>Start time<input id="event-private-start-time" type="time" step="900" required /></label>
+            <label>Finish date<input id="event-private-end-date" type="date" required /></label>
+            <label>Finish time<input id="event-private-end-time" type="time" step="900" required /></label>
+          </div>
+          <p id="event-private-message" role="status"></p>
+          <button type="submit">Save private event</button>
+          <button id="delete-private-event" class="calendar-cancel-booking" type="button">Cancel private event</button>
+        </form>
+        <form id="event-booking-details-form" class="calendar-booking-details-form" hidden>
+          <h3>Booking status and note</h3>
+          <label>
+            Status
+            <select id="event-booking-status">
+              <option value="confirmed">Confirmed</option>
+              <option value="pending">Pending — waiting to hear back</option>
+            </select>
+          </label>
+          <label>
+            Note
+            <textarea id="event-booking-note" rows="3" placeholder="For example: Waiting for the client to confirm the time."></textarea>
+          </label>
+          <p id="event-booking-details-message" role="status"></p>
+          <button type="submit">Save status and note</button>
+        </form>
+        <form id="event-reschedule-form" class="calendar-reschedule-form" hidden>
+          <h3>Reschedule booking</h3>
+          <div>
+            <label>
+              New date
+              <input id="event-new-date" type="date" required />
+            </label>
+            <label>
+              New time
+              <input id="event-new-time" type="time" step="900" required />
+            </label>
+            <label class="calendar-reschedule-format">
+              Session format
+              <select id="event-new-format" required>
+                <option value="Online">Online</option>
+                <option value="In person">In person</option>
+              </select>
+            </label>
+          </div>
+          <p id="event-reschedule-message" role="status"></p>
+          <button class="calendar-reschedule-button" type="submit">
+            Review changes
+          </button>
+        </form>
+        <button id="cancel-event-booking" class="calendar-cancel-booking" type="button" hidden>
+          Cancel booking
+        </button>
+        <button id="repeat-event-booking" class="calendar-repeat-booking" type="button" hidden>
+          Repeat next week
+        </button>
+        <a
+          id="event-google-link"
+          class="calendar-google-link"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Open in Google Calendar
+        </a>
+      </article>
+    </dialog>
+
+    <dialog id="calendar-quick-book-dialog" class="calendar-event-dialog calendar-quick-book-dialog">
+      <form id="calendar-quick-book-form">
+        <header>
+          <div><p class="admin-kicker">Calendar</p><h2 id="quick-book-heading">Book this time</h2></div>
+          <button id="close-quick-book-dialog" class="dialog-close" type="button" aria-label="Close booking form"><i data-lucide="x"></i></button>
+        </header>
+        <div class="calendar-quick-book-body">
+          <fieldset class="calendar-event-kind">
+            <legend>What would you like to add?</legend>
+            <label><input type="radio" name="quick-book-kind" value="client" checked /> Client booking</label>
+            <label><input type="radio" name="quick-book-kind" value="private" /> Private event</label>
+          </fieldset>
+          <div id="quick-book-client-fields" class="calendar-quick-book-grid">
+            <label>Client<select id="quick-book-client" required><option value="">Choose client</option></select></label>
+            <label>Date<input id="quick-book-date" type="date" required /></label>
+            <label>Time<input id="quick-book-time" type="time" step="900" required /></label>
+            <label>Format<select id="quick-book-format"><option>Online</option><option>In person</option></select></label>
+            <label class="calendar-quick-book-wide calendar-pending-choice">
+              Booking status
+              <select id="quick-book-status">
+                <option value="confirmed">Confirmed booking</option>
+                <option value="pending">Pending — waiting to hear back from client</option>
+              </select>
+              <small>Pending bookings appear bright red and do not create an invoice yet.</small>
+            </label>
+            <label>Fee (£)<input id="quick-book-fee" type="number" min="0" step="0.01" required /></label>
+          </div>
+          <div id="quick-book-private-fields" class="calendar-quick-book-grid" hidden>
+            <label class="calendar-quick-book-wide">Event title<input id="quick-book-private-title" type="text" placeholder="For example: Personal appointment" /></label>
+            <label>Start date<input id="quick-book-private-date" type="date" /></label>
+            <label>Start time<input id="quick-book-private-time" type="time" step="900" /></label>
+            <label>Finish date<input id="quick-book-private-end-date" type="date" /></label>
+            <label>Finish time<input id="quick-book-private-end-time" type="time" step="900" /></label>
+          </div>
+          <label>Note<textarea id="quick-book-note" rows="3" placeholder="Optional note about this booking"></textarea></label>
+          <p id="quick-book-message" role="status"></p>
+        </div>
+        <footer class="dialog-actions">
+          <button id="cancel-quick-book" class="secondary-button" type="button">Cancel</button>
+          <button id="save-quick-book" type="submit">Save client booking</button>
+        </footer>
+      </form>
+    </dialog>
+
+    <script src="config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+    <script src="admin-auth.js?v=20260813-ten-hour-session"></script>
+    <script src="calendar.js?v=20260813-deduplicated-weekly-totals"></script>
+  </body>
+</html>

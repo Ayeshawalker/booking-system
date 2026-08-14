@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ayesha Jane Admin Login</title>
+    <link rel="stylesheet" href="styles.css?v=20260727-centred-auth-logo" />
+  </head>
+  <body class="auth-page">
+    <main class="auth-shell">
+      <section class="auth-panel" aria-labelledby="login-title">
+        <a class="brand auth-brand" href="https://ayeshajane.com/">Ayesha Jane</a>
+        <p class="auth-eyebrow">Private admin</p>
+
+        <div id="login-view">
+          <h1 id="login-title">Sign in</h1>
+          <p>Access client records, internal bookings, notes and settings.</p>
+
+          <form id="admin-login-form" class="auth-form">
+            <label>
+              Email address
+              <input
+                id="admin-email"
+                name="email"
+                type="email"
+                autocomplete="username"
+                required
+              />
+            </label>
+
+            <label>
+              Password
+              <input
+                id="admin-password"
+                name="password"
+                type="password"
+                autocomplete="current-password"
+                required
+              />
+            </label>
+
+            <button type="submit">Sign in securely</button>
+          </form>
+
+          <button id="show-reset-form" class="auth-link-button" type="button">
+            Forgotten your password?
+          </button>
+        </div>
+
+        <div id="reset-request-view" hidden>
+          <h1>Reset password</h1>
+          <p>
+            Enter your admin email and Supabase will send a secure reset link.
+            Open the newest link in this same browser on this Mac. It can take
+            a few minutes; please also check your spam folder.
+          </p>
+
+          <form id="reset-request-form" class="auth-form">
+            <label>
+              Email address
+              <input
+                id="reset-email"
+                name="email"
+                type="email"
+                autocomplete="email"
+                required
+              />
+            </label>
+            <button type="submit">Send reset link</button>
+          </form>
+
+          <button id="back-to-login" class="auth-link-button" type="button">
+            Back to sign in
+          </button>
+        </div>
+
+        <div id="password-update-view" hidden>
+          <h1>Choose a new password</h1>
+          <p>Use at least 12 characters and avoid a password used elsewhere.</p>
+
+          <form id="password-update-form" class="auth-form">
+            <label>
+              New password
+              <input
+                id="new-admin-password"
+                name="password"
+                type="password"
+                autocomplete="new-password"
+                minlength="12"
+                required
+              />
+            </label>
+
+            <label>
+              Confirm new password
+              <input
+                id="confirm-admin-password"
+                name="confirmPassword"
+                type="password"
+                autocomplete="new-password"
+                minlength="12"
+                required
+              />
+            </label>
+            <button type="submit">Update password</button>
+          </form>
+        </div>
+
+        <p id="auth-message" class="auth-message" role="status"></p>
+        <a class="auth-public-link" href="index.html">Return to public booking page</a>
+      </section>
+    </main>
+
+    <script src="config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="admin-login.js"></script>
+  </body>
+</html>

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en" class="admin-auth-checking">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ayesha Jane Admin Verification</title>
+    <link rel="stylesheet" href="styles.css?v=20260727-centred-auth-logo" />
+  </head>
+  <body class="auth-page">
+    <main class="auth-shell">
+      <section class="auth-panel" aria-labelledby="security-title">
+        <a class="brand auth-brand" href="https://ayeshajane.com/">Ayesha Jane</a>
+        <p class="auth-eyebrow">Private admin</p>
+
+        <div id="mfa-enrol-view" hidden>
+          <h1 id="security-title">Protect your account</h1>
+          <p>
+            Scan this code with an authenticator app, then enter the six-digit
+            code it gives you.
+          </p>
+
+          <div class="mfa-qr-frame">
+            <img id="mfa-qr-code" alt="Authenticator setup QR code" />
+          </div>
+
+          <details class="mfa-secret">
+            <summary>Cannot scan the code?</summary>
+            <p>Enter this setup key manually in your authenticator app:</p>
+            <code id="mfa-secret-value"></code>
+          </details>
+
+          <form id="mfa-enrol-form" class="auth-form">
+            <label>
+              Six-digit code
+              <input
+                id="mfa-enrol-code"
+                type="text"
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                pattern="[0-9]{6}"
+                maxlength="6"
+                required
+              />
+            </label>
+            <button type="submit">Enable and continue</button>
+          </form>
+        </div>
+
+        <div id="mfa-challenge-view" hidden>
+          <h1 id="security-title-challenge">Verification code</h1>
+          <p>Enter the current six-digit code from your authenticator app.</p>
+
+          <form id="mfa-challenge-form" class="auth-form">
+            <label>
+              Six-digit code
+              <input
+                id="mfa-challenge-code"
+                type="text"
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                pattern="[0-9]{6}"
+                maxlength="6"
+                autofocus
+                required
+              />
+            </label>
+            <button type="submit">Verify and continue</button>
+          </form>
+        </div>
+
+        <p id="mfa-message" class="auth-message" role="status"></p>
+        <button id="mfa-sign-out" class="auth-link-button" type="button">
+          Sign out
+        </button>
+      </section>
+    </main>
+
+    <script src="config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="admin-security.js?v=20260810-mfa-enrolment"></script>
+  </body>
+</html>

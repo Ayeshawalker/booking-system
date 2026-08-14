@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en" class="admin-auth-checking">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Supervision Preparation | Ayesha Jane</title>
+  <link rel="stylesheet" href="styles.css?v=20260811-note-tools-supervision" />
+</head>
+<body class="supervision-page">
+  <header class="site-header no-print">
+    <a class="brand" href="https://ayeshajane.com/">Ayesha Jane</a>
+    <nav class="admin-nav" aria-label="Private admin links">
+      <a href="clients.html">Clients</a><a href="calendar.html">Calendar</a><a href="payments.html">Payments</a>
+      <a href="notes.html">Notes</a><a href="supervision.html" aria-current="page">Supervision</a>
+      <span class="admin-user-email" data-admin-email></span><button class="nav-signout" type="button" data-admin-sign-out>Sign out</button>
+    </nav>
+  </header>
+  <main class="settings-shell">
+    <section class="booking-panel supervision-sheet" aria-labelledby="supervision-title">
+      <div class="intro">
+        <p class="eyebrow">Private clinical preparation</p>
+        <h1 id="supervision-title">Supervision</h1>
+        <p>Outstanding questions gathered from client notes. Use only the minimum identifying information needed in supervision.</p>
+      </div>
+      <div class="supervision-toolbar no-print">
+        <label>Show<select id="supervision-filter"><option value="outstanding">To discuss</option><option value="discussed">Discussed</option><option value="all">All items</option></select></label>
+        <button id="print-supervision" type="button">Print or save as PDF</button>
+      </div>
+      <p id="supervision-message" class="note-save-message" aria-live="polite"></p>
+      <div id="supervision-list" class="supervision-list"></div>
+    </section>
+  </main>
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="admin-auth.js?v=20260813-ten-hour-session"></script>
+  <script src="supervision.js?v=20260811"></script>
+</body>
+</html>
