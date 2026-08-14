@@ -52,3 +52,4 @@ using (public.is_current_user_admin());
 revoke all on public.client_agreements from anon;
 grant select, insert, update, delete on public.client_agreements to authenticated;
 
+notify pgrst, 'reload schema';
