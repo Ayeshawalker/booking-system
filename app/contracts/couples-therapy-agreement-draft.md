@@ -1,7 +1,4 @@
-# Couples Therapy Agreement — review draft
-
-> Working draft for Ayesha Jane Walker. This should be checked against current insurance,
-> professional-body and legal requirements before publication.
+# Couples Therapy Agreement
 
 ## Welcome and purpose
 

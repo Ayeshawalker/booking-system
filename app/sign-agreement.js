@@ -24,9 +24,11 @@
     for (const raw of lines) {
       const line = raw.trim();
       if (!line) { closeList(); continue; }
+      if (line.startsWith(">")) continue;
       if (line.startsWith("### ")) { closeList(); html += `<h3>${escapeHtml(line.slice(4))}</h3>`; }
       else if (line.startsWith("## ")) { closeList(); html += `<h2>${escapeHtml(line.slice(3))}</h2>`; }
-      else if (line.startsWith("# ")) { closeList(); html += `<h1>${escapeHtml(line.slice(2))}</h1>`; }
+      else if (line.startsWith("# ")) { closeList(); html += `<h1>${escapeHtml(line.slice(2).replace(/\s+—\s+review draft$/i, ""))}</h1>`; }
+      else if (/^[-*]\s+\[\s*\]\s+/.test(line)) { closeList(); html += `<div class="agreement-document-choice"><span aria-hidden="true">✓</span>${escapeHtml(line.replace(/^[-*]\s+\[\s*\]\s+/, ""))}</div>`; }
       else if (/^[-*] /.test(line)) { if (!listOpen) { html += "<ul>"; listOpen = true; } html += `<li>${escapeHtml(line.slice(2))}</li>`; }
       else { closeList(); html += `<p>${escapeHtml(line).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")}</p>`; }
     }
