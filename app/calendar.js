@@ -302,8 +302,10 @@
   }
 
   async function ensureBookingZoomLink(booking) {
-    if (String(booking.session_format || "").toLowerCase() !== "online") return "";
-    if (booking.zoom_join_url) return booking.zoom_join_url;
+    const sessionFormat = booking.session_format || booking.sessionFormat || "";
+    if (String(sessionFormat).toLowerCase() !== "online") return "";
+    const existingLink = booking.zoom_join_url || booking.zoomJoinUrl;
+    if (existingLink) return existingLink;
     const bookingId = booking.id || booking.bookingRequestId;
     if (!bookingId) throw new Error("This booking has no saved reference for Zoom.");
     const { data, error } = await supabaseClient.functions.invoke(
@@ -314,6 +316,7 @@
       throw new Error(await zoomErrorMessage(error, data));
     }
     booking.zoom_join_url = data.joinUrl;
+    booking.zoomJoinUrl = data.joinUrl;
     return data.joinUrl;
   }
 
@@ -2033,6 +2036,7 @@
     const booking = state.selectedEvent;
     if (!booking?.bookingRequestId) return;
     const pending = controls.bookingStatus.value === "pending";
+    const becomingConfirmed = isPendingEvent(booking) && !pending;
     const update = {
       status: pending ? "contacted" : "confirmed",
       message: controls.bookingNote.value.trim() || null,
@@ -2048,10 +2052,12 @@
     button.disabled = true;
     controls.bookingDetailsMessage.textContent = "Saving…";
     try {
-      const { error } = await supabaseClient
+      const { data: savedBooking, error } = await supabaseClient
         .from("booking_requests")
         .update(update)
-        .eq("id", booking.bookingRequestId);
+        .eq("id", booking.bookingRequestId)
+        .select("*")
+        .single();
       if (error) throw error;
       if (pending) {
         const { data: pendingDrafts } = await supabaseClient
@@ -2092,11 +2098,41 @@
         );
         if (invoiceError) console.error("Invoice could not be ensured.", invoiceError);
       }
-      controls.bookingDetailsMessage.textContent = pending
-        ? "Saved as pending."
-        : "Saved as confirmed.";
+
+      let zoomNeedsAttention = false;
+      if (becomingConfirmed && String(savedBooking?.session_format || "").toLowerCase() === "online") {
+        try {
+          await ensureBookingZoomLink(savedBooking);
+        } catch (zoomError) {
+          zoomNeedsAttention = true;
+          console.error("The booking was confirmed but its Zoom link needs attention.", zoomError);
+        }
+      }
+
       await loadEvents();
       controls.dialog.close();
+      if (pending) {
+        controls.message.textContent = "Saved as pending.";
+      } else if (becomingConfirmed) {
+        const client = state.bookingClients.find(
+          (candidate) => candidate.id === savedBooking?.client_id,
+        ) || {
+          record_type: savedBooking?.second_first_name ? "Couple" : "Individual",
+          first_name: savedBooking?.first_name || "",
+          surname: savedBooking?.surname || "",
+          second_first_name: savedBooking?.second_first_name || "",
+          second_surname: savedBooking?.second_surname || "",
+          phone: savedBooking?.phone || "",
+        };
+        const clientName = bookingClientDisplayName(client) || booking.title;
+        showWhatsAppConfirmation(
+          client,
+          savedBooking,
+          `${clientName} confirmed successfully${zoomNeedsAttention ? "; Zoom link needs attention" : ""}.`,
+        );
+      } else {
+        controls.message.textContent = "Saved as confirmed.";
+      }
     } catch (error) {
       console.error(error);
       controls.bookingDetailsMessage.textContent = "The status and note could not be saved.";
