@@ -6,6 +6,8 @@
     "ayesha.html",
     "clients.html",
     "calendar.html",
+    "payments.html",
+    "invoice.html",
     "settings.html",
     "notes.html",
   ]);
@@ -67,6 +69,26 @@
       return stopUntilRedirect();
     }
 
+    const { data: factors, error: factorsError } =
+      await supabaseClient.auth.mfa.listFactors();
+    if (factorsError) {
+      redirectTo("admin-security.html", { return: returnPage });
+      return stopUntilRedirect();
+    }
+    const verifiedTotp = (factors.totp || factors.all || []).find(
+      (factor) => factor.factor_type === "totp" && factor.status === "verified",
+    );
+    if (!verifiedTotp) {
+      redirectTo("admin-security.html", { return: returnPage });
+      return stopUntilRedirect();
+    }
+    const { data: assurance, error: assuranceError } =
+      await supabaseClient.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (assuranceError || assurance.currentLevel !== "aal2") {
+      redirectTo("admin-security.html", { return: returnPage });
+      return stopUntilRedirect();
+    }
+
     document.querySelectorAll("[data-admin-email]").forEach((element) => {
       element.textContent = membership.email || session.user.email || "";
     });
@@ -79,7 +101,10 @@
       });
     });
 
-    const idleLimitMilliseconds = 30 * 60 * 1000;
+    // Keep this trusted browser signed in for a working day. MFA is still
+    // required after a manual sign-out, an expired/revoked session, or on a
+    // different browser/device.
+    const idleLimitMilliseconds = 10 * 60 * 60 * 1000;
     let idleTimer = null;
     const resetIdleTimer = () => {
       window.clearTimeout(idleTimer);

@@ -7,7 +7,8 @@ window.BOOKING_CONFIG = {
   calendarRescheduleFunction: "calendar-reschedule-booking",
   stripeCheckoutFunction: "stripe-create-checkout",
   adminRecoveryUrl: "http://localhost:4175/admin-login.html",
-  // clientNoteImproveFunction: "improve-client-note",
+  clientNoteImproveFunction: "improve-client-note",
+  zoomCreateMeetingFunction: "zoom-create-meeting",
   timeZone: "Europe/London",
 };
   

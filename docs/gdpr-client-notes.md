@@ -1,5 +1,13 @@
 # GDPR notes for client notes and AI drafting
 
+> **August 2026 update:** The earlier implementation notes below described the prototype.
+> Secure Supabase storage, administrator access, version history and the authenticated
+> OpenAI wording-assistance function are now implemented. Use the current working drafts:
+>
+> - `privacy-notice-clinical-notes-ai-draft.md`
+> - `clinical-notes-processing-record-draft.md`
+> - `clinical-notes-ai-dpia-screening-draft.md`
+
 This project can support GDPR-aware workflows, but code changes alone do not make the service GDPR compliant. Before using real client notes, Ayesha should document the decisions below and have the setup reviewed by an appropriate professional.
 
 ## Why this needs extra care

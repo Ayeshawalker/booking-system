@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Ayesha Jane Clients</title>
-    <link rel="stylesheet" href="styles.css?v=20260727-medium-logo-all-pages" />
+    <link rel="stylesheet" href="styles.css?v=20260808-bank-payment-name" />
   </head>
   <body>
     <header class="site-header">
@@ -13,6 +13,7 @@
         <a href="clients.html" aria-current="page">Clients</a>
         <a href="calendar.html">Calendar</a>
         <a href="ayesha.html">Bookings</a>
+        <a href="payments.html">Payments</a>
         <a href="settings.html">Settings</a>
         <a href="notes.html">Notes</a>
         <a href="index.html">Public page</a>
@@ -32,9 +33,14 @@
             Track client type, paperwork, areas of support and usual session preferences.
           </p>
         </div>
-        <button id="add-client" class="admin-primary-action" type="button">
-          Add client
-        </button>
+        <div class="client-heading-actions">
+          <a class="secondary-button agreement-preview-link" href="agreement-preview.html">
+            Preview agreements
+          </a>
+          <button id="add-client" class="admin-primary-action" type="button">
+            Add client
+          </button>
+        </div>
       </header>
 
       <section class="client-stats" aria-label="Client totals">
@@ -42,6 +48,9 @@
         <div><strong id="client-count-active">0</strong><span>Active</span></div>
         <div><strong id="client-count-individuals">0</strong><span>Individuals</span></div>
         <div><strong id="client-count-couples">0</strong><span>Couples</span></div>
+        <div><strong id="client-count-weekly">0</strong><span>Weekly</span></div>
+        <div><strong id="client-count-fortnightly">0</strong><span>Fortnightly</span></div>
+        <div><strong id="client-count-other-frequency">0</strong><span>Other frequency</span></div>
       </section>
 
       <section class="admin-workspace" aria-labelledby="client-list-title">
@@ -73,6 +82,31 @@
               <option value="">All types</option>
               <option value="Individual">Individuals</option>
               <option value="Couple">Couples</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Support</span>
+            <select id="client-support-filter">
+              <option value="">All support</option>
+              <option value="Relationships">Relationships</option>
+              <option value="Betrayal trauma">Betrayal trauma</option>
+              <option value="ADHD">ADHD</option>
+              <option value="Communication">Communication</option>
+              <option value="Intimacy">Intimacy</option>
+              <option value="Separation or divorce">Separation or divorce</option>
+              <option value="Life transitions">Life transitions</option>
+              <option value="Other">Other</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Session frequency</span>
+            <select id="client-frequency-filter">
+              <option value="">All frequencies</option>
+              <option value="Weekly">Weekly</option>
+              <option value="Fortnightly">Fortnightly</option>
+              <option value="Other">Other</option>
             </select>
           </label>
         </div>
@@ -155,6 +189,10 @@
               <label>
                 Telephone <span class="optional">(optional)</span>
                 <input name="phone" type="tel" autocomplete="tel" />
+              </label>
+              <label class="bank-payment-name-field">
+                Name shown on bank payment <span class="optional">(optional)</span>
+                <input name="bankPaymentName" autocomplete="off" placeholder="For example: J Smith" />
               </label>
             </div>
           </fieldset>
@@ -335,9 +373,64 @@
       </form>
     </dialog>
 
+    <dialog id="contract-dialog" class="client-dialog contract-dialog">
+      <header class="dialog-header">
+        <div><p class="admin-kicker">Client agreement</p><h2 id="contract-dialog-title">Send agreement</h2></div>
+        <button id="close-contract-dialog" class="dialog-close" type="button" aria-label="Close">×</button>
+      </header>
+      <div class="client-form-body contract-manager-body">
+        <p id="contract-explanation"></p>
+        <div id="contract-current-status" class="contract-current-status"></div>
+        <div id="contract-link-panel" hidden>
+          <label>Private signing link<input id="contract-signing-link" readonly /></label>
+          <div class="contract-link-actions">
+            <button id="copy-contract-link" type="button">Copy link</button>
+            <a id="whatsapp-contract-link" class="secondary-button" target="_blank" rel="noopener">Open WhatsApp</a>
+            <a id="preview-contract-link" class="secondary-button" target="_blank" rel="noopener">Open signing page</a>
+          </div>
+          <p class="contract-security-note">Anyone with this private link can open the agreement. Send it only to the named client and do not post it publicly.</p>
+        </div>
+        <p id="contract-dialog-message" class="admin-message" role="status"></p>
+      </div>
+      <footer class="dialog-actions">
+        <button id="cancel-current-contract" class="secondary-button" type="button" hidden>Cancel link</button>
+        <button id="create-contract-link" type="button">Create signing link</button>
+      </footer>
+    </dialog>
+
+    <dialog id="intake-dialog" class="client-dialog contract-dialog">
+      <header class="dialog-header">
+        <div><p class="admin-kicker">Betrayal trauma intake</p><h2 id="intake-dialog-title">Send intake form</h2></div>
+        <button id="close-intake-dialog" class="dialog-close" type="button" aria-label="Close">×</button>
+      </header>
+      <div class="client-form-body contract-manager-body">
+        <p>This private electronic form records the client’s answers and signature securely. Only send the link to the named client.</p>
+        <div id="intake-current-status" class="contract-current-status"></div>
+        <div id="intake-link-panel" hidden>
+          <label>Private form link<input id="intake-signing-link" readonly /></label>
+          <div class="contract-link-actions">
+            <button id="copy-intake-link" type="button">Copy link</button>
+            <a id="whatsapp-intake-link" class="secondary-button" target="_blank" rel="noopener">Open WhatsApp</a>
+            <a id="open-intake-link" class="secondary-button" target="_blank" rel="noopener">Open/test form</a>
+          </div>
+          <p class="contract-security-note">Anyone with this private link can open the form. Do not post it publicly.</p>
+        </div>
+        <section id="intake-response-panel" class="intake-response-panel" hidden>
+          <h3>Completed answers</h3>
+          <p id="intake-signed-by"></p>
+          <div id="intake-answers"></div>
+        </section>
+        <p id="intake-dialog-message" class="admin-message" role="status"></p>
+      </div>
+      <footer class="dialog-actions">
+        <button id="cancel-current-intake" class="secondary-button" type="button" hidden>Cancel link</button>
+        <button id="create-intake-link" type="button">Create private form link</button>
+      </footer>
+    </dialog>
+
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="admin-auth.js"></script>
-    <script src="clients.js?v=20260724-format-fees"></script>
+    <script src="admin-auth.js?v=20260813-ten-hour-session"></script>
+    <script src="clients.js?v=20260814-intake-signing"></script>
   </body>
 </html>

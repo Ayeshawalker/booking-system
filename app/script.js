@@ -274,7 +274,9 @@ function setupDatePicker() {
   datePicker.grid = grid;
   datePicker.previousButton = previousButton;
   datePicker.nextButton = nextButton;
-  datePicker.monthDate = monthStartForDate(dateInput.value || dateInput.min);
+  datePicker.monthDate = monthStartForDate(
+    dateInput.value || dateInput.min || dateToIsoDate(new Date()),
+  );
 
   previousButton.addEventListener("click", () => {
     datePicker.monthDate = addMonths(datePicker.monthDate, -1);
@@ -286,11 +288,17 @@ function setupDatePicker() {
   });
 }
 
+function resetDatePickerToCurrentMonth() {
+  datePicker.monthDate = monthStartForDate(dateToIsoDate(new Date()));
+}
+
 async function renderDatePicker() {
   if (!datePicker.root) return;
 
   const renderId = ++datePickerRenderId;
-  const monthDate = datePicker.monthDate || monthStartForDate(dateInput.value || dateInput.min);
+  const monthDate = datePicker.monthDate || monthStartForDate(
+    dateInput.value || dateInput.min || dateToIsoDate(new Date()),
+  );
   const dateValues = datePickerGridDates(monthDate);
   const [availableInPersonDates, publicUnavailableDates] = await Promise.all([
     availableInPersonDatesForGrid(dateValues),
@@ -318,7 +326,8 @@ async function renderDatePicker() {
       !isAyeshaBooking() &&
       selectedSessionFormat() === "In person" &&
       !availableInPersonDates.has(dateValue);
-    const publicUnavailable = publicUnavailableDates.has(dateValue);
+    const publicUnavailable =
+      !isAyeshaBooking() && publicUnavailableDates.has(dateValue);
     const isDisabled = tooSoon || inPersonUnavailable || publicUnavailable;
 
     button.type = "button";
@@ -748,9 +757,21 @@ function formatBlockDate(date, time) {
 }
 
 function setMinimumDate() {
+  if (isAyeshaBooking()) {
+    dateInput.removeAttribute("min");
+    return;
+  }
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   dateInput.min = tomorrow.toISOString().slice(0, 10);
+}
+
+function isAdminHistoricalDate(dateValue) {
+  return Boolean(
+    isAyeshaBooking() &&
+    dateValue &&
+    dateValue < dateToIsoDate(new Date()),
+  );
 }
 
 function durationToMinutes(duration) {
@@ -952,6 +973,10 @@ function isAyeshaBooking() {
   return selectedBookingSource() === "Ayesha booking for client";
 }
 
+function isPendingAdminBooking() {
+  return isAyeshaBooking() && form.elements.bookingStatus?.value === "pending";
+}
+
 function selectedBlockSessionCount() {
   const value = form.elements.blockSessionCount?.value;
   if (!value) return null;
@@ -1070,12 +1095,15 @@ function calculatePaymentReminder() {
 
 function calculateInvoiceSummary(paymentSummary) {
   if (!isAyeshaBooking()) return "Not needed";
+  if (isPendingAdminBooking()) return "No invoice until the booking is confirmed";
   if (paymentSummary.totalCost === null || Number.isNaN(paymentSummary.totalCost)) {
     return "Choose session first";
   }
   if (paymentSummary.totalCost === 0) return "No invoice needed";
 
-  return `${formatPrice(paymentSummary.totalCost)} payment request after booking`;
+  return isBlockBooking()
+    ? `One invoice for the full block: ${formatPrice(paymentSummary.totalCost)}`
+    : `One invoice for this appointment: ${formatPrice(paymentSummary.totalCost)}`;
 }
 
 function calculateBlockDates() {
@@ -1151,13 +1179,14 @@ function hasAppointmentBufferConflict(slot, bookingsForDate) {
 
 async function populateTimes() {
   const selectedDate = dateInput.value;
+  const historicalEntry = isAdminHistoricalDate(selectedDate);
   const requestId = ++availabilityRequestId;
   const bookings = getBookings();
   const bookingsForDate = bookings.filter(
     (booking) => booking.date === selectedDate,
   );
   const bookedTimes = bookingsForDate.map((booking) => booking.time);
-  const dailyLimitReached = bookingsForDate.length >= maximumDailyBookings;
+  const dailyLimitReached = !historicalEntry && bookingsForDate.length >= maximumDailyBookings;
   let googleBusySlots = [];
   let calendarUnavailable = false;
 
@@ -1167,21 +1196,21 @@ async function populateTimes() {
     ? "This day already has the maximum of five booking requests."
     : "";
 
-  if (selectedDate && !(await isPublicDateAvailable(selectedDate))) {
+  if (!isAyeshaBooking() && selectedDate && !(await isPublicDateAvailable(selectedDate))) {
     timeSelect.disabled = false;
     availabilityMessage.textContent =
       "Ayesha is not available for public bookings on this date.";
     return;
   }
 
-  if (selectedDate && !(await isPublicInPersonDateAllowed(selectedDate))) {
+  if (!isAyeshaBooking() && selectedDate && !(await isPublicInPersonDateAllowed(selectedDate))) {
     timeSelect.disabled = false;
     availabilityMessage.textContent =
       "In-person sessions are not available for public booking on this date.";
     return;
   }
 
-  if (selectedDate && !dailyLimitReached) {
+  if (selectedDate && !dailyLimitReached && !historicalEntry) {
     availabilityMessage.textContent = "Checking Google Calendar availability...";
 
     try {
@@ -1204,11 +1233,12 @@ async function populateTimes() {
     const hasBufferConflict = hasAppointmentBufferConflict(slot, bookingsForDate);
     const hasGoogleConflict = googleBusySlots.includes(slot);
 
-    const slotUnavailable =
+    const slotUnavailable = !historicalEntry && (
       dailyLimitReached ||
       bookedTimes.includes(slot) ||
       hasBufferConflict ||
-      hasGoogleConflict;
+      hasGoogleConflict
+    );
 
     if (slotUnavailable) return;
 
@@ -1304,7 +1334,9 @@ function updateSummary() {
   const paymentSummary = calculatePaymentSummary();
   summary.totalCost.textContent = formatPrice(paymentSummary.totalCost);
   summary.payNow.textContent = isAyeshaBooking()
-    ? "Invoice after booking"
+    ? isPendingAdminBooking()
+      ? "Pending — no invoice yet"
+      : "Invoice after booking"
     : formatPayNowButtonText(paymentSummary.payNow);
   summary.payNow.disabled =
     isAyeshaBooking() ||
@@ -1368,11 +1400,12 @@ function blockBookingDetailsComplete() {
 
 function requiredContactFieldsComplete() {
   const isExistingClient = selectedClientType() === "Existing client";
+  const isAyesha = isAyeshaBooking();
   const needsFullClientDetails =
-    Boolean(selectedClientType()) && (!isExistingClient || isAyeshaBooking());
-  const fields = ["email"];
+    Boolean(selectedClientType()) && (!isExistingClient || isAyesha);
+  const fields = isAyesha ? ["firstName", "surname"] : ["email"];
 
-  if (needsFullClientDetails) fields.push("firstName", "surname", "phone");
+  if (needsFullClientDetails && !isAyesha) fields.push("firstName", "surname", "phone");
   if (needsFullClientDetails && isJointSession()) {
     fields.push("secondFirstName", "secondSurname");
   }
@@ -1421,7 +1454,7 @@ function updateStepAvailability() {
   const hasAppointment = hasSelectedAppointment();
   const hasBlockDetails = blockBookingDetailsComplete();
   const hasContactDetails = requiredContactFieldsComplete();
-  const hasConsent = Boolean(form.elements.consent?.checked);
+  const hasConsent = isAyeshaBooking() || Boolean(form.elements.consent?.checked);
 
   setSectionLocked(bookingTypeFieldset, !hasClientType);
   setSectionLocked(sessionTypeFieldset, !hasClientType || !hasBookingType);
@@ -1604,7 +1637,7 @@ function updateExactBlockDateFields() {
     dateInputForRow.name = "exactBlockDate";
     dateInputForRow.type = "date";
     dateInputForRow.required = true;
-    dateInputForRow.min = dateInput.min;
+    if (dateInput.min) dateInputForRow.min = dateInput.min;
     dateInputForRow.value = existingDate.date || "";
     dateLabel.append(dateInputForRow);
 
@@ -1654,8 +1687,8 @@ function updateClientFields() {
 
   firstNameInput.required = needsFullClientDetails;
   surnameInput.required = needsFullClientDetails;
-  emailInput.required = hasSelectedClientType;
-  phoneInput.required = needsFullClientDetails;
+  emailInput.required = hasSelectedClientType && !isAyesha;
+  phoneInput.required = needsFullClientDetails && !isAyesha;
   secondFirstNameInput.required = needsSecondClientNames;
   secondSurnameInput.required = needsSecondClientNames;
 
@@ -1682,8 +1715,12 @@ function updateClientFields() {
   consentLabelText.textContent = isAyesha
     ? "I confirm this client can be contacted about this booking and payment."
     : "I consent to being contacted about this booking.";
+  consentField.hidden = isAyesha;
+  form.elements.consent.required = !isAyesha;
   submitButton.textContent = isAyesha
-    ? "Book session and create payment link"
+    ? isPendingAdminBooking()
+      ? "Save pending booking"
+      : "Book session and create invoice"
     : "Request booking";
 
   sessionTypeCards.forEach((input) => {
@@ -1948,7 +1985,7 @@ async function saveBookingRequest(booking) {
     return "local";
   }
 
-  const { error } = await supabaseClient.from("booking_requests").insert({
+  const bookingRow = {
     id: booking.id,
     client_id: booking.clientId,
     session_type: booking.sessionType,
@@ -1988,9 +2025,55 @@ async function saveBookingRequest(booking) {
     phone: booking.phone,
     message: booking.message || null,
     consent_to_contact: true,
-  });
+    status: booking.bookingStatus === "pending"
+      ? "contacted"
+      : booking.bookingStatus === "confirmed"
+        ? "confirmed"
+        : undefined,
+  };
 
-  if (error) throw error;
+  // Some existing installations predate optional payment/invoice columns. If
+  // PostgREST reports one of those fields as unknown, omit it and retry rather
+  // than losing the whole booking.
+  let insertError = null;
+  const attemptedMissingColumns = new Set();
+  while (true) {
+    const { error } = await supabaseClient
+      .from("booking_requests")
+      .insert(bookingRow);
+    insertError = error;
+    if (!insertError) break;
+
+    const missingColumn = String(insertError.message || "").match(
+      /Could not find the ['"]([^'"]+)['"] column of ['"]booking_requests['"]/i,
+    )?.[1];
+    if (
+      !missingColumn ||
+      !(missingColumn in bookingRow) ||
+      attemptedMissingColumns.has(missingColumn)
+    ) {
+      break;
+    }
+
+    attemptedMissingColumns.add(missingColumn);
+    delete bookingRow[missingColumn];
+    console.warn(`Booking field '${missingColumn}' is not available and was omitted.`);
+  }
+
+  if (insertError) throw insertError;
+
+  if (isAyeshaBooking()) {
+    const { error: invoiceError } = await supabaseClient.rpc(
+      "ensure_booking_invoice",
+      { p_booking_id: booking.id },
+    );
+    if (invoiceError) {
+      booking.invoiceCreationError = invoiceError.message || "Invoice creation failed.";
+      console.error("The booking was saved but its invoice could not be ensured.", invoiceError);
+    } else {
+      booking.invoiceCreationError = null;
+    }
+  }
 
   const bookings = [booking, ...getBookings()];
   saveBookings(bookings);
@@ -2107,9 +2190,11 @@ async function handleSubmit(event) {
   const isBlockBookingRequest =
     (isExistingClient || isAyeshaBookingRequest) &&
     formData.get("bookingType") === "Block booking";
-  const requiredTextFields = isExistingClient && !isAyeshaBookingRequest
-    ? ["email"]
-    : ["firstName", "surname", "email", "phone"];
+  const requiredTextFields = isAyeshaBookingRequest
+    ? ["firstName", "surname"]
+    : isExistingClient
+      ? ["email"]
+      : ["firstName", "surname", "email", "phone"];
   if (needsSecondClientNames) {
     requiredTextFields.push("secondFirstName", "secondSurname");
   }
@@ -2179,18 +2264,22 @@ async function handleSubmit(event) {
     surname: formData.get("surname")?.trim() || "",
     secondFirstName: formData.get("secondFirstName")?.trim() || "",
     secondSurname: formData.get("secondSurname")?.trim() || "",
-    email: formData.get("email").trim(),
+    email: formData.get("email")?.trim() || "",
     phone: formData.get("phone")?.trim() || "",
     message: formData.get("message").trim(),
+    bookingStatus: formData.get("bookingStatus") || "confirmed",
   };
   const paymentSummary = calculatePaymentSummary();
   booking.totalCost = paymentSummary.totalCost;
   booking.payNow = paymentSummary.payNow;
   booking.remainingBalance = paymentSummary.remainingBalance;
-  booking.invoiceRequired = isAyeshaBookingRequest && paymentSummary.totalCost > 0;
+  booking.invoiceRequired = isAyeshaBookingRequest &&
+    booking.bookingStatus !== "pending" && paymentSummary.totalCost > 0;
   booking.invoiceAmount = booking.invoiceRequired ? paymentSummary.totalCost : null;
   booking.invoiceNote = booking.invoiceRequired
-    ? "Ayesha booked this for the client. Send the secure Stripe payment link after booking."
+    ? isBlockBooking()
+      ? "Create one invoice for the complete block total. Do not invoice each session separately."
+      : "Create one invoice for this appointment."
     : null;
   booking.paymentReminderRequired = false;
   booking.nextPaymentDueAmount = null;
@@ -2202,12 +2291,13 @@ async function handleSubmit(event) {
       : Number(booking.payNow || 0) > 0
         ? "not_started"
         : "paid";
+  const historicalEntry = isAdminHistoricalDate(booking.date);
 
   submitButton.disabled = true;
   submitButton.textContent = "Saving...";
 
   try {
-    if (!(await isPublicDateAvailable(booking.date))) {
+    if (!isAyeshaBooking() && !(await isPublicDateAvailable(booking.date))) {
       confirmation.hidden = false;
       confirmation.textContent =
         "Ayesha is not available for public bookings on this date. Please choose another date.";
@@ -2217,6 +2307,7 @@ async function handleSubmit(event) {
     }
 
     if (
+      !isAyeshaBooking() &&
       booking.sessionFormat === "In person" &&
       !(await isPublicInPersonDateAllowed(booking.date))
     ) {
@@ -2227,18 +2318,20 @@ async function handleSubmit(event) {
       return;
     }
 
-    const calendarAvailability = await fetchCalendarAvailability(booking.date, {
-      refresh: true,
-    });
-    if (
-      calendarAvailability.configured &&
-      calendarAvailability.busySlots.includes(booking.time)
-    ) {
-      confirmation.hidden = false;
-      confirmation.textContent =
-        "That time is now unavailable in Google Calendar. Please choose another time.";
-      populateTimes();
-      return;
+    if (!historicalEntry) {
+      const calendarAvailability = await fetchCalendarAvailability(booking.date, {
+        refresh: true,
+      });
+      if (
+        calendarAvailability.configured &&
+        calendarAvailability.busySlots.includes(booking.time)
+      ) {
+        confirmation.hidden = false;
+        confirmation.textContent =
+          "That time is now unavailable in Google Calendar. Please choose another time.";
+        populateTimes();
+        return;
+      }
     }
 
     const saveMode = await saveBookingRequest(booking);
@@ -2249,7 +2342,7 @@ async function handleSubmit(event) {
       Number(booking.payNow || 0) > Number(booking.amountReceived || 0);
 
     if (saveMode === "supabase") {
-      if (isAyeshaBookingRequest || !paymentStillDue) {
+      if (!historicalEntry && (isAyeshaBookingRequest || !paymentStillDue)) {
         try {
           calendarSync = await syncBookingToGoogleCalendar(booking);
           booking.calendarSyncStatus = calendarSync?.status || "synced";
@@ -2264,7 +2357,7 @@ async function handleSubmit(event) {
         }
       }
 
-      if (paymentStillDue) {
+      if (paymentStillDue && !historicalEntry) {
         stripeCheckoutUrl = await createStripeCheckout(booking);
       }
 
@@ -2276,10 +2369,16 @@ async function handleSubmit(event) {
     confirmation.hidden = false;
     const savedMessage =
       saveMode === "supabase"
-        ? isAyeshaBookingRequest
-          ? paymentStillDue
-            ? "The appointment has been saved. Its secure Stripe payment link is ready to send to the client."
-            : "The appointment has been saved and no further payment is due."
+        ? booking.bookingStatus === "pending"
+          ? "The appointment has been saved as pending. No invoice has been created yet."
+        : historicalEntry
+          ? booking.invoiceCreationError
+            ? "The past appointment has been recorded."
+            : "The past appointment has been recorded and its draft invoice has been created."
+          : isAyeshaBookingRequest
+          ? booking.invoiceCreationError
+            ? "The appointment has been saved."
+            : "The appointment has been saved and its draft invoice has been created."
           : paymentStillDue
             ? "Your requested time is held for 30 minutes while you complete secure payment with Stripe."
             : "Your booking request has been sent. Ayesha will confirm it personally."
@@ -2291,7 +2390,10 @@ async function handleSubmit(event) {
       calendarFailure,
       isAyeshaBookingRequest,
     );
-    confirmation.textContent = [savedMessage, calendarMessage]
+    const invoiceMessage = booking.invoiceCreationError
+      ? `The booking was saved, but its invoice could not be created: ${booking.invoiceCreationError}`
+      : "";
+    confirmation.textContent = [savedMessage, invoiceMessage, calendarMessage]
       .filter(Boolean)
       .join(" ");
 
@@ -2311,6 +2413,7 @@ async function handleSubmit(event) {
     }
 
     form.reset();
+    resetDatePickerToCurrentMonth();
     if (linkedAdminClient) {
       applyLinkedClientToForm();
     } else {
@@ -2326,8 +2429,9 @@ async function handleSubmit(event) {
     loadEarningsSummary();
   } catch (error) {
     confirmation.hidden = false;
-    confirmation.textContent =
-      "Sorry, the booking request could not be sent. Please check the Supabase setup and try again.";
+    confirmation.textContent = isAyeshaBooking()
+      ? `The booking was not saved. ${error?.message || "Please check the Supabase setup and try again."}`
+      : "Sorry, the booking request could not be sent. Please check the details and try again.";
     console.error(error);
   } finally {
     submitButton.disabled = false;
@@ -2359,6 +2463,7 @@ adminClientSelect?.addEventListener("change", () => {
 chooseAnotherClient?.addEventListener("click", () => {
   linkedAdminClient = null;
   form.reset();
+  resetDatePickerToCurrentMonth();
   form.elements.linkedClientId.value = "";
   linkedClientBanner.hidden = true;
   adminClientPicker.hidden = false;
@@ -2395,7 +2500,9 @@ form.addEventListener("change", (event) => {
   updateStepAvailability();
 });
 dateInput.addEventListener("change", () => {
-  datePicker.monthDate = monthStartForDate(dateInput.value || dateInput.min);
+  datePicker.monthDate = monthStartForDate(
+    dateInput.value || dateToIsoDate(new Date()),
+  );
   populateTimes();
   renderDatePicker();
   updateSummary();

@@ -13,6 +13,7 @@
         <a href="clients.html">Clients</a>
         <a href="calendar.html">Calendar</a>
         <a href="ayesha.html" aria-current="page">Bookings</a>
+        <a href="payments.html">Payments</a>
         <a href="settings.html">Settings</a>
         <a href="notes.html">Notes</a>
         <a href="index.html">Public page</a>
@@ -268,6 +269,14 @@
                   Payment date
                   <input name="paymentDate" type="date" />
                 </label>
+                <label>
+                  Booking status
+                  <select name="bookingStatus">
+                    <option value="confirmed">Confirmed</option>
+                    <option value="pending">Pending — waiting to hear back</option>
+                  </select>
+                  <small class="field-note">Pending bookings appear red on your calendar.</small>
+                </label>
               </div>
             </fieldset>
 
@@ -440,7 +449,7 @@
             </div>
 
             <label id="message-field">
-              Anything helpful to know? <span class="optional">(optional)</span>
+              Booking note / situation <span class="optional">(optional)</span>
               <textarea
                 name="message"
                 rows="4"
@@ -551,7 +560,7 @@
 
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="admin-auth.js"></script>
-    <script src="script.js?v=20260727-full-block-payment"></script>
+    <script src="admin-auth.js?v=20260813-ten-hour-session"></script>
+    <script src="script.js?v=20260809-pending-bookings"></script>
   </body>
 </html>

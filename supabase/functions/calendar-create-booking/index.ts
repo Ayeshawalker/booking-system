@@ -43,6 +43,7 @@ type BookingRow = {
   phone: string | null;
   calendar_sync_status?: string;
   calendar_event_ids?: unknown;
+  zoom_join_url?: string | null;
 };
 
 type CalendarSession = {
@@ -682,6 +683,7 @@ function calendarEventDescription(
     `Email: ${booking.email}`,
     booking.phone ? `Telephone: ${booking.phone}` : "",
     `Format: ${session.format}`,
+    session.format === "Online" && booking.zoom_join_url ? `Zoom: ${booking.zoom_join_url}` : "",
     `Duration: ${session.durationMinutes} minutes`,
     `Booked via: ${booking.booking_source}`,
     `Booking reference: ${booking.id}`,

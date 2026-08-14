@@ -42,22 +42,95 @@ Deno.serve(async (request) => {
     if (!membership) return json({ error: "Forbidden" }, 403);
 
     const body = await request.json() as {
+      action?: "reschedule" | "cancel" | "create_private" | "resize_event";
       bookingId?: string;
       eventId?: string;
       date?: string;
       time?: string;
       sessionFormat?: string;
+      title?: string;
+      durationMinutes?: number;
+      allDay?: boolean;
+      note?: string;
     };
+    const action = body.action || "reschedule";
     const bookingId = body.bookingId || "";
     const eventId = body.eventId || "";
     const date = body.date || "";
     const time = body.time || "";
     const sessionFormat = body.sessionFormat || "";
+    const calendarId = Deno.env.get("GOOGLE_CALENDAR_ID") || "";
+    const clientEmail = Deno.env.get("GOOGLE_SERVICE_ACCOUNT_EMAIL") || "";
+    const privateKey =
+      Deno.env.get("GOOGLE_PRIVATE_KEY")?.replace(/\\n/g, "\n") || "";
+
+    if (action === "resize_event") {
+      const durationMinutes = Number(body.durationMinutes || 0);
+      if (!eventId || !isDate(date) || !isTime(time) || durationMinutes < 30 || durationMinutes > 720) {
+        return json({ error: "Invalid event length" }, 400);
+      }
+      if (!calendarId || !clientEmail || !privateKey) {
+        return json({ error: "Google Calendar is not configured" }, 503);
+      }
+      const start = zonedDateTimeToUtc(date, time, timeZone);
+      const end = new Date(start.getTime() + durationMinutes * 60 * 1000);
+      const accessToken = await createGoogleAccessToken(clientEmail, privateKey);
+      const response = await fetch(
+        `${googleEventsUrl}/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}?sendUpdates=none`,
+        {
+          method: "PATCH",
+          headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ end: { dateTime: end.toISOString(), timeZone } }),
+        },
+      );
+      if (!response.ok) return json({ error: "Google Calendar rejected the new length" }, 502);
+      return json({ status: "resized", message: "Private event length updated." });
+    }
+
+    if (action === "create_private") {
+      const title = String(body.title || "").trim();
+      const durationMinutes = Number(body.durationMinutes || 60);
+      const allDay = Boolean(body.allDay);
+      if (
+        !title || title.length > 160 || !isDate(date) ||
+        (!allDay && !isTime(time)) || durationMinutes < 1 || durationMinutes > 525600
+      ) return json({ error: "Invalid private event details" }, 400);
+      if (!calendarId || !clientEmail || !privateKey) {
+        return json({ error: "Google Calendar is not configured" }, 503);
+      }
+      const start = allDay ? dateFromDateKey(date) : zonedDateTimeToUtc(date, time, timeZone);
+      const end = new Date(start.getTime() + durationMinutes * 60 * 1000);
+      const accessToken = await createGoogleAccessToken(clientEmail, privateKey);
+      const response = await fetch(
+        `${googleEventsUrl}/${encodeURIComponent(calendarId)}/events?sendUpdates=none`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            summary: title,
+            description: String(body.note || "").trim(),
+            start: allDay
+              ? { date }
+              : { dateTime: start.toISOString(), timeZone },
+            end: allDay
+              ? { date: utcDateKey(end) }
+              : { dateTime: end.toISOString(), timeZone },
+            extendedProperties: { private: { ayeshaEventType: "personal" } },
+          }),
+        },
+      );
+      if (!response.ok) return json({ error: "Google Calendar rejected the event" }, 502);
+      const created = await response.json();
+      return json({ status: "created", eventId: created.id, message: "Private event added." });
+    }
+
+    if (!isUuid(bookingId)) return json({ error: "Invalid booking reference" }, 400);
     if (
-      !isUuid(bookingId) ||
-      !isDate(date) ||
-      !isTime(time) ||
-      !["Online", "In person"].includes(sessionFormat)
+      action === "reschedule" &&
+      (!isDate(date) || !isTime(time) || !["Online", "In person"].includes(sessionFormat))
     ) {
       return json({ error: "Invalid reschedule details" }, 400);
     }
@@ -70,7 +143,7 @@ Deno.serve(async (request) => {
       .eq("id", bookingId)
       .maybeSingle();
     if (bookingError || !booking) return json({ error: "Booking not found" }, 404);
-    if (booking.booking_type !== "Single session") {
+    if (action === "reschedule" && booking.booking_type !== "Single session") {
       return json({
         error: "block_booking_not_supported",
         message: "Block bookings must currently be rescheduled one session at a time in Google Calendar.",
@@ -86,17 +159,51 @@ Deno.serve(async (request) => {
       return json({ error: "The calendar event does not belong to this booking" }, 403);
     }
 
+    if (action === "cancel") {
+      if (savedEventIds.length && (!calendarId || !clientEmail || !privateKey)) {
+        return json({ error: "Google Calendar is not configured" }, 503);
+      }
+      if (savedEventIds.length) {
+        const accessToken = await createGoogleAccessToken(clientEmail, privateKey);
+        for (const savedEventId of savedEventIds) {
+          const response = await fetch(
+            `${googleEventsUrl}/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(savedEventId)}?sendUpdates=none`,
+            { method: "DELETE", headers: { Authorization: `Bearer ${accessToken}` } },
+          );
+          if (!response.ok && ![404, 410].includes(response.status)) {
+            return json({ error: "Google Calendar could not remove the booking" }, 502);
+          }
+        }
+      }
+      const { error: closeError } = await supabase.from("booking_requests").update({
+        status: "closed",
+        calendar_event_ids: [],
+        calendar_sync_status: "synced",
+        calendar_sync_error: null,
+        invoice_required: false,
+      }).eq("id", bookingId);
+      if (closeError) return json({ error: "The booking record could not be cancelled" }, 500);
+      const { data: invoices } = await supabase.from("invoices")
+        .select("id, status").eq("booking_id", bookingId);
+      const cancellableIds = (invoices || [])
+        .filter((invoice) => String(invoice.status).toLowerCase() !== "paid")
+        .map((invoice) => invoice.id);
+      if (cancellableIds.length) {
+        await supabase.from("invoices").update({ status: "Cancelled" })
+          .in("id", cancellableIds);
+      }
+      return json({ status: "cancelled", message: "Booking cancelled and removed from Google Calendar." });
+    }
+
+    const requestedDuration = Number(body.durationMinutes || 0);
     const duration =
+      (requestedDuration >= 30 && requestedDuration <= 720 ? requestedDuration : 0) ||
       Number.parseInt(booking.duration, 10) ||
       (booking.session_type === "Joint session" ? 80 : 50);
     const start = zonedDateTimeToUtc(date, time, timeZone);
     const end = new Date(start.getTime() + duration * 60 * 1000);
 
     if (eventId) {
-      const calendarId = Deno.env.get("GOOGLE_CALENDAR_ID") || "";
-      const clientEmail = Deno.env.get("GOOGLE_SERVICE_ACCOUNT_EMAIL") || "";
-      const privateKey =
-        Deno.env.get("GOOGLE_PRIVATE_KEY")?.replace(/\\n/g, "\n") || "";
       if (!calendarId || !clientEmail || !privateKey) {
         return json({ error: "Google Calendar is not configured" }, 503);
       }
@@ -129,6 +236,7 @@ Deno.serve(async (request) => {
         preferred_date: date,
         preferred_time: time,
         session_format: sessionFormat,
+        duration: `${duration} minutes`,
         calendar_sync_error: eventId ? null : "Waiting to be added to Google Calendar.",
       })
       .eq("id", bookingId);
@@ -188,6 +296,15 @@ function zonedDateTimeToUtc(date: string, time: string, zone: string) {
   const guess = new Date(Date.UTC(year, month - 1, day, hour, minute));
   const first = new Date(guess.getTime() - zoneOffset(guess, zone));
   return new Date(guess.getTime() - zoneOffset(first, zone));
+}
+
+function dateFromDateKey(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
+function utcDateKey(value: Date) {
+  return `${value.getUTCFullYear()}-${String(value.getUTCMonth() + 1).padStart(2, "0")}-${String(value.getUTCDate()).padStart(2, "0")}`;
 }
 
 function zoneOffset(date: Date, zone: string) {

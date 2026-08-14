@@ -7,6 +7,8 @@
     "ayesha.html",
     "clients.html",
     "calendar.html",
+    "payments.html",
+    "invoice.html",
     "settings.html",
     "notes.html",
   ]);
@@ -126,7 +128,36 @@
       for (const factor of unverifiedFactors) {
         await supabaseClient.auth.mfa.unenroll({ factorId: factor.id });
       }
-      redirectTo(returnPage);
+
+      const verifiedFactor = (factors.totp || factors.all || []).find(
+        (factor) => factor.factor_type === "totp" && factor.status === "verified",
+      );
+      if (verifiedFactor) {
+        const { data: assurance, error: assuranceError } =
+          await supabaseClient.auth.mfa.getAuthenticatorAssuranceLevel();
+        if (assuranceError) throw assuranceError;
+        if (assurance.currentLevel === "aal2") {
+          redirectTo(returnPage);
+          return;
+        }
+        activeFactorId = verifiedFactor.id;
+        document.documentElement.classList.remove("admin-auth-checking");
+        challengeView.hidden = false;
+        document.querySelector("#mfa-challenge-code").focus();
+        return;
+      }
+
+      const { data: enrolment, error: enrolmentError } =
+        await supabaseClient.auth.mfa.enroll({
+          factorType: "totp",
+          friendlyName: "Ayesha Jane Admin",
+        });
+      if (enrolmentError) throw enrolmentError;
+      activeFactorId = enrolment.id;
+      document.querySelector("#mfa-qr-code").src = enrolment.totp.qr_code;
+      document.querySelector("#mfa-secret-value").textContent = enrolment.totp.secret;
+      document.documentElement.classList.remove("admin-auth-checking");
+      enrolView.hidden = false;
     } catch (error) {
       console.error(error);
       document.documentElement.classList.remove("admin-auth-checking");

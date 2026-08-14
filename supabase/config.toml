@@ -1,0 +1,11 @@
+[functions.agreement-signing]
+verify_jwt = false
+
+[functions.intake-form]
+verify_jwt = true
+
+[functions.improve-client-note]
+verify_jwt = true
+
+[functions.zoom-create-meeting]
+verify_jwt = true

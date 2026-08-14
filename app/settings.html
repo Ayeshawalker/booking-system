@@ -13,6 +13,7 @@
         <a href="clients.html">Clients</a>
         <a href="calendar.html">Calendar</a>
         <a href="ayesha.html">Bookings</a>
+        <a href="payments.html">Payments</a>
         <a href="settings.html" aria-current="page">Settings</a>
         <a href="notes.html">Notes</a>
         <a href="index.html">Public page</a>
@@ -93,12 +94,55 @@
           <ul id="days-off-list" class="settings-list"></ul>
           <p id="days-off-message" class="field-note"></p>
         </section>
+
+        <section class="admin-control-panel" aria-labelledby="zoom-settings-title">
+          <div>
+            <h2 id="zoom-settings-title">Zoom meetings</h2>
+            <p>Zoom is connected securely. Confirmed online bookings receive their own unique Zoom meeting link automatically; you do not need to paste a permanent link here.</p>
+          </div>
+          <form id="zoom-settings-form" class="invoice-settings-form" hidden>
+            <label class="invoice-settings-wide">Zoom meeting link<input id="zoom-confirmation-link" type="url" placeholder="https://zoom.us/j/…" autocomplete="off" /></label>
+            <div class="invoice-settings-actions">
+              <button id="save-zoom-settings" type="submit">Save Zoom link</button>
+              <span id="zoom-settings-message" class="field-note" role="status"></span>
+            </div>
+          </form>
+        </section>
+
+        <section class="admin-control-panel" aria-labelledby="invoice-settings-title">
+          <div>
+            <h2 id="invoice-settings-title">Invoice details</h2>
+            <p>
+              These details appear on invoices. Bank information is encrypted in Supabase and is not stored in the website files.
+            </p>
+          </div>
+
+          <form id="invoice-settings-form" class="invoice-settings-form">
+            <label>Invoice name<input name="issuerName" value="Ayesha Jane" required /></label>
+            <label>Invoice prefix<input name="invoicePrefix" value="AJ" maxlength="10" required /></label>
+            <label class="invoice-settings-wide">Address<input name="addressLine1" value="Suite 48, 275 New North Road" required /></label>
+            <label>Town and postcode<input name="cityPostcode" value="London N1 7AA" required /></label>
+            <label>Payment due after<input name="paymentTermsDays" type="number" value="2" min="0" max="90" required /><span class="field-note">days</span></label>
+
+            <div class="invoice-settings-divider invoice-settings-wide">
+              <h3>Bank transfer details</h3>
+              <p>Leave these blank unless adding or replacing them.</p>
+            </div>
+            <label>Account name<input name="accountName" autocomplete="off" /></label>
+            <label>Sort code<input name="sortCode" inputmode="numeric" autocomplete="off" placeholder="00-00-00" /></label>
+            <label>Account number<input name="accountNumber" inputmode="numeric" autocomplete="off" placeholder="00000000" /></label>
+            <div class="invoice-settings-actions">
+              <button id="save-invoice-settings" type="submit">Save invoice details</button>
+              <span id="invoice-settings-message" class="field-note" role="status"></span>
+            </div>
+          </form>
+        </section>
       </section>
     </main>
 
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="admin-auth.js"></script>
-    <script src="settings.js"></script>
+    <script src="admin-auth.js?v=20260813-ten-hour-session"></script>
+    <script src="settings.js?v=20260813-unique-zoom-links"></script>
   </body>
 </html>

@@ -11,9 +11,20 @@ const daysOffControls = {
   list: document.querySelector("#days-off-list"),
   message: document.querySelector("#days-off-message"),
 };
+const invoiceSettingsControls = {
+  form: document.querySelector("#invoice-settings-form"),
+  saveButton: document.querySelector("#save-invoice-settings"),
+  message: document.querySelector("#invoice-settings-message"),
+};
+const zoomSettingsControls = {
+  form: document.querySelector("#zoom-settings-form"),
+  link: document.querySelector("#zoom-confirmation-link"),
+  message: document.querySelector("#zoom-settings-message"),
+};
 
 const inPersonAvailabilityKey = "ayesha-in-person-availability";
 const daysOffKey = "ayesha-public-unavailable-dates";
+const zoomLinkKey = "ayesha-whatsapp-zoom-link";
 const weekDayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const inPersonAvailabilityCache = new Map();
 
@@ -340,6 +351,87 @@ async function handleDayOffAdd() {
   }
 }
 
+async function loadInvoiceSettings() {
+  const supabaseClient = createSupabaseClient();
+  if (!supabaseClient || !invoiceSettingsControls.form) return;
+  const { data, error } = await supabaseClient
+    .from("invoice_profile")
+    .select("issuer_name,address_line_1,city_postcode,payment_terms_days,invoice_prefix")
+    .eq("profile_key", "default")
+    .maybeSingle();
+  if (error) {
+    invoiceSettingsControls.message.textContent = "Run the invoice Supabase setup to enable these settings.";
+    return;
+  }
+  if (!data) return;
+  const form = invoiceSettingsControls.form.elements;
+  form.issuerName.value = data.issuer_name || "";
+  form.addressLine1.value = data.address_line_1 || "";
+  form.cityPostcode.value = data.city_postcode || "";
+  form.paymentTermsDays.value = data.payment_terms_days ?? 2;
+  form.invoicePrefix.value = data.invoice_prefix || "AJ";
+}
+
+async function saveInvoiceSettings(event) {
+  event.preventDefault();
+  const supabaseClient = createSupabaseClient();
+  const form = new FormData(invoiceSettingsControls.form);
+  invoiceSettingsControls.saveButton.disabled = true;
+  invoiceSettingsControls.message.textContent = "Saving...";
+  try {
+    const { error: profileError } = await supabaseClient
+      .from("invoice_profile")
+      .update({
+        issuer_name: String(form.get("issuerName") || "").trim(),
+        address_line_1: String(form.get("addressLine1") || "").trim(),
+        city_postcode: String(form.get("cityPostcode") || "").trim(),
+        payment_terms_days: Number(form.get("paymentTermsDays")),
+        invoice_prefix: String(form.get("invoicePrefix") || "AJ").trim().toUpperCase(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("profile_key", "default");
+    if (profileError) throw profileError;
+
+    const accountName = String(form.get("accountName") || "").trim();
+    const sortCode = String(form.get("sortCode") || "").trim();
+    const accountNumber = String(form.get("accountNumber") || "").trim();
+    if (accountName || sortCode || accountNumber) {
+      const { error: bankError } = await supabaseClient.rpc("save_invoice_bank_details", {
+        account_name: accountName,
+        sort_code: sortCode,
+        account_number: accountNumber,
+      });
+      if (bankError) throw bankError;
+      invoiceSettingsControls.form.elements.accountName.value = "";
+      invoiceSettingsControls.form.elements.sortCode.value = "";
+      invoiceSettingsControls.form.elements.accountNumber.value = "";
+    }
+    invoiceSettingsControls.message.textContent = "Invoice details saved securely.";
+  } catch (error) {
+    invoiceSettingsControls.message.textContent = "The invoice details could not be saved.";
+    console.error(error);
+  } finally {
+    invoiceSettingsControls.saveButton.disabled = false;
+  }
+}
+
+function loadZoomSettings() {
+  if (!zoomSettingsControls.link) return;
+  zoomSettingsControls.link.value = localStorage.getItem(zoomLinkKey) || "";
+}
+
+function saveZoomSettings(event) {
+  event.preventDefault();
+  const value = zoomSettingsControls.link.value.trim();
+  if (value && !/^https:\/\//i.test(value)) {
+    zoomSettingsControls.message.textContent = "Please paste the complete Zoom link beginning with https://";
+    return;
+  }
+  if (value) localStorage.setItem(zoomLinkKey, value);
+  else localStorage.removeItem(zoomLinkKey);
+  zoomSettingsControls.message.textContent = value ? "Zoom link saved on this Mac." : "Zoom link removed.";
+}
+
 inPersonAvailabilityControls.weekDate.addEventListener(
   "change",
   renderInPersonAvailabilityControls,
@@ -349,5 +441,9 @@ inPersonAvailabilityControls.saveButton.addEventListener(
   handleInPersonAvailabilitySave,
 );
 daysOffControls.addButton.addEventListener("click", handleDayOffAdd);
+invoiceSettingsControls.form?.addEventListener("submit", saveInvoiceSettings);
+zoomSettingsControls.form?.addEventListener("submit", saveZoomSettings);
 renderInPersonAvailabilityControls();
 renderDaysOff();
+loadInvoiceSettings();
+loadZoomSettings();

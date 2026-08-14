@@ -11,6 +11,8 @@
     "ayesha.html",
     "clients.html",
     "calendar.html",
+    "payments.html",
+    "invoice.html",
     "settings.html",
     "notes.html",
   ]);
