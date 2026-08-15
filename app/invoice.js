@@ -18,12 +18,6 @@
     return new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(Number(value));
   }
 
-  function paymentReferenceForDate(value) {
-    const [year, month, day] = value.split("-");
-    const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
-    return `${day}${months[Number(month) - 1]}${String(year).slice(-2)}`;
-  }
-
   function invoiceSessionDates(invoice) {
     const itemMarker = String(invoice.description || "").match(/\[\[ITEMS:([^\]]+)\]\]/i);
     if (itemMarker) {
@@ -168,7 +162,7 @@
   setText("#invoice-account-name", bank.account_name || "Add securely in Settings");
   setText("#invoice-sort-code", bank.sort_code || "Add securely in Settings");
   setText("#invoice-account-number", bank.account_number || "Add securely in Settings");
-  setText("#invoice-reference", invoice.payment_reference);
+  setText("#invoice-reference", invoice.invoice_number);
   document.title = `${formatDate(sessionDates[0])} · Invoice · ${invoice.client_name}`;
   loading.hidden = true;
   document.querySelector("#invoice-document").hidden = false;
@@ -218,7 +212,7 @@
   });
   document.querySelector("#invoice-whatsapp").addEventListener("click", () => {
     const message = encodeURIComponent(
-      `Hello, your invoice ${invoice.invoice_number} for ${formatMoney(Number(invoice.amount) + extraAmount)} is ready. Please use ${invoice.payment_reference} as the bank payment reference.`,
+      `Hello, your invoice ${invoice.invoice_number} for ${formatMoney(Number(invoice.amount) + extraAmount)} is ready. Please use ${invoice.invoice_number} as the payment reference.`,
     );
     window.open(`https://wa.me/?text=${message}`, "_blank", "noopener");
   });
@@ -336,7 +330,7 @@
       amount,
       description,
       session_duration: null,
-      payment_reference: paymentReferenceForDate(sessionDate),
+      payment_reference: invoice.invoice_number,
       status: "Draft",
     }).eq("id", invoice.id);
     if (error) {
