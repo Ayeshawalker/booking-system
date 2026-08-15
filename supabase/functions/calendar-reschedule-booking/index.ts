@@ -42,7 +42,7 @@ Deno.serve(async (request) => {
     if (!membership) return json({ error: "Forbidden" }, 403);
 
     const body = await request.json() as {
-      action?: "reschedule" | "cancel" | "create_private" | "resize_event";
+      action?: "reschedule" | "cancel" | "create_private" | "resize_event" | "delete_private";
       bookingId?: string;
       eventId?: string;
       date?: string;
@@ -63,6 +63,25 @@ Deno.serve(async (request) => {
     const clientEmail = Deno.env.get("GOOGLE_SERVICE_ACCOUNT_EMAIL") || "";
     const privateKey =
       Deno.env.get("GOOGLE_PRIVATE_KEY")?.replace(/\\n/g, "\n") || "";
+
+    if (action === "delete_private") {
+      if (!eventId) return json({ error: "Invalid private event reference" }, 400);
+      if (!calendarId || !clientEmail || !privateKey) {
+        return json({ error: "Google Calendar is not configured" }, 503);
+      }
+      const accessToken = await createGoogleAccessToken(clientEmail, privateKey);
+      const response = await fetch(
+        `${googleEventsUrl}/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}?sendUpdates=none`,
+        { method: "DELETE", headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+      if (!response.ok && ![404, 410].includes(response.status)) {
+        return json({ error: "Google Calendar could not remove the private event" }, 502);
+      }
+      return json({
+        status: "cancelled",
+        message: "Private event cancelled and removed from Google Calendar.",
+      });
+    }
 
     if (action === "resize_event") {
       const durationMinutes = Number(body.durationMinutes || 0);

@@ -808,23 +808,26 @@
       return;
     }
 
-    // Calendar totals describe the appointments visibly scheduled in this
-    // period. Count a client only once on a date. This also protects the
-    // totals from an older Google or Zoom copy left at the previous time
-    // after an appointment has been moved.
-    const countedClientDates = new Set();
-    state.events.forEach((event) => {
-      if (!isClientEvent(event) || isPendingEvent(event)) return;
-      const eventRange = eventDates(event);
-      if (eventRange.start < range.start || eventRange.start >= range.end) return;
-      const occurrence = `${clientEventIdentity(event)}:${localDateKey(eventRange.start)}`;
-      if (countedClientDates.has(occurrence)) return;
-      countedClientDates.add(occurrence);
-      if (isCoupleEvent(event)) couples += 1;
-      else individuals += 1;
-      if (isInPersonEvent(event)) inPerson += 1;
-      else online += 1;
-      earnings += feeForEvent(event);
+    // For current and future periods, use confirmed booking records rather
+    // than the visible Google event list. Google and Zoom can leave an older
+    // copy behind after a time is changed; those copies must not increase the
+    // session totals or earnings.
+    const countedBookings = new Set();
+    state.summaryBookings.forEach((booking) => {
+      if (String(booking.status).toLowerCase() !== "confirmed") return;
+      bookingOccurrences(booking).forEach((occurrence) => {
+        const sessionDate = dateFromKey(occurrence.date);
+        if (sessionDate < range.start || sessionDate >= range.end) return;
+        const clientIdentity = booking.client_id || normalisePersonName(bookingClientName(booking));
+        const key = `${clientIdentity}:${occurrence.date}:${occurrence.time}`;
+        if (countedBookings.has(key)) return;
+        countedBookings.add(key);
+        if (String(booking.session_type).toLowerCase() === "joint session") couples += 1;
+        else individuals += 1;
+        if (String(occurrence.format).toLowerCase() === "in person") inPerson += 1;
+        else online += 1;
+        earnings += Number(booking.price || 0);
+      });
     });
 
     controls.individualSessions.textContent = String(individuals);
@@ -832,6 +835,39 @@
     controls.onlineSessions.textContent = String(online);
     controls.inPersonSessions.textContent = String(inPerson);
     controls.sessionEarnings.textContent = formatCurrency(earnings);
+  }
+
+  function bookingOccurrences(booking) {
+    const defaultOccurrence = {
+      date: booking.preferred_date,
+      time: String(booking.preferred_time || "").slice(0, 5),
+      format: booking.session_format,
+    };
+    if (booking.booking_type !== "Block booking") return [defaultOccurrence];
+
+    if (booking.block_date_pattern === "Flexible dates" && Array.isArray(booking.exact_block_dates)) {
+      const exactDates = booking.exact_block_dates
+        .filter((item) => item && typeof item === "object")
+        .map((item) => ({
+          date: String(item.date || ""),
+          time: String(item.time || "").slice(0, 5),
+          format: String(item.format || booking.session_format || ""),
+        }))
+        .filter((item) => item.date && item.time);
+      if (exactDates.length) return exactDates;
+    }
+
+    if (booking.block_date_pattern === "Regular pattern") {
+      const count = Math.min(Math.max(Number(booking.block_session_count) || 1, 1), 20);
+      const gapDays = booking.block_frequency === "Fortnightly" ? 14 : 7;
+      const firstDate = dateFromKey(booking.preferred_date);
+      return Array.from({ length: count }, (_, index) => ({
+        ...defaultOccurrence,
+        date: localDateKey(addDays(firstDate, gapDays * index)),
+      }));
+    }
+
+    return [defaultOccurrence];
   }
 
   function savedBookingEvent(booking) {
@@ -973,7 +1009,7 @@
     controls.bookingDetailsForm.hidden = !canReschedule;
     controls.privateDetailsForm.hidden = !canEditPrivate;
     controls.privateTimeFields.hidden = !isLocalPrivate;
-    controls.deletePrivateEvent.hidden = !isLocalPrivate;
+    controls.deletePrivateEvent.hidden = !canEditPrivate;
     [
       controls.privateStartDate,
       controls.privateStartTime,
@@ -1677,14 +1713,27 @@
 
   controls.deletePrivateEvent.addEventListener("click", async () => {
     const privateEvent = state.selectedEvent;
-    if (!privateEvent?.id.startsWith("local-private-")) return;
+    if (!privateEvent || privateEvent.eventType === "booking") return;
     if (!window.confirm(
       `Cancel ${privateEvent.title}?\n\nThis private event will be removed from the calendar.`,
     )) return;
-    state.localPrivateEvents = state.localPrivateEvents.filter(
-      (item) => item.id !== privateEvent.id,
-    );
-    localStorage.setItem(privateEventStorageKey, JSON.stringify(state.localPrivateEvents));
+    if (privateEvent.id.startsWith("local-private-")) {
+      state.localPrivateEvents = state.localPrivateEvents.filter(
+        (item) => item.id !== privateEvent.id,
+      );
+      localStorage.setItem(privateEventStorageKey, JSON.stringify(state.localPrivateEvents));
+    } else {
+      controls.privateMessage.textContent = "Cancelling private event…";
+      const { data, error } = await supabaseClient.functions.invoke(
+        "calendar-reschedule-booking",
+        { body: { action: "delete_private", eventId: privateEvent.id } },
+      );
+      if (error || data?.error) {
+        controls.privateMessage.textContent =
+          data?.message || data?.error || "The private event could not be cancelled. Please try again.";
+        return;
+      }
+    }
     delete state.colourOverrides[privateEvent.id];
     localStorage.setItem(colourStorageKey, JSON.stringify(state.colourOverrides));
     delete state.titleOverrides[privateEvent.id];
