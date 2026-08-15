@@ -26,6 +26,10 @@
     creditTotal: document.querySelector("#payments-credit-total"),
     unpaidCount: document.querySelector("#payments-unpaid-count"),
     invoicesEmpty: document.querySelector("#invoices-empty"),
+    invoicePeriodFilter: document.querySelector("#invoice-period-filter"),
+    invoiceCustomDates: document.querySelector("#invoice-custom-dates"),
+    invoiceDateFrom: document.querySelector("#invoice-date-from"),
+    invoiceDateTo: document.querySelector("#invoice-date-to"),
     invoicesTableWrap: document.querySelector("#invoices-table-wrap"),
     invoicesTableBody: document.querySelector("#invoices-table-body"),
     sentInvoicesArchive: document.querySelector("#sent-invoices-archive"),
@@ -239,6 +243,34 @@
       ? marker[1].split(",").map((date) => date.trim()).filter(Boolean)
       : [invoice.session_date].filter(Boolean);
     return [...new Set(dates)].sort();
+  }
+
+  function invoicePeriodBounds() {
+    const today = new Date();
+    today.setHours(12, 0, 0, 0);
+    const period = controls.invoicePeriodFilter.value;
+    if (period === "all") return { start: "", end: "" };
+    if (period === "custom") {
+      return { start: controls.invoiceDateFrom.value, end: controls.invoiceDateTo.value };
+    }
+    if (period === "this-week" || period === "next-week") {
+      const monday = new Date(today);
+      monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+      if (period === "next-week") monday.setDate(monday.getDate() + 7);
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      return { start: isoDate(monday), end: isoDate(sunday) };
+    }
+    const end = new Date(today);
+    end.setDate(today.getDate() + 6);
+    return { start: isoDate(today), end: isoDate(end) };
+  }
+
+  function invoiceMatchesSelectedPeriod(invoice) {
+    const { start, end } = invoicePeriodBounds();
+    return invoiceSessionDates(invoice).some((date) =>
+      (!start || date >= start) && (!end || date <= end)
+    );
   }
 
   async function deleteInvoice(invoice, button) {
@@ -504,7 +536,9 @@
       }
     }
     const invoicesAwaitingSending = allInvoices.filter((invoice) =>
-      invoice.status === "Draft" && !nonInvoiceableBookingIds.has(invoice.booking_id)
+      invoice.status === "Draft" &&
+      !nonInvoiceableBookingIds.has(invoice.booking_id) &&
+      invoiceMatchesSelectedPeriod(invoice)
     )
       .sort((first, second) =>
         String(invoiceSessionDates(second).at(-1) || "").localeCompare(
@@ -523,6 +557,7 @@
     controls.invoicesTableBody.replaceChildren(
       ...invoicesAwaitingSending.map((invoice) => renderInvoiceRow(invoice)),
     );
+    controls.invoicesEmpty.textContent = "No outstanding invoices match these session dates.";
     controls.invoicesEmpty.hidden = invoicesAwaitingSending.length > 0;
     controls.invoicesTableWrap.hidden = invoicesAwaitingSending.length === 0;
     controls.sentInvoicesTableBody.replaceChildren(
@@ -1184,6 +1219,13 @@
     controls.historyPanel.hidden = true;
   });
   controls.createHistoryInvoice.addEventListener("click", createInvoiceFromSelectedPayments);
+  controls.invoicePeriodFilter.addEventListener("change", async () => {
+    controls.invoiceCustomDates.hidden = controls.invoicePeriodFilter.value !== "custom";
+    await loadInvoices();
+  });
+  [controls.invoiceDateFrom, controls.invoiceDateTo].forEach((field) => {
+    field.addEventListener("change", loadInvoices);
+  });
   controls.clientSelect.addEventListener("change", applyClientDefaults);
   controls.form.elements.sessionFormat.addEventListener("change", applyClientDefaults);
   [

@@ -47,6 +47,22 @@
           <div><p class="admin-kicker">Booking invoices</p><h2 id="invoice-list-title">Invoices waiting to be sent</h2></div>
           <a class="secondary-button" href="settings.html#invoice-settings-title">Invoice settings</a>
         </div>
+        <div class="invoice-date-toolbar">
+          <label>
+            <span>Show session dates</span>
+            <select id="invoice-period-filter">
+              <option value="next-seven" selected>Upcoming 7 days</option>
+              <option value="this-week">This week</option>
+              <option value="next-week">Next calendar week</option>
+              <option value="custom">Choose dates</option>
+              <option value="all">All outstanding invoices</option>
+            </select>
+          </label>
+          <div id="invoice-custom-dates" class="payment-custom-dates" hidden>
+            <label><span>From</span><input id="invoice-date-from" type="date" /></label>
+            <label><span>To</span><input id="invoice-date-to" type="date" /></label>
+          </div>
+        </div>
         <p id="invoices-empty" class="admin-state">No invoices are waiting to be sent.</p>
         <div id="invoices-table-wrap" class="client-table-wrap" hidden>
           <table class="client-table">
@@ -172,6 +188,6 @@
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="admin-auth.js?v=20260813-ten-hour-session"></script>
-    <script src="payments.js?v=20260810-pending-invoice-fix"></script>
+    <script src="payments.js?v=20260815-invoice-date-filter"></script>
   </body>
 </html>
