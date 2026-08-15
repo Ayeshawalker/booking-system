@@ -819,7 +819,9 @@
         const sessionDate = dateFromKey(occurrence.date);
         if (sessionDate < range.start || sessionDate >= range.end) return;
         const clientIdentity = booking.client_id || normalisePersonName(bookingClientName(booking));
-        const key = `${clientIdentity}:${occurrence.date}:${occurrence.time}`;
+        // A moved appointment can occasionally leave both its old and new
+        // saved time behind. A client still counts as one session that day.
+        const key = `${clientIdentity}:${occurrence.date}`;
         if (countedBookings.has(key)) return;
         countedBookings.add(key);
         if (String(booking.session_type).toLowerCase() === "joint session") couples += 1;
