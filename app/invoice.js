@@ -167,6 +167,38 @@
   loading.hidden = true;
   document.querySelector("#invoice-document").hidden = false;
 
+  const safeFilePart = (value) => String(value || "")
+    .replace(/[\\/:*?"<>|]+/g, "-")
+    .replace(/\s+/g, " ")
+    .trim();
+  const invoiceFilename = [
+    safeFilePart(formatDate(sessionDates[0])),
+    "Invoice",
+    safeFilePart(invoice.client_name),
+  ].filter(Boolean).join(" - ");
+  const invoiceDocument = document.querySelector("#invoice-document");
+  const pdfOptions = {
+    margin: 0,
+    filename: `${invoiceFilename}.pdf`,
+    image: { type: "jpeg", quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
+    jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+    pagebreak: { mode: ["css", "legacy"] },
+  };
+
+  async function createInvoicePdfBlob() {
+    invoiceDocument.classList.add("is-pdf-export");
+    try {
+      return await window.html2pdf()
+        .set(pdfOptions)
+        .from(invoiceDocument)
+        .toPdf()
+        .outputPdf("blob");
+    } finally {
+      invoiceDocument.classList.remove("is-pdf-export");
+    }
+  }
+
   const downloadButton = document.querySelector("#invoice-download");
   downloadButton.addEventListener("click", async () => {
     if (typeof window.html2pdf !== "function") {
@@ -177,27 +209,10 @@
 
     downloadButton.disabled = true;
     downloadButton.textContent = "Preparing PDF…";
-    const safeFilePart = (value) => String(value || "")
-      .replace(/[\\/:*?"<>|]+/g, "-")
-      .replace(/\s+/g, " ")
-      .trim();
-    const invoiceFilename = [
-      safeFilePart(formatDate(sessionDates[0])),
-      "Invoice",
-      safeFilePart(invoice.client_name),
-    ].filter(Boolean).join(" - ");
-    const invoiceDocument = document.querySelector("#invoice-document");
     try {
       invoiceDocument.classList.add("is-pdf-export");
       await window.html2pdf()
-        .set({
-          margin: 0,
-          filename: `${invoiceFilename}.pdf`,
-          image: { type: "jpeg", quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
-          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-          pagebreak: { mode: ["css", "legacy"] },
-        })
+        .set(pdfOptions)
         .from(invoiceDocument)
         .save();
     } catch (error) {
@@ -210,11 +225,43 @@
       downloadButton.textContent = "Download PDF";
     }
   });
-  document.querySelector("#invoice-whatsapp").addEventListener("click", () => {
-    const message = encodeURIComponent(
-      `Hello, your invoice ${invoice.invoice_number} for ${formatMoney(Number(invoice.amount) + extraAmount)} is ready. Please use ${invoice.invoice_number} as the payment reference.`,
-    );
-    window.open(`https://wa.me/?text=${message}`, "_blank", "noopener");
+  const whatsappButton = document.querySelector("#invoice-whatsapp");
+  whatsappButton.addEventListener("click", async () => {
+    const message = `Hello, your invoice ${invoice.invoice_number} for ${formatMoney(Number(invoice.amount) + extraAmount)} is ready. Please use ${invoice.invoice_number} as the payment reference.`;
+    if (typeof window.html2pdf !== "function") {
+      document.querySelector("#invoice-page-message").textContent =
+        "The PDF sharing tool could not load. Please refresh the page and try again.";
+      return;
+    }
+    whatsappButton.disabled = true;
+    whatsappButton.textContent = "Preparing PDF…";
+    try {
+      const blob = await createInvoicePdfBlob();
+      const file = new File([blob], `${invoiceFilename}.pdf`, { type: "application/pdf" });
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: `Invoice ${invoice.invoice_number}`,
+          text: message,
+        });
+      } else {
+        const downloadLink = document.createElement("a");
+        downloadLink.href = URL.createObjectURL(blob);
+        downloadLink.download = file.name;
+        downloadLink.click();
+        setTimeout(() => URL.revokeObjectURL(downloadLink.href), 1000);
+        window.location.assign(`https://wa.me/?text=${encodeURIComponent(message)}`);
+      }
+    } catch (error) {
+      if (error?.name !== "AbortError") {
+        console.error(error);
+        document.querySelector("#invoice-page-message").textContent =
+          "The invoice could not be shared. Please use Download PDF instead.";
+      }
+    } finally {
+      whatsappButton.disabled = false;
+      whatsappButton.textContent = "Share PDF to WhatsApp";
+    }
   });
   const markSent = document.querySelector("#invoice-mark-sent");
   if (invoice.status === "Sent" || invoice.status === "Paid") {
