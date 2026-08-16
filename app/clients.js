@@ -18,6 +18,7 @@
     form: document.querySelector("#client-form"),
     formMessage: document.querySelector("#client-form-message"),
     saveButton: document.querySelector("#save-client"),
+    deleteButton: document.querySelector("#delete-client"),
     firstPersonLegend: document.querySelector("#first-person-legend"),
     secondPersonFields: document.querySelector("#second-person-fields"),
     agreedFeeLabel: document.querySelector("#agreed-fee-label"),
@@ -658,6 +659,7 @@
     controls.formMessage.textContent = "";
     editingClientId = client?.id || null;
     controls.dialogTitle.textContent = client ? "Edit client" : "Add client";
+    controls.deleteButton.hidden = !client;
 
     if (client) {
       const typeInput = controls.form.querySelector(
@@ -806,6 +808,34 @@
       controls.saveButton.disabled = false;
       controls.saveButton.textContent = "Save client";
     }
+  });
+
+  controls.deleteButton.addEventListener("click", async () => {
+    const client = clients.find((item) => item.id === editingClientId);
+    if (!client) return;
+    const name = clientName(client);
+    const confirmed = window.confirm(
+      `Permanently delete ${name}?\n\nOnly continue if this is the duplicate record. This cannot be undone.`,
+    );
+    if (!confirmed) return;
+    controls.deleteButton.disabled = true;
+    controls.formMessage.textContent = "";
+    const { data, error } = await supabaseClient
+      .from("clients")
+      .delete()
+      .eq("id", client.id)
+      .select("id");
+    if (error || data?.length !== 1) {
+      controls.deleteButton.disabled = false;
+      controls.formMessage.textContent =
+        "This client could not be deleted, usually because sessions, notes or payments are attached to this record.";
+      console.error("Client deletion failed.", error);
+      return;
+    }
+    clients = clients.filter((item) => item.id !== client.id);
+    controls.dialog.close();
+    controls.message.textContent = `${name} was deleted.`;
+    renderClients();
   });
 
   controls.addButton.addEventListener("click", () => openClientEditor());
