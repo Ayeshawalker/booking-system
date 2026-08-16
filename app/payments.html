@@ -37,12 +37,25 @@
       <section class="payment-stats" aria-label="Payment totals">
         <div><strong id="payments-fees-total">£0</strong><span>Fees in view</span></div>
         <div><strong id="payments-received-total">£0</strong><span>Received</span></div>
-        <div><strong id="payments-outstanding-total">£0</strong><span>Outstanding</span></div>
+        <div><strong id="payments-outstanding-total">£0</strong><span>Sent invoice balance</span></div>
         <div><strong id="payments-credit-total">£0</strong><span>Client credit</span></div>
-        <div><strong id="payments-unpaid-count">0</strong><span>Clients owing</span></div>
+        <div><strong id="payments-unpaid-count">0</strong><span>Sent invoices unpaid</span></div>
       </section>
 
       <section class="admin-workspace invoice-list-panel" aria-labelledby="invoice-list-title">
+        <div class="invoice-list-heading sent-unpaid-heading">
+          <div><p class="admin-kicker">Needs attention</p><h2>Sent and unpaid</h2></div>
+          <strong id="sent-unpaid-summary" class="sent-unpaid-summary">£0 outstanding</strong>
+        </div>
+        <p id="sent-unpaid-empty" class="admin-state">No sent invoices are awaiting payment.</p>
+        <div id="sent-unpaid-table-wrap" class="client-table-wrap" hidden>
+          <table class="client-table sent-unpaid-table">
+            <thead><tr><th>Invoice</th><th>Client</th><th>Session date</th><th>Due</th><th>Still owed</th><th>Payment status</th><th></th></tr></thead>
+            <tbody id="sent-unpaid-table-body"></tbody>
+          </table>
+        </div>
+
+        <div class="invoice-section-divider"></div>
         <div class="invoice-list-heading">
           <div><p class="admin-kicker">Booking invoices</p><h2 id="invoice-list-title">Invoices waiting to be sent</h2></div>
           <a class="secondary-button" href="settings.html#invoice-settings-title">Invoice settings</a>
@@ -71,7 +84,7 @@
           </table>
         </div>
         <details id="sent-invoices-archive" class="sent-invoices-archive" hidden>
-          <summary>Previously sent invoices</summary>
+          <summary>Paid and completed invoices</summary>
           <div class="client-table-wrap">
             <table class="client-table">
               <thead><tr><th>Invoice</th><th>Client</th><th>Session date</th><th>Due</th><th>Total</th><th>Status</th><th></th></tr></thead>
@@ -188,6 +201,6 @@
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="admin-auth.js?v=20260813-ten-hour-session"></script>
-    <script src="payments.js?v=20260815-invoice-date-filter"></script>
+    <script src="payments.js?v=20260815-sent-unpaid-invoices"></script>
   </body>
 </html>
