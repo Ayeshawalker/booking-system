@@ -25,6 +25,10 @@
     outstandingTotal: document.querySelector("#payments-outstanding-total"),
     creditTotal: document.querySelector("#payments-credit-total"),
     unpaidCount: document.querySelector("#payments-unpaid-count"),
+    sentUnpaidSummary: document.querySelector("#sent-unpaid-summary"),
+    sentUnpaidEmpty: document.querySelector("#sent-unpaid-empty"),
+    sentUnpaidTableWrap: document.querySelector("#sent-unpaid-table-wrap"),
+    sentUnpaidTableBody: document.querySelector("#sent-unpaid-table-body"),
     invoicesEmpty: document.querySelector("#invoices-empty"),
     invoicePeriodFilter: document.querySelector("#invoice-period-filter"),
     invoiceCustomDates: document.querySelector("#invoice-custom-dates"),
@@ -46,6 +50,8 @@
   let bookingRequests = [];
   let editingId = null;
   let historyClient = null;
+  let sentInvoiceOutstandingTotal = 0;
+  let sentInvoiceUnpaidCount = 0;
   const selectedInvoicePaymentIds = new Set();
 
   function isoDate(date) {
@@ -271,6 +277,79 @@
     return invoiceSessionDates(invoice).some((date) =>
       (!start || date >= start) && (!end || date <= end)
     );
+  }
+
+  function paymentsLinkedToInvoice(invoice) {
+    const direct = payments.filter((payment) =>
+      payment.source_reference === `invoice:${invoice.id}`
+    );
+    const dates = new Set(invoiceSessionDates(invoice));
+    const invoiceName = normalisedName(invoice.client_name);
+    const dated = payments.filter((payment) =>
+      dates.has(payment.session_date) &&
+      (
+        (invoice.client_id && payment.client_id === invoice.client_id) ||
+        normalisedName(payment.client_name) === invoiceName
+      )
+    );
+    return { direct, dated };
+  }
+
+  function invoiceOutstanding(invoice) {
+    const { direct, dated } = paymentsLinkedToInvoice(invoice);
+    const received = Math.max(
+      direct.reduce((sum, payment) => sum + Number(payment.amount_received || 0), 0),
+      dated.reduce((sum, payment) => sum + Number(payment.amount_received || 0), 0),
+    );
+    return Math.max(
+      0,
+      Number(invoice.amount || 0) + Number(invoice.extra_amount || 0) - received,
+    );
+  }
+
+  function invoiceDueStatus(invoice) {
+    if (!invoice.due_date) return "Awaiting payment";
+    const today = new Date();
+    today.setHours(12, 0, 0, 0);
+    const due = new Date(`${invoice.due_date}T12:00:00`);
+    const days = Math.round((due - today) / 86400000);
+    if (days < 0) return `Overdue by ${Math.abs(days)} day${days === -1 ? "" : "s"}`;
+    if (days === 0) return "Due today";
+    return `Due in ${days} day${days === 1 ? "" : "s"}`;
+  }
+
+  function renderSentUnpaidInvoiceRow(invoice) {
+    const row = document.createElement("tr");
+    const dueStatus = invoiceDueStatus(invoice);
+    if (dueStatus.startsWith("Overdue")) row.classList.add("invoice-row-overdue");
+    appendCell(row, invoice.invoice_number);
+    appendCell(row, invoice.client_name);
+    appendCell(row, invoiceSessionDates(invoice).map(displayDate).join(" · "));
+    appendCell(row, displayDate(invoice.due_date));
+    appendCell(row, currency(invoiceOutstanding(invoice)));
+    appendCell(row, dueStatus, dueStatus.startsWith("Overdue")
+      ? "invoice-payment-overdue"
+      : "invoice-payment-awaiting");
+    const actions = document.createElement("td");
+    actions.className = "payment-history-actions";
+    const view = document.createElement("a");
+    view.className = "payment-edit-button";
+    view.href = `invoice.html?id=${encodeURIComponent(invoice.id)}`;
+    view.textContent = "View";
+    const reminder = document.createElement("button");
+    reminder.type = "button";
+    reminder.className = "payment-edit-button invoice-reminder-button";
+    reminder.textContent = "Send reminder";
+    reminder.addEventListener("click", () => {
+      const firstName = String(invoice.client_name || "").trim().split(/\s+/)[0] || "there";
+      const message = encodeURIComponent(
+        `Hi ${firstName}, just a gentle reminder that invoice ${invoice.invoice_number} has a balance of ${currency(invoiceOutstanding(invoice))} outstanding. Please use ${invoice.invoice_number} as the payment reference. Thank you.`,
+      );
+      window.open(`https://wa.me/?text=${message}`, "_blank", "noopener");
+    });
+    actions.append(view, reminder);
+    row.append(actions);
+    return row;
   }
 
   async function deleteInvoice(invoice, button) {
@@ -507,7 +586,7 @@
       .from("invoices")
       .select("id,booking_id,client_id,invoice_number,client_name,invoice_date,due_date,session_date,description,amount,extra_amount,status")
       .order("invoice_date", { ascending: false })
-      .limit(50);
+      .limit(500);
     if (error) {
       controls.invoicesEmpty.textContent = "Run the invoice Supabase setup to enable automatic draft invoices.";
       return;
@@ -545,8 +624,14 @@
           String(invoiceSessionDates(first).at(-1) || ""),
         )
       );
+    const sentUnpaidInvoices = allInvoices.filter((invoice) =>
+      invoice.status === "Sent" && invoiceOutstanding(invoice) > 0.009
+    ).sort((first, second) =>
+      String(first.due_date || "").localeCompare(String(second.due_date || ""))
+    );
     const sentInvoices = allInvoices.filter((invoice) =>
-      invoice.status === "Sent" || invoice.status === "Paid"
+      invoice.status === "Paid" ||
+      (invoice.status === "Sent" && invoiceOutstanding(invoice) <= 0.009)
     ).sort((first, second) =>
       String(second.invoice_number || "").localeCompare(
         String(first.invoice_number || ""),
@@ -564,7 +649,19 @@
       ...sentInvoices.map((invoice) => renderInvoiceRow(invoice, true)),
     );
     controls.sentInvoicesArchive.hidden = sentInvoices.length === 0;
+    controls.sentUnpaidTableBody.replaceChildren(
+      ...sentUnpaidInvoices.map(renderSentUnpaidInvoiceRow),
+    );
+    controls.sentUnpaidEmpty.hidden = sentUnpaidInvoices.length > 0;
+    controls.sentUnpaidTableWrap.hidden = sentUnpaidInvoices.length === 0;
+    sentInvoiceOutstandingTotal = sentUnpaidInvoices.reduce(
+      (sum, invoice) => sum + invoiceOutstanding(invoice),
+      0,
+    );
+    sentInvoiceUnpaidCount = sentUnpaidInvoices.length;
+    controls.sentUnpaidSummary.textContent = `${currency(sentInvoiceOutstandingTotal)} outstanding`;
     await syncInvoicesToPaymentHistory(allInvoices);
+    render();
   }
 
   function paymentStatus(payment) {
@@ -1071,9 +1168,9 @@
       }, { outstanding: 0, credit: 0, owing: 0 });
     controls.feeTotal.textContent = currency(totals.fees);
     controls.receivedTotal.textContent = currency(totals.received);
-    controls.outstandingTotal.textContent = currency(clientTotals.outstanding);
+    controls.outstandingTotal.textContent = currency(sentInvoiceOutstandingTotal);
     controls.creditTotal.textContent = currency(clientTotals.credit);
-    controls.unpaidCount.textContent = String(clientTotals.owing);
+    controls.unpaidCount.textContent = String(sentInvoiceUnpaidCount);
     if (historyClient) renderHistory(historyClient);
   }
 

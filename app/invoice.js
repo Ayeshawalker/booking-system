@@ -225,6 +225,35 @@
       downloadButton.textContent = "Download PDF";
     }
   });
+  const markSent = document.querySelector("#invoice-mark-sent");
+
+  async function recordInvoiceAsSent(successMessage = "Invoice marked as sent.") {
+    if (invoice.status === "Sent" || invoice.status === "Paid") return true;
+    const sentDate = new Date().toISOString().slice(0, 10);
+    const { error } = await client.from("invoices").update({ status: "Sent" }).eq("id", invoice.id);
+    if (error) {
+      markSent.disabled = false;
+      document.querySelector("#invoice-page-message").textContent =
+        "The invoice was shared, but its sent status could not be updated. Please use Mark as sent.";
+      return false;
+    }
+    invoice.status = "Sent";
+    await client.from("manual_payments")
+      .update({ invoice_sent_date: sentDate })
+      .eq("source_reference", `invoice:${invoice.id}`);
+    const sessionDates = invoiceSessionDates(invoice);
+    if (invoice.client_id && sessionDates.length) {
+      await client.from("manual_payments")
+        .update({ invoice_sent_date: sentDate })
+        .eq("client_id", invoice.client_id)
+        .in("session_date", sessionDates);
+    }
+    markSent.textContent = "Sent";
+    markSent.disabled = true;
+    document.querySelector("#invoice-page-message").textContent = successMessage;
+    return true;
+  }
+
   const whatsappButton = document.querySelector("#invoice-whatsapp");
   whatsappButton.addEventListener("click", async () => {
     const message = `Hello, your invoice ${invoice.invoice_number} for ${formatMoney(Number(invoice.amount) + extraAmount)} is ready. Please use ${invoice.invoice_number} as the payment reference.`;
@@ -244,12 +273,14 @@
           title: `Invoice ${invoice.invoice_number}`,
           text: message,
         });
+        await recordInvoiceAsSent("Invoice shared and marked as sent.");
       } else {
         const downloadLink = document.createElement("a");
         downloadLink.href = URL.createObjectURL(blob);
         downloadLink.download = file.name;
         downloadLink.click();
         setTimeout(() => URL.revokeObjectURL(downloadLink.href), 1000);
+        await recordInvoiceAsSent("WhatsApp opened and the invoice was marked as sent.");
         window.location.assign(`https://wa.me/?text=${encodeURIComponent(message)}`);
       }
     } catch (error) {
@@ -263,21 +294,13 @@
       whatsappButton.textContent = "Share PDF to WhatsApp";
     }
   });
-  const markSent = document.querySelector("#invoice-mark-sent");
   if (invoice.status === "Sent" || invoice.status === "Paid") {
     markSent.textContent = invoice.status;
     markSent.disabled = true;
   }
   markSent.addEventListener("click", async () => {
     markSent.disabled = true;
-    const { error } = await client.from("invoices").update({ status: "Sent" }).eq("id", invoice.id);
-    if (error) {
-      markSent.disabled = false;
-      document.querySelector("#invoice-page-message").textContent = "The invoice status could not be updated.";
-      return;
-    }
-    markSent.textContent = "Sent";
-    document.querySelector("#invoice-page-message").textContent = "Invoice marked as sent.";
+    await recordInvoiceAsSent();
   });
 
   const detailsEditor = document.querySelector("#invoice-details-editor");
