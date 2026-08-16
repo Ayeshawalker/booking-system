@@ -1138,6 +1138,7 @@ dd {
 }
 .sent-invoices-archive[open] summary { margin-bottom: 12px; }
 .invoice-delete-button { margin-left: 8px; }
+.client-delete-button { margin-right: auto; }
 
 .payment-custom-dates {
   display: grid;
