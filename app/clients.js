@@ -46,6 +46,8 @@
     intakeResponsePanel: document.querySelector("#intake-response-panel"),
     intakeAnswers: document.querySelector("#intake-answers"),
     intakeSignedBy: document.querySelector("#intake-signed-by"),
+    intakeFormType: document.querySelector("#intake-form-type"),
+    intakeFormTypeField: document.querySelector("#intake-form-type-field"),
   };
   const counts = {
     all: document.querySelector("#client-count-all"),
@@ -473,6 +475,7 @@
     const exists = Boolean(intake);
     controls.intakeLinkPanel.hidden = !exists;
     controls.createIntakeButton.hidden = exists;
+    controls.intakeFormTypeField.hidden = exists;
     controls.cancelIntakeButton.hidden = !exists || intake.status === "Completed";
     controls.intakeResponsePanel.hidden = !exists || intake.status !== "Completed";
     if (!exists) { controls.intakeStatus.textContent = "No active intake link has been created yet."; return; }
@@ -480,9 +483,10 @@
     controls.intakeSigningLink.value = url;
     document.querySelector("#open-intake-link").href = url;
     const firstName = intakeClient.first_name || "there";
-    const text = `Hi ${firstName}, here is your private betrayal trauma therapy intake form to complete and sign: ${url}`;
+    const formLabel = intake.form_type === "Betrayal trauma" ? "betrayal trauma therapy" : "therapy";
+    const text = `Hi ${firstName}, here is your private ${formLabel} intake form to complete and sign: ${url}`;
     document.querySelector("#whatsapp-intake-link").href = `https://wa.me/?text=${encodeURIComponent(text)}`;
-    controls.intakeStatus.textContent = `Betrayal trauma intake · ${intake.status}`;
+    controls.intakeStatus.textContent = `${intake.form_type} intake · ${intake.status}`;
     if (intake.status === "Completed") {
       const signedDate = intake.signed_at ? new Intl.DateTimeFormat("en-GB", { dateStyle: "long" }).format(new Date(intake.signed_at)) : "date unavailable";
       controls.intakeSignedBy.textContent = `Electronically signed by ${intake.signer_name || "client"} on ${signedDate}.`;
@@ -492,6 +496,8 @@
 
   async function openIntakeManager(client) {
     intakeClient = client; controls.intakeMessage.textContent = "";
+    const specialities = Array.isArray(client.specialities) ? client.specialities : [];
+    controls.intakeFormType.value = specialities.includes("Betrayal trauma") ? "Betrayal trauma" : "Individual";
     controls.intakeDialogTitle.textContent = clientNames(client); showIntake(null);
     controls.intakeDialog.showModal();
     const { data, error } = await supabaseClient.from("client_intake_forms")
@@ -511,7 +517,7 @@
     if (!intakeClient) return;
     controls.createIntakeButton.disabled = true; controls.intakeMessage.textContent = "Creating the private form link…";
     const { data, error } = await supabaseClient.from("client_intake_forms").insert({
-      client_id: intakeClient.id, form_type: "Betrayal trauma", form_version: "2026-08-14", created_by: admin.user.id,
+      client_id: intakeClient.id, form_type: controls.intakeFormType.value, form_version: "2026-08-17", created_by: admin.user.id,
     }).select("id,form_type,form_version,access_token,status,answers,signer_name,signed_at,created_at").single();
     if (error) controls.intakeMessage.textContent = "The link could not be created. " + error.message;
     else {

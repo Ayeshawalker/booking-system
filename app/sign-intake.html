@@ -3,14 +3,14 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Betrayal trauma intake form | Ayesha Jane</title>
+    <title>Therapy intake form | Ayesha Jane</title>
     <link rel="stylesheet" href="styles.css?v=20260814-intake-signing-v3" />
   </head>
   <body class="agreement-signing-page intake-signing-page">
     <main class="agreement-signing-shell intake-signing-shell">
       <header class="agreement-signing-brand">
         <img src="assets/aj-logo-medium-preview.png" alt="Ayesha Jane Therapy, Counselling and Coaching" />
-        <div><p class="admin-kicker">Private client document</p><h1>Betrayal trauma therapy</h1><p>Initial information form</p></div>
+        <div><p class="admin-kicker">Private client document</p><h1 id="intake-public-title">Therapy intake form</h1><p>Initial information form</p></div>
       </header>
       <section id="intake-loading" class="agreement-public-state">Opening your secure form…</section>
       <section id="intake-error" class="agreement-public-state agreement-public-error" hidden></section>
@@ -30,7 +30,7 @@
           <label>Is it safe to contact you by WhatsApp, telephone or email?<select name="safe_contact"><option value="">Please choose</option><option>Yes</option><option>No</option><option>Please discuss with me first</option></select></label>
         </div><label>Address <span class="optional">(optional)</span><textarea name="address" rows="2"></textarea></label><label>Emergency contact: name, relationship and telephone <span class="optional">(optional)</span><textarea name="emergency_contact" rows="2"></textarea></label></fieldset>
 
-        <fieldset><legend>2. What brings you to therapy</legend>
+        <fieldset class="betrayal-intake-only"><legend>2. What brings you to betrayal trauma therapy</legend>
           <label id="what-happened-field">Please tell me, in your own words, what has brought you to therapy.<textarea name="what_happened" rows="5" aria-describedby="intake-core-answer-help"></textarea></label>
           <p id="intake-core-answer-help" class="intake-field-error" hidden>Please answer this question or the highlighted question in section 10 before submitting.</p>
           <p>Which experiences are relevant to you? Select any that apply.</p>
@@ -51,27 +51,27 @@
           <label>What is the present relationship situation?<textarea name="relationship_context" rows="3"></textarea></label>
         </fieldset>
 
-        <fieldset><legend>3. Your present circumstances</legend><div class="form-grid">
+        <fieldset class="betrayal-intake-only"><legend>3. Your present circumstances</legend><div class="form-grid">
           <label>Are you currently in contact with the other person?<textarea name="current_contact" rows="3"></textarea></label>
           <label>Are there children or dependants affected by the situation?<textarea name="children" rows="3"></textarea></label>
           <label>Are there legal, separation or divorce processes underway?<textarea name="legal_processes" rows="3"></textarea></label>
           <label>What are your current living arrangements?<textarea name="living_arrangements" rows="3"></textarea></label>
         </div></fieldset>
 
-        <fieldset><legend>4. How this is affecting you</legend><div class="form-grid">
+        <fieldset class="betrayal-intake-only"><legend>4. How this is affecting you</legend><div class="form-grid">
           <label>Emotionally<textarea name="emotional_impact" rows="4"></textarea></label>
           <label>Physically, including sleep or appetite<textarea name="physical_impact" rows="4"></textarea></label>
           <label>Day-to-day life and relationships<textarea name="daily_impact" rows="4"></textarea></label>
           <label>Work, study or caring responsibilities<textarea name="work_impact" rows="4"></textarea></label>
         </div></fieldset>
 
-        <fieldset><legend>5. Safety and practical considerations</legend>
+        <fieldset class="betrayal-intake-only"><legend>5. Safety and practical considerations</legend>
           <p>This brief, optional question helps me consider whether there is anything I should take into account when contacting or supporting you.</p>
           <label>Is there anything about your current relationship or home situation that leaves you feeling unsafe, frightened, pressured or unable to make your own choices?<select name="safety_concerns"><option value="">Please choose</option><option>No</option><option>Yes</option><option>Unsure</option><option>Prefer to discuss in session</option></select></label>
           <label>If you would like to, tell me anything that would help me contact or support you safely.<textarea name="contact_safety" rows="4"></textarea></label>
         </fieldset>
 
-        <fieldset><legend>6. Relationship patterns, coping and support</legend>
+        <fieldset class="betrayal-intake-only"><legend>6. Relationship patterns, coping and support</legend>
           <p>People respond to betrayal in many different and understandable ways. These questions will help me understand how you have been coping and what support may be most helpful.</p>
           <label>What have you found yourself doing to cope or get through this?<textarea name="coping_responses" rows="5"></textarea></label>
           <label>Who, if anyone, currently supports you?<textarea name="support_network" rows="4"></textarea></label>
@@ -89,7 +89,7 @@
           <label>What helps you feel safe, connected and able to trust?<textarea name="attachment_security_needs" rows="4"></textarea></label>
         </fieldset>
 
-        <fieldset><legend>7. Family of origin</legend>
+        <fieldset class="betrayal-intake-only"><legend>7. Family of origin</legend>
           <p>This section is optional. Earlier experiences can sometimes help us understand present relationship patterns, but you do not need to share anything you would rather discuss in person.</p>
           <label>How would you describe your childhood environment?<textarea name="childhood_environment" rows="4"></textarea></label>
           <p>Were any of the following present in your family while you were growing up? Select any that apply.</p>
@@ -106,20 +106,30 @@
           <label>Is there anything about your early relationships or caregiving that feels relevant to your support now?<textarea name="family_origin_context" rows="4"></textarea></label>
         </fieldset>
 
-        <fieldset><legend>8. Health and previous support</legend><div class="form-grid">
+        <fieldset class="general-intake-only" hidden><legend>2. What brings you to therapy</legend>
+          <label id="general-what-happened-field">Please tell me, in your own words, what has brought you to therapy.<textarea name="what_happened" rows="5" aria-describedby="general-intake-core-answer-help"></textarea></label>
+          <p id="general-intake-core-answer-help" class="intake-field-error" hidden>Please answer this question or the highlighted question about your hopes for therapy before submitting.</p>
+          <label>How are these difficulties affecting your emotions, relationships or day-to-day life?<textarea name="daily_impact" rows="5"></textarea></label>
+          <label>How long has this been affecting you, and has anything recently changed?<textarea name="discovery_timing" rows="4"></textarea></label>
+          <label>What have you already tried, and what has or has not helped?<textarea name="coping_responses" rows="4"></textarea></label>
+          <label>Who, if anyone, currently supports you?<textarea name="support_network" rows="4"></textarea></label>
+          <label>Is there anything about your relationships, family background or present circumstances that feels important for me to understand?<textarea name="relationship_context" rows="5"></textarea></label>
+        </fieldset>
+
+        <fieldset><legend><span class="intake-section-number">8.</span> Health and previous support</legend><div class="form-grid">
           <label>Previous counselling, therapy or other support<textarea name="previous_therapy" rows="4"></textarea></label>
           <label>Physical or mental-health information that may be helpful to know<textarea name="health_information" rows="4"></textarea></label>
           <label>Current medication that may be relevant <span class="optional">(optional)</span><textarea name="medication" rows="3"></textarea></label>
           <label>Accessibility, communication or cultural needs<textarea name="access_needs" rows="3"></textarea></label>
         </div></fieldset>
 
-        <fieldset class="intake-risk-section"><legend>9. Current emotional risk</legend>
+        <fieldset class="intake-risk-section"><legend><span class="intake-section-number">9.</span> Current emotional risk</legend>
           <label>Have you recently had thoughts of harming yourself, ending your life or harming someone else?<select name="risk_thoughts"><option value="">Please choose</option><option>No</option><option>Yes</option><option>Unsure / prefer to discuss</option></select></label>
           <label>If yes or unsure, please share anything I need to know to respond safely.<textarea name="risk_details" rows="4"></textarea></label>
           <label>What helps you stay safe or keep going when things are difficult?<textarea name="protective_factors" rows="4"></textarea></label>
         </fieldset>
 
-        <fieldset><legend>10. What you hope for</legend>
+        <fieldset><legend><span class="intake-section-number">10.</span> What you hope for</legend>
           <label id="therapy-hopes-field">What would you most like help with in therapy?<textarea name="therapy_hopes" rows="5" aria-describedby="intake-goal-answer-help"></textarea></label>
           <p id="intake-goal-answer-help" class="intake-field-error" hidden>Please answer this question or the highlighted question in section 2 before submitting.</p>
           <label>If therapy were helpful, what differences would you notice in yourself, your relationships or your day-to-day life?<textarea name="therapy_success_difference" rows="5"></textarea></label>
@@ -127,7 +137,7 @@
           <label>Is there anything else you would like me to understand before we meet?<textarea name="important_context" rows="4"></textarea></label>
         </fieldset>
 
-        <fieldset class="agreement-signature-panel"><legend>11. Confirmation and electronic signature</legend>
+        <fieldset class="agreement-signature-panel"><legend><span class="intake-section-number">11.</span> Confirmation and electronic signature</legend>
           <label class="agreement-choice agreement-accept"><input type="checkbox" name="confirmAccurate" required /> I have shared what I feel able to share at this stage and understand that I may discuss or clarify my answers in therapy.</label>
           <label class="agreement-choice agreement-accept"><input type="checkbox" name="confirmNotEmergency" required /> I understand that submitting this form does not provide emergency or crisis support.</label>
           <label class="agreement-choice agreement-accept"><input type="checkbox" name="confirmAssessment" required /> I understand that this form supports assessment but does not by itself confirm that therapy has begun or is suitable for me.</label>
@@ -139,6 +149,6 @@
       <p class="agreement-privacy-link"><a href="privacy-notice.html" target="_blank" rel="noopener">Read the Privacy Notice</a></p>
     </main>
     <script src="config.js"></script>
-    <script src="sign-intake.js?v=20260814-secure-intake-v3"></script>
+    <script src="sign-intake.js?v=20260817-multiple-intakes"></script>
   </body>
 </html>

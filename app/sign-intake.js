@@ -7,6 +7,21 @@
   const config = window.BOOKING_CONFIG || {};
   let intake;
 
+  function configureFormType(formType) {
+    const betrayal = formType === "Betrayal trauma";
+    document.querySelector("#intake-public-title").textContent = betrayal ? "Betrayal trauma therapy" : "Individual therapy";
+    document.querySelectorAll(".betrayal-intake-only").forEach((section) => {
+      section.hidden = !betrayal;
+      section.querySelectorAll("input, select, textarea").forEach((control) => { control.disabled = !betrayal; });
+    });
+    document.querySelectorAll(".general-intake-only").forEach((section) => {
+      section.hidden = betrayal;
+      section.querySelectorAll("input, select, textarea").forEach((control) => { control.disabled = betrayal; });
+    });
+    const numbers = betrayal ? ["8.", "9.", "10.", "11."] : ["3.", "4.", "5.", "6."];
+    document.querySelectorAll(".intake-section-number").forEach((node, index) => { node.textContent = numbers[index]; });
+  }
+
   async function call(action, extra = {}) {
     const response = await fetch(`${config.supabaseUrl}/functions/v1/intake-form`, {
       method: "POST",
@@ -33,32 +48,32 @@
     return answers;
   }
   function clearCoreAnswerErrors() {
-    ["#what-happened-field", "#therapy-hopes-field"].forEach((selector) => {
+    ["#what-happened-field", "#general-what-happened-field", "#therapy-hopes-field"].forEach((selector) => {
       form.querySelector(selector)?.classList.remove("intake-field-invalid");
     });
-    ["#intake-core-answer-help", "#intake-goal-answer-help"].forEach((selector) => {
+    ["#intake-core-answer-help", "#general-intake-core-answer-help", "#intake-goal-answer-help"].forEach((selector) => {
       const help = form.querySelector(selector);
       if (help) help.hidden = true;
     });
   }
   function validateCoreAnswer() {
     clearCoreAnswerErrors();
-    const first = form.elements.what_happened;
+    const first = [...form.querySelectorAll('[name="what_happened"]')].find((control) => !control.disabled);
     const second = form.elements.therapy_hopes;
     if (String(first.value || "").trim() || String(second.value || "").trim()) return true;
-    ["#what-happened-field", "#therapy-hopes-field"].forEach((selector) => {
+    [intake.form_type === "Betrayal trauma" ? "#what-happened-field" : "#general-what-happened-field", "#therapy-hopes-field"].forEach((selector) => {
       form.querySelector(selector)?.classList.add("intake-field-invalid");
     });
-    ["#intake-core-answer-help", "#intake-goal-answer-help"].forEach((selector) => {
+    [intake.form_type === "Betrayal trauma" ? "#intake-core-answer-help" : "#general-intake-core-answer-help", "#intake-goal-answer-help"].forEach((selector) => {
       const help = form.querySelector(selector);
       if (help) help.hidden = false;
     });
     message.textContent = "Please answer one of the two highlighted questions before submitting.";
     first.focus({ preventScroll: true });
-    form.querySelector("#what-happened-field")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    form.querySelector(intake.form_type === "Betrayal trauma" ? "#what-happened-field" : "#general-what-happened-field")?.scrollIntoView({ behavior: "smooth", block: "center" });
     return false;
   }
-  form.elements.what_happened.addEventListener("input", clearCoreAnswerErrors);
+  [...form.querySelectorAll('[name="what_happened"]')].forEach((control) => control.addEventListener("input", clearCoreAnswerErrors));
   form.elements.therapy_hopes.addEventListener("input", clearCoreAnswerErrors);
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -85,6 +100,7 @@
     try {
       if (!token) throw new Error("This intake link is incomplete.");
       intake = (await call("view")).intake;
+      configureFormType(intake.form_type);
       loading.hidden = true;
       if (intake.status === "Completed") {
         errorBox.hidden = false;

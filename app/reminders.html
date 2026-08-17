@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en" class="admin-auth-checking">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Reminders | Ayesha Jane</title>
+    <link rel="stylesheet" href="styles.css?v=20260817-reminders" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="https://ayeshajane.com/">Ayesha Jane</a>
+      <nav class="admin-nav" aria-label="Private admin links">
+        <a href="clients.html">Clients</a><a href="calendar.html">Calendar</a><a href="ayesha.html">Bookings</a>
+        <a href="payments.html">Payments</a><a href="notes.html">Notes</a><a href="reminders.html" aria-current="page">Reminders</a>
+        <a href="settings.html">Settings</a><a href="index.html">Public page</a>
+        <span class="admin-user-email" data-admin-email></span><button class="nav-signout" type="button" data-admin-sign-out>Sign out</button>
+      </nav>
+    </header>
+
+    <main class="admin-shell reminders-shell">
+      <header class="admin-heading">
+        <div><p class="admin-kicker">Private task list</p><h1>Reminders</h1><p>Keep practical tasks, follow-ups and client-related reminders together.</p></div>
+      </header>
+
+      <section class="reminder-stats" aria-label="Reminder totals">
+        <div><strong id="reminder-due-count">0</strong><span>Due or overdue</span></div>
+        <div><strong id="reminder-upcoming-count">0</strong><span>Upcoming</span></div>
+        <div><strong id="reminder-no-date-count">0</strong><span>No date</span></div>
+        <div><strong id="reminder-completed-count">0</strong><span>Completed</span></div>
+      </section>
+
+      <section class="admin-workspace reminder-entry-panel" aria-labelledby="new-reminder-title">
+        <h2 id="new-reminder-title">Add a reminder</h2>
+        <form id="reminder-form">
+          <div class="form-grid">
+            <label>What needs doing?<input name="title" required maxlength="180" placeholder="For example: Check whether Chloe has confirmed" /></label>
+            <label>Related client <span class="optional">(optional)</span><select name="clientId"><option value="">No client</option></select></label>
+          </div>
+          <div class="form-grid">
+            <label>Due date <span class="optional">(optional)</span><input name="dueDate" type="date" /></label>
+            <label>Status<select name="status"><option value="Pending">To do</option><option value="Waiting">Waiting to hear back</option></select></label>
+          </div>
+          <div class="form-grid">
+            <label>Priority<select name="priority"><option>Normal</option><option>High</option><option>Low</option></select></label>
+          </div>
+          <label>Brief note <span class="optional">(optional)</span><textarea name="details" rows="3" placeholder="Add any short information you need to remember."></textarea></label>
+          <div class="settings-button-row"><button type="submit">Add reminder</button><button id="clear-reminder" class="secondary-button" type="button">Clear</button></div>
+          <p id="reminder-message" class="admin-message" role="status"></p>
+        </form>
+      </section>
+
+      <section class="admin-workspace reminder-list-panel" aria-labelledby="reminder-list-title">
+        <div class="notes-list-heading"><h2 id="reminder-list-title">My reminders</h2><label>Show<select id="reminder-filter"><option value="open">Open reminders</option><option value="waiting">Waiting to hear back</option><option value="due">Due or overdue</option><option value="upcoming">Upcoming</option><option value="no-date">No date</option><option value="completed">Completed</option><option value="all">Everything</option></select></label></div>
+        <div id="reminder-list" class="reminder-list"></div>
+      </section>
+    </main>
+    <script src="config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="admin-auth.js?v=20260813-ten-hour-session"></script>
+    <script src="reminders.js?v=20260817-reminders"></script>
+  </body>
+</html>
