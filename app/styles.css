@@ -2214,6 +2214,30 @@ dd {
   padding: 8px 12px;
 }
 
+.reminders-shell { max-width: 1120px; }
+.reminder-stats { display: grid; grid-template-columns: repeat(4, 1fr); margin: 20px 0 28px; border: 1px solid var(--border); background: var(--cream); }
+.reminder-stats div { display: grid; gap: 4px; padding: 22px; border-right: 1px solid var(--border); }
+.reminder-stats div:last-child { border-right: 0; }
+.reminder-stats strong { color: var(--pink-dark); font-family: Georgia, serif; font-size: 2rem; }
+.reminder-stats span { color: var(--gold-dark); font-size: .78rem; font-weight: 800; text-transform: uppercase; }
+.reminder-entry-panel, .reminder-list-panel { margin-bottom: 28px; }
+.reminder-list { display: grid; gap: 12px; margin-top: 18px; }
+.reminder-card { display: flex; align-items: center; justify-content: space-between; gap: 20px; border: 2px solid #f1ddbd; border-left: 8px solid var(--orange); border-radius: 16px; padding: 17px 18px; background: white; }
+.reminder-card.is-overdue { border-color: #da263b; border-left-color: #da263b; background: #fff4f4; }
+.reminder-card.is-waiting { border-left-color: #8d69c7; background: #fbf8ff; }
+.reminder-card.is-completed { opacity: .68; border-left-color: #88a891; }
+.reminder-card.is-completed strong { text-decoration: line-through; }
+.reminder-card-main { min-width: 0; }
+.reminder-card-heading { display: flex; align-items: center; gap: 10px; }
+.reminder-card-heading > strong { font-size: 1.08rem; }
+.reminder-card p { margin: 7px 0 0; white-space: pre-wrap; }
+.reminder-card small { color: var(--muted); }
+.reminder-priority { border-radius: 999px; padding: 2px 9px; background: var(--cream); color: var(--gold-dark); font-size: .68rem; font-weight: 800; text-transform: uppercase; }
+.reminder-priority-high { background: #ffe5e8; color: #b3172d; }
+.reminder-priority-low { background: #eaf5ed; color: #477553; }
+.reminder-status-waiting { border-radius: 999px; padding: 3px 10px; background: #eee5fb; color: #5c378f; font-size: .72rem; font-weight: 800; }
+@media (max-width: 760px) { .reminder-stats { grid-template-columns: 1fr 1fr; } .reminder-stats div:nth-child(2) { border-right: 0; } .reminder-card { align-items: flex-start; flex-direction: column; } }
+
 .calendar-admin-shell {
   width: min(1440px, calc(100% - 32px));
 }

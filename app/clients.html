@@ -16,6 +16,7 @@
         <a href="payments.html">Payments</a>
         <a href="settings.html">Settings</a>
         <a href="notes.html">Notes</a>
+        <a href="reminders.html">Reminders</a>
         <a href="index.html">Public page</a>
         <span class="admin-user-email" data-admin-email></span>
         <button class="nav-signout" type="button" data-admin-sign-out>
@@ -403,11 +404,12 @@
 
     <dialog id="intake-dialog" class="client-dialog contract-dialog">
       <header class="dialog-header">
-        <div><p class="admin-kicker">Betrayal trauma intake</p><h2 id="intake-dialog-title">Send intake form</h2></div>
+        <div><p class="admin-kicker">Client intake</p><h2 id="intake-dialog-title">Send intake form</h2></div>
         <button id="close-intake-dialog" class="dialog-close" type="button" aria-label="Close">×</button>
       </header>
       <div class="client-form-body contract-manager-body">
         <p>This private electronic form records the client’s answers and signature securely. Only send the link to the named client.</p>
+        <label id="intake-form-type-field">Choose intake form<select id="intake-form-type"><option value="Individual">General individual intake</option><option value="Betrayal trauma">Betrayal trauma intake</option></select></label>
         <div id="intake-current-status" class="contract-current-status"></div>
         <div id="intake-link-panel" hidden>
           <label>Private form link<input id="intake-signing-link" readonly /></label>
@@ -434,6 +436,6 @@
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="admin-auth.js?v=20260813-ten-hour-session"></script>
-    <script src="clients.js?v=20260817-delete-client-fix"></script>
+    <script src="clients.js?v=20260817-reminders-and-intakes"></script>
   </body>
 </html>
