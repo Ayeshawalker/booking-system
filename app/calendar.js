@@ -2054,15 +2054,20 @@
         );
         if (invoiceError) console.error("Invoice could not be created.", invoiceError);
       }
+      let zoomNeedsAttention = false;
       if (
         String(repeated.session_format || "").toLowerCase() === "online" &&
         repeated.status === "confirmed"
       ) {
-        const { error: zoomError } = await supabaseClient.functions.invoke(
+        const { data: zoomData, error: zoomError } = await supabaseClient.functions.invoke(
           window.BOOKING_CONFIG?.zoomCreateMeetingFunction || "zoom-create-meeting",
           { body: { bookingId: repeatedId } },
         );
-        if (zoomError) console.error("Zoom link needs attention.", zoomError);
+        if (zoomData?.joinUrl) repeated.zoom_join_url = zoomData.joinUrl;
+        if (zoomError || zoomData?.error || !zoomData?.joinUrl) {
+          zoomNeedsAttention = true;
+          console.error("Zoom link needs attention.", zoomError || zoomData?.error);
+        }
       }
       const { error: calendarError } = await supabaseClient.functions.invoke(
         window.BOOKING_CONFIG?.calendarCreateFunction || "calendar-create-booking",
@@ -2072,7 +2077,21 @@
       controls.dialog.close();
       state.focusDate = startOfDay(repeatedStart);
       await loadEvents();
-      controls.message.textContent = `${booking.title} repeated for next week.`;
+      const client = state.bookingClients.find(
+        (candidate) => candidate.id === repeated.client_id,
+      ) || {
+        record_type: repeated.second_first_name ? "Couple" : "Individual",
+        first_name: repeated.first_name,
+        surname: repeated.surname,
+        second_first_name: repeated.second_first_name,
+        second_surname: repeated.second_surname,
+        phone: repeated.phone,
+      };
+      showWhatsAppConfirmation(
+        client,
+        repeated,
+        `${booking.title} repeated for next week${zoomNeedsAttention ? "; Zoom link needs attention" : ""}.`,
+      );
     } catch (error) {
       console.error(error);
       controls.bookingDetailsMessage.textContent = error?.message ||
