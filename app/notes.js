@@ -156,7 +156,10 @@
 
   function setOptions(select, includeAll) {
     const first = includeAll ? '<option value="">All clients</option>' : '<option value="">Choose client</option>';
-    select.innerHTML = first + clients.map((client) => `<option value="${client.id}">${escapeHtml(name(client))}</option>`).join("");
+    select.innerHTML = first + clients.map((client) => {
+      const status = client.status && client.status !== "Active" ? ` — ${client.status}` : "";
+      return `<option value="${client.id}">${escapeHtml(`${name(client)}${status}`)}</option>`;
+    }).join("");
   }
   function clearForm() {
     revokeStagedUrls(); stagedImages = []; noteImages = [];
@@ -289,7 +292,9 @@
       const client = clients.find((item) => item.id === note.client_id);
       const item = document.createElement("li"); item.className = "secure-note-list-item";
       const tags = [...(note.interventions || []), ...(note.resources_shared || [])];
-      item.innerHTML = `<span><strong>${escapeHtml(name(client || {}))}</strong><small>${formatDate(note.note_date)} · ${escapeHtml(note.note_type)} · <b>${escapeHtml(note.status)}</b>${note.archived_at ? " · Archived" : ""}${note.ai_assisted ? " · AI assisted" : ""}${note.supervision_status === "Outstanding" ? " · Supervision flagged" : ""}</small>${tags.length ? `<small>${escapeHtml(tags.join(" · "))}</small>` : ""}</span>`;
+      const clientName = client ? name(client) : "Client record unavailable";
+      const clientStatus = client?.status && client.status !== "Active" ? ` · ${client.status} client` : "";
+      item.innerHTML = `<span><strong>${escapeHtml(clientName)}</strong><small>${formatDate(note.note_date)} · ${escapeHtml(note.note_type)} · <b>${escapeHtml(note.status)}</b>${escapeHtml(clientStatus)}${note.archived_at ? " · Archived" : ""}${note.ai_assisted ? " · AI assisted" : ""}${note.supervision_status === "Outstanding" ? " · Supervision flagged" : ""}</small>${tags.length ? `<small>${escapeHtml(tags.join(" · "))}</small>` : ""}</span>`;
       const actions = document.createElement("span"); actions.className = "settings-list-actions";
       const finalAction = note.archived_at ? ["Restore", () => restore(note)] : ["Archive", () => archive(note)];
       [["Open note", () => openNote(note)], ["History", () => showHistory(note)], finalAction].forEach(([label, handler]) => { const button = document.createElement("button"); button.type = "button"; button.textContent = label; if (label === "Archive" || label === "Restore") button.className = "secondary-button"; button.addEventListener("click", handler); actions.append(button); });
@@ -322,7 +327,7 @@
     document.querySelector(".note-structured-fields").hidden = !structuredFieldsReady;
     document.querySelector(".note-supervision-fields").hidden = !structuredFieldsReady;
     ui.imageFields.hidden = !imageFieldsReady;
-    const { data, error } = await db.from("clients").select("id,first_name,surname,second_first_name,second_surname,status").neq("status", "Former").order("first_name");
+    const { data, error } = await db.from("clients").select("id,first_name,surname,second_first_name,second_surname,status").order("first_name");
     if (error) { ui.message.textContent = "Clients could not be loaded."; return; }
     clients = data || []; setOptions(ui.client, false); setOptions(ui.filter, true); clearForm(); await loadNotes();
     if (!structuredFieldsReady) ui.message.textContent = "Your existing notes are working. The new interventions and supervision fields still need the one-time Supabase update.";
