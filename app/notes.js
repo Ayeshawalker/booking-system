@@ -9,6 +9,7 @@
     save: document.querySelector("#save-client-note"), finalise: document.querySelector("#finalise-client-note"),
     clear: document.querySelector("#clear-client-note"), message: document.querySelector("#client-note-message"),
     list: document.querySelector("#client-notes-list"), filter: document.querySelector("#client-note-list-filter"),
+    showArchived: document.querySelector("#show-archived-notes"),
     historyDialog: document.querySelector("#note-history-dialog"), historyList: document.querySelector("#note-history-list"),
     interventions: document.querySelector("#client-note-interventions"), resources: document.querySelector("#client-note-resources"),
     needsSupervision: document.querySelector("#client-note-needs-supervision"), supervisionWrap: document.querySelector("#client-note-supervision-wrap"),
@@ -266,6 +267,12 @@
     if (error) { ui.message.textContent = "The note could not be archived."; return; }
     if (activeId === note.id) clearForm(); await loadNotes();
   }
+  async function restore(note) {
+    const { error } = await db.from("clinical_notes").update({ archived_at: null, archived_by: null }).eq("id", note.id);
+    if (error) { ui.message.textContent = "The note could not be restored."; return; }
+    await loadNotes();
+    ui.message.textContent = "The note has been restored to Saved notes.";
+  }
   async function showHistory(note) {
     ui.historyList.textContent = "Loading history…"; ui.historyDialog.showModal();
     const { data, error } = await db.from("clinical_note_versions").select("version_number,final_note,rough_note,status,changed_at,structured_details").eq("note_id", note.id).order("version_number", { ascending: false });
@@ -275,15 +282,17 @@
   }
   function render() {
     const filter = ui.filter.value;
-    const visible = notes.filter((note) => !filter || note.client_id === filter);
+    const archivedView = ui.showArchived.checked;
+    const visible = notes.filter((note) => Boolean(note.archived_at) === archivedView && (!filter || note.client_id === filter));
     ui.list.innerHTML = "";
     visible.forEach((note) => {
       const client = clients.find((item) => item.id === note.client_id);
       const item = document.createElement("li"); item.className = "secure-note-list-item";
       const tags = [...(note.interventions || []), ...(note.resources_shared || [])];
-      item.innerHTML = `<span><strong>${escapeHtml(name(client || {}))}</strong><small>${formatDate(note.note_date)} · ${escapeHtml(note.note_type)} · <b>${escapeHtml(note.status)}</b>${note.ai_assisted ? " · AI assisted" : ""}${note.supervision_status === "Outstanding" ? " · Supervision flagged" : ""}</small>${tags.length ? `<small>${escapeHtml(tags.join(" · "))}</small>` : ""}</span>`;
+      item.innerHTML = `<span><strong>${escapeHtml(name(client || {}))}</strong><small>${formatDate(note.note_date)} · ${escapeHtml(note.note_type)} · <b>${escapeHtml(note.status)}</b>${note.archived_at ? " · Archived" : ""}${note.ai_assisted ? " · AI assisted" : ""}${note.supervision_status === "Outstanding" ? " · Supervision flagged" : ""}</small>${tags.length ? `<small>${escapeHtml(tags.join(" · "))}</small>` : ""}</span>`;
       const actions = document.createElement("span"); actions.className = "settings-list-actions";
-      [["Open note", () => openNote(note)], ["History", () => showHistory(note)], ["Archive", () => archive(note)]].forEach(([label, handler]) => { const button = document.createElement("button"); button.type = "button"; button.textContent = label; if (label === "Archive") button.className = "secondary-button"; button.addEventListener("click", handler); actions.append(button); });
+      const finalAction = note.archived_at ? ["Restore", () => restore(note)] : ["Archive", () => archive(note)];
+      [["Open note", () => openNote(note)], ["History", () => showHistory(note)], finalAction].forEach(([label, handler]) => { const button = document.createElement("button"); button.type = "button"; button.textContent = label; if (label === "Archive" || label === "Restore") button.className = "secondary-button"; button.addEventListener("click", handler); actions.append(button); });
       item.append(actions); ui.list.append(item);
     });
     if (!visible.length) ui.list.innerHTML = "<li>No secure notes have been saved for this selection.</li>";
@@ -292,7 +301,7 @@
   function renderWorkOverview() {
     const clientId = ui.client.value;
     if (!clientId) { ui.workOverview.innerHTML = "<p>No client selected.</p>"; return; }
-    const clientNotes = notes.filter((note) => note.client_id === clientId).sort((a, b) => String(b.note_date).localeCompare(String(a.note_date)));
+    const clientNotes = notes.filter((note) => note.client_id === clientId && !note.archived_at).sort((a, b) => String(b.note_date).localeCompare(String(a.note_date)));
     const renderItems = (field, empty) => {
       const items = clientNotes.flatMap((note) => (note[field] || []).map((text) => ({ text, date: note.note_date })));
       return items.length ? `<ul>${items.map((item) => `<li><strong>${escapeHtml(item.text)}</strong><small>${formatDate(item.date)}</small></li>`).join("")}</ul>` : `<p>${empty}</p>`;
@@ -300,7 +309,7 @@
     ui.workOverview.innerHTML = `<section><h4>Interventions and strategies</h4>${renderItems("interventions", "None recorded yet.")}</section><section><h4>Resources shared</h4>${renderItems("resources_shared", "None recorded yet.")}</section>`;
   }
   async function loadNotes() {
-    const { data, error } = await db.from("clinical_notes").select("*").is("archived_at", null).order("note_date", { ascending: false }).order("updated_at", { ascending: false });
+    const { data, error } = await db.from("clinical_notes").select("*").order("note_date", { ascending: false }).order("updated_at", { ascending: false });
     if (error) { notes = []; ui.message.textContent = "Secure notes are ready locally but still need activating in Supabase."; }
     else notes = data || [];
     render();
@@ -323,7 +332,7 @@
     if (requestedNote) openNote(requestedNote);
   }
   ui.improve.addEventListener("click", improve); ui.save.addEventListener("click", () => save("Draft")); ui.finalise.addEventListener("click", () => save("Final"));
-  ui.clear.addEventListener("click", clearForm); ui.filter.addEventListener("change", render);
+  ui.clear.addEventListener("click", clearForm); ui.filter.addEventListener("change", render); ui.showArchived.addEventListener("change", render);
   ui.client.addEventListener("change", renderWorkOverview);
   ui.needsSupervision.addEventListener("change", () => { ui.supervisionWrap.hidden = !ui.needsSupervision.checked; supervisionStatus = ui.needsSupervision.checked ? "Outstanding" : "Not required"; supervisionDiscussedAt = null; if (ui.needsSupervision.checked) ui.supervisionQuestion.focus(); });
   ui.addImage.addEventListener("click", () => ui.imageInput.click());

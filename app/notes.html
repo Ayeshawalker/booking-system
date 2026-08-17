@@ -186,7 +186,11 @@
             <div id="client-work-overview" class="client-work-overview-grid"><p>No client selected.</p></div>
           </section>
 
-          <div class="notes-list-heading"><h3>Saved notes</h3><label>Show client<select id="client-note-list-filter"><option value="">All clients</option></select></label></div>
+          <div class="notes-list-heading">
+            <h3>Saved notes</h3>
+            <label>Show client<select id="client-note-list-filter"><option value="">All clients</option></select></label>
+            <label><input id="show-archived-notes" type="checkbox" /> Show archived notes</label>
+          </div>
           <ul id="client-notes-list" class="settings-list client-notes-list"></ul>
         </section>
       </section>
@@ -200,6 +204,6 @@
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="admin-auth.js?v=20260813-ten-hour-session"></script>
-    <script src="notes.js?v=20260811-abc-diagrams"></script>
+    <script src="notes.js?v=20260817-archived-notes"></script>
   </body>
 </html>

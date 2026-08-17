@@ -812,30 +812,38 @@
 
   controls.deleteButton.addEventListener("click", async () => {
     const client = clients.find((item) => item.id === editingClientId);
-    if (!client) return;
+    if (!client) {
+      window.alert("This client record could not be found. Please close the box, refresh the page and try again.");
+      return;
+    }
     const name = clientName(client);
     const confirmed = window.confirm(
       `Permanently delete ${name}?\n\nOnly continue if this is the duplicate record. This cannot be undone.`,
     );
     if (!confirmed) return;
     controls.deleteButton.disabled = true;
+    controls.deleteButton.textContent = "Deleting...";
     controls.formMessage.textContent = "";
-    const { data, error } = await supabaseClient
-      .from("clients")
-      .delete()
-      .eq("id", client.id)
-      .select("id");
-    if (error || data?.length !== 1) {
+    try {
+      const { error } = await supabaseClient
+        .from("clients")
+        .delete()
+        .eq("id", client.id);
+      if (error) throw error;
+      clients = clients.filter((item) => item.id !== client.id);
+      controls.dialog.close();
+      controls.message.textContent = `${name} was deleted.`;
+      renderClients();
+    } catch (error) {
       controls.deleteButton.disabled = false;
+      controls.deleteButton.textContent = "Delete client";
       controls.formMessage.textContent =
         "This client could not be deleted, usually because sessions, notes or payments are attached to this record.";
       console.error("Client deletion failed.", error);
-      return;
+      window.alert(
+        `${name} could not be deleted because this record appears to have sessions, notes or payments attached. No information has been removed.`,
+      );
     }
-    clients = clients.filter((item) => item.id !== client.id);
-    controls.dialog.close();
-    controls.message.textContent = `${name} was deleted.`;
-    renderClients();
   });
 
   controls.addButton.addEventListener("click", () => openClientEditor());
