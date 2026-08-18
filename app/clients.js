@@ -52,6 +52,7 @@
   const counts = {
     all: document.querySelector("#client-count-all"),
     active: document.querySelector("#client-count-active"),
+    paused: document.querySelector("#client-count-paused"),
     individuals: document.querySelector("#client-count-individuals"),
     couples: document.querySelector("#client-count-couples"),
     weekly: document.querySelector("#client-count-weekly"),
@@ -541,6 +542,9 @@
     counts.all.textContent = String(clients.length);
     counts.active.textContent = String(
       clients.filter((client) => client.status === "Active").length,
+    );
+    counts.paused.textContent = String(
+      clients.filter((client) => client.status === "Paused").length,
     );
     counts.individuals.textContent = String(
       clients.filter((client) => client.record_type === "Individual").length,
