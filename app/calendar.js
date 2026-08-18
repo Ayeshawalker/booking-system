@@ -2045,8 +2045,32 @@
         stripe_paid_at: null,
         payment_failure_message: null,
       };
-      const { error: insertError } = await supabaseClient
-        .from("booking_requests").insert(repeated);
+      // Older installations may not yet have every optional payment field.
+      // If PostgREST identifies one as unavailable, omit just that field and
+      // retry so the repeated appointment itself is not lost.
+      let insertError = null;
+      const attemptedMissingColumns = new Set();
+      while (true) {
+        const { error } = await supabaseClient
+          .from("booking_requests").insert(repeated);
+        insertError = error;
+        if (!insertError) break;
+
+        const missingColumn = String(insertError.message || "").match(
+          /Could not find the ['"]([^'"]+)['"] column of ['"]booking_requests['"]/i,
+        )?.[1];
+        if (
+          !missingColumn ||
+          !(missingColumn in repeated) ||
+          attemptedMissingColumns.has(missingColumn)
+        ) {
+          break;
+        }
+
+        attemptedMissingColumns.add(missingColumn);
+        delete repeated[missingColumn];
+        console.warn(`Repeated-booking field '${missingColumn}' is not available and was omitted.`);
+      }
       if (insertError) throw insertError;
       if (repeated.invoice_required && Number(repeated.invoice_amount || 0) > 0) {
         const { error: invoiceError } = await supabaseClient.rpc(
