@@ -3,7 +3,9 @@
   const errorBox = document.querySelector("#intake-error");
   const form = document.querySelector("#intake-form");
   const message = document.querySelector("#intake-form-message");
-  const token = new URLSearchParams(location.search).get("token") || "";
+  const query = new URLSearchParams(location.search);
+  const token = query.get("token") || "";
+  const previewType = query.get("preview") || "";
   const config = window.BOOKING_CONFIG || {};
   let intake;
 
@@ -98,6 +100,21 @@
   });
   (async () => {
     try {
+      if (previewType) {
+        intake = {
+          form_type: previewType.toLowerCase() === "betrayal"
+            ? "Betrayal trauma"
+            : "Individual",
+        };
+        configureFormType(intake.form_type);
+        loading.hidden = true;
+        form.hidden = false;
+        const submit = form.querySelector("button[type='submit']");
+        submit.disabled = true;
+        submit.textContent = "Preview only — nothing will be submitted";
+        message.textContent = "This is a blank preview. It is not linked to a client and nothing entered here will be saved or sent.";
+        return;
+      }
       if (!token) throw new Error("This intake link is incomplete.");
       intake = (await call("view")).intake;
       configureFormType(intake.form_type);
