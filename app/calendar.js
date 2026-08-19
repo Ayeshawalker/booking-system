@@ -289,7 +289,10 @@
     const formatDetails = format === "online"
       ? (zoomLink ? ` Your Zoom link is: ${zoomLink}.` : "")
       : " This session will be at Cherry Tree Therapy Centre, and I’ll let you know which room you’ll be in nearer the time.";
-    return `Hi ${clientGreetingName(client)}, confirming your appointment with me on ${date} at ${time.format(start)}–${time.format(end)}, ${format}.${formatDetails} Please let me know if anything needs changing.`;
+    const noticeReminder = format === "online"
+      ? " Just a gentle reminder that I need at least 48 hours’ notice if you wish to change or cancel this appointment; otherwise, the agreed session fee will still be charged."
+      : "";
+    return `Hi ${clientGreetingName(client)}, confirming your appointment with me on ${date} at ${time.format(start)}–${time.format(end)}, ${format}.${formatDetails} Please let me know if anything needs changing.${noticeReminder}`;
   }
 
   async function zoomErrorMessage(error, data) {
