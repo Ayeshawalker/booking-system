@@ -63,7 +63,9 @@
           <label>Physically, including sleep or appetite<textarea name="physical_impact" rows="4"></textarea></label>
           <label>Day-to-day life and relationships<textarea name="daily_impact" rows="4"></textarea></label>
           <label>Work, study or caring responsibilities<textarea name="work_impact" rows="4"></textarea></label>
-        </div></fieldset>
+        </div>
+          <label>Has the betrayal affected your sexual wellbeing, sexual relationship, sense of sexual safety, desire, confidence or how you experience your sexuality? Please share only what feels comfortable. You may also choose to discuss this with me in a session.<textarea name="sexual_wellbeing_impact" rows="4" placeholder="Optional — you can write ‘Prefer to discuss in session’. "></textarea></label>
+        </fieldset>
 
         <fieldset class="betrayal-intake-only"><legend>5. Safety and practical considerations</legend>
           <p>This brief, optional question helps me consider whether there is anything I should take into account when contacting or supporting you.</p>
@@ -75,6 +77,18 @@
           <p>People respond to betrayal in many different and understandable ways. These questions will help me understand how you have been coping and what support may be most helpful.</p>
           <label>What have you found yourself doing to cope or get through this?<textarea name="coping_responses" rows="5"></textarea></label>
           <label>Who, if anyone, currently supports you?<textarea name="support_network" rows="4"></textarea></label>
+          <p>If you know, is your partner currently receiving any support connected with the betrayal or related behaviours? Select any that apply. It is also fine not to know or not to answer.</p>
+          <div class="form-grid">
+            <label class="agreement-choice"><input type="checkbox" name="partner_support" value="Individual therapy or counselling" /> Individual therapy or counselling</label>
+            <label class="agreement-choice"><input type="checkbox" name="partner_support" value="Couples therapy with me" /> Couples therapy with me</label>
+            <label class="agreement-choice"><input type="checkbox" name="partner_support" value="A 12-step or peer-support programme" /> A 12-step or peer-support programme</label>
+            <label class="agreement-choice"><input type="checkbox" name="partner_support" value="A specialist treatment or recovery programme" /> A specialist treatment or recovery programme</label>
+            <label class="agreement-choice"><input type="checkbox" name="partner_support" value="Other support" /> Other support</label>
+            <label class="agreement-choice"><input type="checkbox" name="partner_support" value="Not currently receiving support" /> Not currently receiving support</label>
+            <label class="agreement-choice"><input type="checkbox" name="partner_support" value="I do not know" /> I do not know</label>
+            <label class="agreement-choice"><input type="checkbox" name="partner_support" value="Prefer to discuss in session" /> Prefer to discuss in session</label>
+          </div>
+          <label>If you would like to, please add anything relevant about your partner’s support, recovery work or willingness to seek help.<textarea name="partner_support_details" rows="4"></textarea></label>
           <h3>Closeness, distance and uncertainty</h3>
           <p>There are no right or wrong answers. These responses can vary between relationships, especially after trust has been broken.</p>
           <div class="form-grid">
@@ -149,6 +163,6 @@
       <p class="agreement-privacy-link"><a href="privacy-notice.html" target="_blank" rel="noopener">Read the Privacy Notice</a></p>
     </main>
     <script src="config.js"></script>
-    <script src="sign-intake.js?v=20260818-intake-preview"></script>
+    <script src="sign-intake.js?v=20260819-betrayal-form-context"></script>
   </body>
 </html>
