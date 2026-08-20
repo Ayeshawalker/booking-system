@@ -36,6 +36,7 @@
 
   const name = (client) => [[client.first_name, client.surname].filter(Boolean).join(" "), [client.second_first_name, client.second_surname].filter(Boolean).join(" ")].filter(Boolean).join(" and ");
   const formatDate = (date) => date ? new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(new Date(`${date}T12:00:00`)) : "No date";
+  const statusLabel = (status) => status === "Final" ? "Completed" : "Unfinished draft";
   const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"})[c]);
   const lines = (value) => String(value || "").split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
   const joinLines = (value) => Array.isArray(value) ? value.join("\n") : "";
@@ -170,7 +171,7 @@
     ui.interventions.value = ""; ui.resources.value = ""; ui.needsSupervision.checked = false;
     ui.supervisionQuestion.value = ""; ui.supervisionWrap.hidden = true;
     ui.abcA.value = ""; ui.abcB.value = ""; ui.abcC.value = ""; ui.abcTitle.value = "ABC explored in session"; ui.abcReview.hidden = true;
-    ui.save.textContent = "Save draft"; ui.message.textContent = "";
+    ui.save.textContent = "Save unfinished draft"; ui.message.textContent = "";
     renderImages();
     [ui.client, ui.date, ui.type, ui.review, ui.rough, ui.final, ui.improve, ui.save, ui.finalise].forEach((element) => element.disabled = false);
   }
@@ -203,7 +204,7 @@
   async function save(status) {
     const problem = validate(); if (problem) { ui.message.textContent = problem; return; }
     if (status === "Final" && !ui.final.value.trim()) ui.final.value = ui.rough.value.trim();
-    if (status === "Final" && !confirm("Finalise this note? Its wording will be preserved in the audit history if it is amended later.")) return;
+    if (status === "Final" && !confirm("Save this as the completed note? The original working notes and any earlier wording will remain safely available in its history.")) return;
     ui.save.disabled = true; ui.finalise.disabled = true; ui.message.textContent = "Saving securely…";
     const payload = currentPayload(status);
     try {
@@ -214,7 +215,7 @@
       await uploadStagedImages(data.id);
       await loadNotes();
       await loadIntoForm(data);
-      ui.message.textContent = status === "Final" ? "Final note saved securely." : "Draft saved securely.";
+      ui.message.textContent = status === "Final" ? "Completed note saved securely." : "Unfinished draft saved securely.";
     } catch (error) {
       console.error(error);
       const technicalReason = String(error.message || error.details || "Unknown database error");
@@ -242,7 +243,7 @@
       }
       ui.message.textContent = `The note was not changed. AI service message: ${technicalReason}`;
       ui.message.classList.add("note-save-error");
-    } finally { ui.improve.disabled = false; ui.improve.textContent = "Improve note"; }
+    } finally { ui.improve.disabled = false; ui.improve.textContent = "Improve with AI"; }
   }
   async function loadIntoForm(note) {
     activeId = note.id; aiUsed = Boolean(note.ai_assisted); aiModel = note.ai_model;
@@ -253,18 +254,18 @@
     ui.supervisionQuestion.value = note.supervision_question || ""; ui.supervisionWrap.hidden = !ui.needsSupervision.checked;
     supervisionStatus = note.supervision_status || (note.supervision_required ? "Outstanding" : "Not required");
     supervisionDiscussedAt = note.supervision_discussed_at || null;
-    ui.save.textContent = "Update draft";
+    ui.save.textContent = "Update unfinished draft";
     const final = note.status === "Final";
     ui.message.classList.remove("note-save-error");
-    ui.message.textContent = final ? "This is a final note. Any later change will preserve the earlier wording in its history." : "Draft loaded.";
+    ui.message.textContent = final ? "Completed note opened. The improved wording is your main record; the original working notes remain available above." : "Unfinished draft loaded.";
     revokeStagedUrls(); stagedImages = []; await loadImages(note.id);
   }
   async function openNote(note) {
     await loadIntoForm(note);
     renderClientReference();
-    ui.message.textContent = `${note.status === "Final" ? "Final note" : "Draft"} opened. You can read it below or make changes and save again.`;
+    ui.message.textContent = `${statusLabel(note.status)} opened. You can read the improved note below or make changes and save again.`;
     document.querySelector("#client-notes-panel").scrollIntoView({ behavior: "smooth", block: "start" });
-    window.setTimeout(() => ui.rough.focus({ preventScroll: true }), 450);
+    window.setTimeout(() => (note.status === "Final" ? ui.final : ui.rough).focus({ preventScroll: true }), 450);
   }
   async function archive(note) {
     if (!confirm("Archive this note? It will disappear from the active list but remain in the audit record.")) return;
@@ -283,7 +284,7 @@
     const { data, error } = await db.from("clinical_note_versions").select("version_number,final_note,rough_note,status,changed_at,structured_details").eq("note_id", note.id).order("version_number", { ascending: false });
     if (error) { ui.historyList.textContent = "History could not be loaded."; return; }
     const versions = data || [];
-    ui.historyList.innerHTML = versions.length ? versions.map((version) => { const details = version.structured_details || {}; const extras = [...(details.interventions || []).map((item) => `Intervention: ${item}`), ...(details.resources_shared || []).map((item) => `Resource: ${item}`), ...(details.supervision_question ? [`Supervision: ${details.supervision_question} (${details.supervision_status || ""})`] : [])]; return `<article class="note-version"><strong>Version ${version.version_number} · ${escapeHtml(version.status)}</strong><small>${new Date(version.changed_at).toLocaleString("en-GB")}</small><pre>${escapeHtml(version.final_note || version.rough_note)}</pre>${extras.length ? `<ul>${extras.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}</article>`; }).join("") : "No earlier versions yet.";
+    ui.historyList.innerHTML = versions.length ? versions.map((version) => { const details = version.structured_details || {}; const extras = [...(details.interventions || []).map((item) => `Intervention: ${item}`), ...(details.resources_shared || []).map((item) => `Resource: ${item}`), ...(details.supervision_question ? [`Supervision: ${details.supervision_question} (${details.supervision_status || ""})`] : [])]; return `<article class="note-version"><strong>Version ${version.version_number} · ${escapeHtml(statusLabel(version.status))}</strong><small>${new Date(version.changed_at).toLocaleString("en-GB")}</small><pre>${escapeHtml(version.final_note || version.rough_note)}</pre>${extras.length ? `<ul>${extras.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}</article>`; }).join("") : "No earlier versions yet.";
   }
   function render() {
     const filter = ui.filter.value;
@@ -296,7 +297,7 @@
       const tags = [...(note.interventions || []), ...(note.resources_shared || [])];
       const clientName = client ? name(client) : "Client record unavailable";
       const clientStatus = client?.status && client.status !== "Active" ? ` · ${client.status} client` : "";
-      item.innerHTML = `<span><strong>${escapeHtml(clientName)}</strong><small>${formatDate(note.note_date)} · ${escapeHtml(note.note_type)} · <b>${escapeHtml(note.status)}</b>${escapeHtml(clientStatus)}${note.archived_at ? " · Archived" : ""}${note.ai_assisted ? " · AI assisted" : ""}${note.supervision_status === "Outstanding" ? " · Supervision flagged" : ""}</small>${tags.length ? `<small>${escapeHtml(tags.join(" · "))}</small>` : ""}</span>`;
+      item.innerHTML = `<span><strong>${escapeHtml(clientName)}</strong><small>${formatDate(note.note_date)} · ${escapeHtml(note.note_type)} · <b>${escapeHtml(statusLabel(note.status))}</b>${escapeHtml(clientStatus)}${note.archived_at ? " · Archived" : ""}${note.ai_assisted ? " · AI assisted" : ""}${note.supervision_status === "Outstanding" ? " · Supervision flagged" : ""}</small>${tags.length ? `<small>${escapeHtml(tags.join(" · "))}</small>` : ""}</span>`;
       const actions = document.createElement("span"); actions.className = "settings-list-actions";
       const finalAction = note.archived_at ? ["Restore", () => restore(note)] : ["Archive", () => archive(note)];
       [["Open note", () => openNote(note)], ["History", () => showHistory(note)], finalAction].forEach(([label, handler]) => { const button = document.createElement("button"); button.type = "button"; button.textContent = label; if (label === "Archive" || label === "Restore") button.className = "secondary-button"; button.addEventListener("click", handler); actions.append(button); });
@@ -317,7 +318,7 @@
       article.className = "previous-client-note-card";
       if (note.archived_at) article.classList.add("is-archived");
       const heading = document.createElement("header");
-      heading.innerHTML = `<span><strong>${formatDate(note.note_date)}</strong><small>${escapeHtml(note.note_type)} · ${escapeHtml(note.status)}${note.archived_at ? " · Archived" : ""}</small></span>`;
+      heading.innerHTML = `<span><strong>${formatDate(note.note_date)}</strong><small>${escapeHtml(note.note_type)} · ${escapeHtml(statusLabel(note.status))}${note.archived_at ? " · Archived" : ""}</small></span>`;
       const openButton = document.createElement("button");
       openButton.type = "button"; openButton.className = "secondary-button"; openButton.textContent = "Open";
       openButton.addEventListener("click", () => openNote(note)); heading.append(openButton);
