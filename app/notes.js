@@ -14,6 +14,7 @@
     interventions: document.querySelector("#client-note-interventions"), resources: document.querySelector("#client-note-resources"),
     needsSupervision: document.querySelector("#client-note-needs-supervision"), supervisionWrap: document.querySelector("#client-note-supervision-wrap"),
     supervisionQuestion: document.querySelector("#client-note-supervision-question"), workOverview: document.querySelector("#client-work-overview"),
+    previousNotes: document.querySelector("#client-previous-notes"),
     imageFields: document.querySelector(".note-image-fields"), imageDropzone: document.querySelector("#note-image-dropzone"),
     imageInput: document.querySelector("#note-image-input"), addImage: document.querySelector("#add-note-image"), imageList: document.querySelector("#note-image-list"),
     abcSuggest: document.querySelector("#suggest-note-abc"), abcReview: document.querySelector("#note-abc-review"),
@@ -260,6 +261,7 @@
   }
   async function openNote(note) {
     await loadIntoForm(note);
+    renderClientReference();
     ui.message.textContent = `${note.status === "Final" ? "Final note" : "Draft"} opened. You can read it below or make changes and save again.`;
     document.querySelector("#client-notes-panel").scrollIntoView({ behavior: "smooth", block: "start" });
     window.setTimeout(() => ui.rough.focus({ preventScroll: true }), 450);
@@ -301,6 +303,33 @@
       item.append(actions); ui.list.append(item);
     });
     if (!visible.length) ui.list.innerHTML = "<li>No secure notes have been saved for this selection.</li>";
+    renderClientReference();
+  }
+  function renderPreviousNotes() {
+    const clientId = ui.client.value;
+    if (!clientId) { ui.previousNotes.innerHTML = "<p>Choose a client to see their earlier notes.</p>"; return; }
+    const previous = notes
+      .filter((note) => note.client_id === clientId && note.id !== activeId)
+      .sort((a, b) => String(b.note_date || "").localeCompare(String(a.note_date || "")) || String(b.updated_at || "").localeCompare(String(a.updated_at || "")));
+    ui.previousNotes.innerHTML = "";
+    previous.forEach((note) => {
+      const article = document.createElement("article");
+      article.className = "previous-client-note-card";
+      if (note.archived_at) article.classList.add("is-archived");
+      const heading = document.createElement("header");
+      heading.innerHTML = `<span><strong>${formatDate(note.note_date)}</strong><small>${escapeHtml(note.note_type)} · ${escapeHtml(note.status)}${note.archived_at ? " · Archived" : ""}</small></span>`;
+      const openButton = document.createElement("button");
+      openButton.type = "button"; openButton.className = "secondary-button"; openButton.textContent = "Open";
+      openButton.addEventListener("click", () => openNote(note)); heading.append(openButton);
+      const content = document.createElement("div");
+      content.className = "previous-client-note-text";
+      content.textContent = note.final_note || note.rough_note || "No note wording recorded.";
+      article.append(heading, content); ui.previousNotes.append(article);
+    });
+    if (!previous.length) ui.previousNotes.innerHTML = "<p>No earlier notes have been saved for this client yet.</p>";
+  }
+  function renderClientReference() {
+    renderPreviousNotes();
     renderWorkOverview();
   }
   function renderWorkOverview() {
@@ -311,7 +340,7 @@
       const items = clientNotes.flatMap((note) => (note[field] || []).map((text) => ({ text, date: note.note_date })));
       return items.length ? `<ul>${items.map((item) => `<li><strong>${escapeHtml(item.text)}</strong><small>${formatDate(item.date)}</small></li>`).join("")}</ul>` : `<p>${empty}</p>`;
     };
-    ui.workOverview.innerHTML = `<section><h4>Interventions and strategies</h4>${renderItems("interventions", "None recorded yet.")}</section><section><h4>Resources shared</h4>${renderItems("resources_shared", "None recorded yet.")}</section>`;
+    ui.workOverview.innerHTML = `<section><h4>Strategies and interventions used</h4>${renderItems("interventions", "None recorded yet.")}</section><section><h4>Documents, diagrams and resources sent</h4>${renderItems("resources_shared", "None recorded yet.")}</section>`;
   }
   async function loadNotes() {
     const { data, error } = await db.from("clinical_notes").select("*").order("note_date", { ascending: false }).order("updated_at", { ascending: false });
@@ -338,7 +367,7 @@
   }
   ui.improve.addEventListener("click", improve); ui.save.addEventListener("click", () => save("Draft")); ui.finalise.addEventListener("click", () => save("Final"));
   ui.clear.addEventListener("click", clearForm); ui.filter.addEventListener("change", render); ui.showArchived.addEventListener("change", render);
-  ui.client.addEventListener("change", renderWorkOverview);
+  ui.client.addEventListener("change", renderClientReference);
   ui.needsSupervision.addEventListener("change", () => { ui.supervisionWrap.hidden = !ui.needsSupervision.checked; supervisionStatus = ui.needsSupervision.checked ? "Outstanding" : "Not required"; supervisionDiscussedAt = null; if (ui.needsSupervision.checked) ui.supervisionQuestion.focus(); });
   ui.addImage.addEventListener("click", () => ui.imageInput.click());
   ui.abcSuggest.addEventListener("click", suggestAbc);
