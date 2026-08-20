@@ -4,9 +4,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Ayesha Jane Client Notes</title>
-    <link rel="stylesheet" href="styles.css?v=20260811-note-images" />
+    <link rel="stylesheet" href="styles.css?v=20260820-wide-note-history" />
   </head>
-  <body>
+  <body class="notes-page">
     <header class="site-header">
       <a class="brand" href="https://ayeshajane.com/">Ayesha Jane</a>
       <nav class="admin-nav" aria-label="Private admin links">
@@ -48,6 +48,8 @@
               This page is available only inside Ayesha's authenticated admin area.
             </p>
           </div>
+
+          <div class="notes-editor-main">
 
           <p class="privacy-note">
             Notes are stored in the authenticated clinical-notes database. AI suggestions
@@ -182,10 +184,22 @@
             ></textarea>
           </label>
 
-          <section class="client-work-overview" aria-labelledby="client-work-overview-title">
-            <div class="notes-list-heading"><h3 id="client-work-overview-title">Client tools and resources overview</h3><small>Choose a client above to see what has already been covered.</small></div>
-            <div id="client-work-overview" class="client-work-overview-grid"><p>No client selected.</p></div>
-          </section>
+          </div>
+
+          <aside class="notes-reference-panel" aria-label="Earlier notes and client overview">
+            <section class="previous-client-notes" aria-labelledby="previous-client-notes-title">
+              <div class="notes-list-heading">
+                <h3 id="previous-client-notes-title">Previous improved notes</h3>
+                <small>Earlier notes for the selected client remain visible while you write.</small>
+              </div>
+              <div id="client-previous-notes" class="previous-client-notes-list"><p>Choose a client to see their earlier notes.</p></div>
+            </section>
+
+            <section class="client-work-overview" aria-labelledby="client-work-overview-title">
+              <div class="notes-list-heading"><h3 id="client-work-overview-title">Strategies and things sent</h3><small>A quick view of everything recorded for this client.</small></div>
+              <div id="client-work-overview" class="client-work-overview-grid"><p>No client selected.</p></div>
+            </section>
+          </aside>
 
           <div class="notes-list-heading">
             <h3>Saved notes</h3>
@@ -205,6 +219,6 @@
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="admin-auth.js?v=20260813-ten-hour-session"></script>
-    <script src="notes.js?v=20260817-former-client-names"></script>
+    <script src="notes.js?v=20260820-visible-note-history"></script>
   </body>
 </html>
