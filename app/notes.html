@@ -86,7 +86,7 @@
           </div>
 
           <label>
-            Rough note
+            Working notes <span class="optional">(original wording is retained)</span>
             <textarea
               id="client-note-rough"
               rows="8"
@@ -168,15 +168,15 @@
           </section>
 
           <div class="settings-button-row">
-            <button id="improve-client-note" type="button">Improve note</button>
-            <button id="save-client-note" type="button">Save draft</button>
-            <button id="finalise-client-note" type="button">Finalise note</button>
-            <button id="clear-client-note" class="secondary-button" type="button">Clear</button>
+            <button id="improve-client-note" type="button">Improve with AI</button>
+            <button id="finalise-client-note" type="button">Save completed note</button>
+            <button id="save-client-note" class="secondary-button" type="button">Save unfinished draft</button>
+            <button id="clear-client-note" class="secondary-button" type="button">Clear form</button>
           </div>
           <p id="client-note-message" class="field-note note-save-message" aria-live="polite"></p>
 
           <label>
-            Improved note
+            Improved note <span class="optional">(main reading version)</span>
             <textarea
               id="client-note-improved"
               rows="10"
@@ -219,6 +219,6 @@
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="admin-auth.js?v=20260813-ten-hour-session"></script>
-    <script src="notes.js?v=20260820-visible-note-history"></script>
+    <script src="notes.js?v=20260820-simple-note-actions"></script>
   </body>
 </html>
