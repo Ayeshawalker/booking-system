@@ -1463,21 +1463,23 @@
     controls.clientChecklistWeek.textContent = `${dayHeading(weekStart)} – ${dayHeading(addDays(weekStart, 6))}`;
 
     const bookedClientIds = new Set();
+    const pendingClientIds = new Set();
     state.events.forEach((event) => {
       const dates = eventDates(event);
       if (dates.start >= weekEnd || dates.end <= weekStart) return;
-      if (!isClientEvent(event) || isPendingEvent(event)) return;
+      if (!isClientEvent(event)) return;
       const clientId = clientDetailsForEvent(event)?.id;
-      if (clientId) bookedClientIds.add(clientId);
+      if (!clientId) return;
+      if (isPendingEvent(event)) pendingClientIds.add(clientId);
+      else bookedClientIds.add(clientId);
     });
 
-    const clientsToCheck = state.bookingClients
-      .filter((client) => !bookedClientIds.has(client.id))
+    const currentClients = state.bookingClients
       .sort((first, second) => bookingClientDisplayName(first).localeCompare(
         bookingClientDisplayName(second), "en-GB", { sensitivity: "base" },
       ));
 
-    const rows = clientsToCheck.map((client) => {
+    const rows = currentClients.map((client) => {
       const noteKey = `client:${client.id}`;
       const row = document.createElement("div");
       row.className = "calendar-client-check-row";
@@ -1485,7 +1487,13 @@
       const name = document.createElement("strong");
       name.textContent = bookingClientDisplayName(client);
       const frequency = document.createElement("span");
-      frequency.textContent = client.session_frequency || "To be agreed";
+      const bookingPosition = bookedClientIds.has(client.id)
+        ? "Booked"
+        : pendingClientIds.has(client.id)
+          ? "Pending"
+          : "Not booked";
+      frequency.textContent = `${client.session_frequency || "To be agreed"} · ${bookingPosition}`;
+      frequency.classList.add(`is-${bookingPosition.toLowerCase().replace(" ", "-")}`);
       heading.append(name, frequency);
       const note = document.createElement("input");
       note.type = "text";
@@ -1505,7 +1513,7 @@
       return row;
     });
     controls.clientChecklistList.replaceChildren(...rows);
-    controls.clientChecklistEmpty.hidden = clientsToCheck.length > 0;
+    controls.clientChecklistEmpty.hidden = currentClients.length > 0;
   }
 
   function render() {

@@ -2482,6 +2482,9 @@ dd {
 .calendar-client-check-row > div { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
 .calendar-client-check-row strong { color: var(--ink); font-size: 0.88rem; }
 .calendar-client-check-row span { color: var(--gold-dark); font-size: 0.67rem; font-weight: 800; }
+.calendar-client-check-row span.is-booked { color: #257242; }
+.calendar-client-check-row span.is-pending { color: #d12035; }
+.calendar-client-check-row span.is-not-booked { color: var(--gold-dark); }
 .calendar-client-check-row input {
   width: 100%;
   margin-top: 6px;
