@@ -2485,9 +2485,9 @@ dd {
 .calendar-client-check-row span.is-booked { color: #257242; }
 .calendar-client-check-row span.is-pending { color: #d12035; }
 .calendar-client-check-row span.is-not-booked { color: var(--gold-dark); }
+.calendar-client-note-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; margin-top: 6px; }
 .calendar-client-check-row input {
   width: 100%;
-  margin-top: 6px;
   padding: 7px 8px;
   border: 1px solid #dfc8b1;
   border-radius: 7px;
@@ -2496,6 +2496,19 @@ dd {
   font: inherit;
   font-size: 0.76rem;
 }
+.calendar-client-note-save {
+  min-width: 54px;
+  padding: 6px 8px;
+  border: 1px solid var(--pink);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--pink-dark);
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.calendar-client-note-save:disabled { cursor: wait; opacity: 0.65; }
 .calendar-client-checklist-empty { color: #257242; font-weight: 800; }
 
 @media (max-width: 980px) {

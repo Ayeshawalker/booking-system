@@ -381,7 +381,7 @@
     const { data, error } = await supabaseClient
       .from("clients")
       .select(
-        "id, record_type, status, first_name, surname, second_first_name, second_surname, email, second_email, phone, preferred_format, session_frequency, agreed_session_fee_gbp, agreed_online_fee_gbp, agreed_in_person_fee_gbp",
+        "id, record_type, status, first_name, surname, second_first_name, second_surname, email, second_email, phone, preferred_format, session_frequency, frequency_notes, agreed_session_fee_gbp, agreed_online_fee_gbp, agreed_in_person_fee_gbp",
       );
 
     if (error) {
@@ -1497,9 +1497,10 @@
       heading.append(name, frequency);
       const note = document.createElement("input");
       note.type = "text";
-      note.value = state.clientCheckNotes[noteKey] || "";
+      note.value = client.frequency_notes || state.clientCheckNotes[noteKey] || "";
       note.placeholder = "Brief note — carries forward until cleared…";
       note.setAttribute("aria-label", `Ongoing calendar note for ${bookingClientDisplayName(client)}`);
+      let lastSavedValue = String(client.frequency_notes || "").trim();
       note.addEventListener("input", () => {
         const value = note.value.trim();
         if (value) state.clientCheckNotes[noteKey] = value;
@@ -1509,7 +1510,37 @@
           JSON.stringify(state.clientCheckNotes),
         );
       });
-      row.append(heading, note);
+      const save = document.createElement("button");
+      save.type = "button";
+      save.className = "calendar-client-note-save";
+      save.textContent = "Save";
+      const saveNote = async () => {
+        const value = note.value.trim();
+        if (value === lastSavedValue) return;
+        save.disabled = true;
+        save.textContent = "Saving…";
+        const { error } = await supabaseClient
+          .from("clients")
+          .update({ frequency_notes: value || null })
+          .eq("id", client.id);
+        save.disabled = false;
+        if (error) {
+          console.error("Calendar client note could not be saved", error);
+          save.textContent = "Try again";
+          controls.message.textContent = `The note for ${bookingClientDisplayName(client)} could not be saved.`;
+          return;
+        }
+        client.frequency_notes = value || null;
+        lastSavedValue = value;
+        save.textContent = "Saved";
+        window.setTimeout(() => { save.textContent = "Save"; }, 1600);
+      };
+      save.addEventListener("click", saveNote);
+      note.addEventListener("change", saveNote);
+      const noteControls = document.createElement("div");
+      noteControls.className = "calendar-client-note-controls";
+      noteControls.append(note, save);
+      row.append(heading, noteControls);
       return row;
     });
     controls.clientChecklistList.replaceChildren(...rows);
