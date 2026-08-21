@@ -20,6 +20,10 @@
     abcSuggest: document.querySelector("#suggest-note-abc"), abcReview: document.querySelector("#note-abc-review"),
     abcA: document.querySelector("#note-abc-a"), abcB: document.querySelector("#note-abc-b"), abcC: document.querySelector("#note-abc-c"),
     abcTitle: document.querySelector("#note-abc-diagram-title"), abcCreate: document.querySelector("#create-note-abc"), abcCancel: document.querySelector("#cancel-note-abc"),
+    resourcePanel: document.querySelector("#client-resource-panel"), resourceUpload: document.querySelector("#client-resource-upload"),
+    resourceTitle: document.querySelector("#client-resource-title-input"), resourceFile: document.querySelector("#client-resource-file"),
+    resourceMessage: document.querySelector("#client-resource-message"), resourceLibrary: document.querySelector("#client-resource-library"),
+    resourceHistory: document.querySelector("#client-resource-history"),
   };
   let clients = [];
   let notes = [];
@@ -30,9 +34,13 @@
   let supervisionDiscussedAt = null;
   let structuredFieldsReady = false;
   let imageFieldsReady = false;
+  let resourceLibraryReady = false;
   let noteImages = [];
   let stagedImages = [];
+  let clientResources = [];
+  let resourceShares = [];
   const imageBucket = "clinical-note-images";
+  const resourceBucket = "client-resources";
 
   const name = (client) => [[client.first_name, client.surname].filter(Boolean).join(" "), [client.second_first_name, client.second_surname].filter(Boolean).join(" ")].filter(Boolean).join(" and ");
   const formatDate = (date) => date ? new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(new Date(`${date}T12:00:00`)) : "No date";
@@ -40,6 +48,99 @@
   const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"})[c]);
   const lines = (value) => String(value || "").split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
   const joinLines = (value) => Array.isArray(value) ? value.join("\n") : "";
+
+  function clientGreeting(client) {
+    return [client?.first_name, client?.second_first_name].filter(Boolean).join(" and ") || "there";
+  }
+  function readableSize(bytes) {
+    const size = Number(bytes || 0);
+    return size >= 1048576 ? `${(size / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(size / 1024))} KB`;
+  }
+  async function signedResourceUrl(resource) {
+    const { data, error } = await db.storage.from(resourceBucket).createSignedUrl(resource.storage_path, 60 * 60 * 24 * 14);
+    if (error || !data?.signedUrl) throw error || new Error("A secure sharing link could not be created.");
+    return data.signedUrl;
+  }
+  async function viewResource(resource) {
+    const target = window.open("about:blank", "_blank");
+    try {
+      const url = await signedResourceUrl(resource);
+      if (target) target.location.href = url; else window.location.href = url;
+    } catch (error) {
+      if (target) target.close();
+      console.error(error); ui.resourceMessage.textContent = "The information sheet could not be opened.";
+    }
+  }
+  async function shareResource(resource) {
+    const client = clients.find((item) => item.id === ui.client.value);
+    if (!client) { ui.resourceMessage.textContent = "Choose a client before sharing an information sheet."; return; }
+    const target = window.open("about:blank", "_blank");
+    ui.resourceMessage.textContent = "Preparing a secure WhatsApp link…";
+    try {
+      const url = await signedResourceUrl(resource);
+      const { error } = await db.from("client_resource_shares").insert({ client_id: client.id, resource_id: resource.id, sharing_method: "WhatsApp secure link", shared_by: admin.user.id });
+      if (error) throw error;
+      const message = `Hi ${clientGreeting(client)}, here is the information sheet we discussed: ${resource.title}. This secure link will remain available for 14 days: ${url}`;
+      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+      if (target) target.location.href = whatsappUrl; else window.location.href = whatsappUrl;
+      ui.resourceMessage.textContent = `${resource.title} has been recorded as sent to ${name(client)}. WhatsApp has been opened for you to choose the chat.`;
+      await loadResourceShares();
+    } catch (error) {
+      if (target) target.close();
+      console.error(error); ui.resourceMessage.textContent = `The sheet was not recorded as sent. ${String(error?.message || "Please try again.")}`;
+    }
+  }
+  function renderResourceLibrary() {
+    if (!resourceLibraryReady) { ui.resourcePanel.hidden = true; return; }
+    ui.resourcePanel.hidden = false;
+    const active = clientResources.filter((resource) => resource.active);
+    ui.resourceLibrary.innerHTML = "";
+    active.forEach((resource) => {
+      const card = document.createElement("article"); card.className = "client-resource-card";
+      card.innerHTML = `<strong>${escapeHtml(resource.title)}</strong><small>${escapeHtml(resource.file_name)} · ${readableSize(resource.file_size)}</small>`;
+      const actions = document.createElement("div"); actions.className = "client-resource-card-actions";
+      const view = document.createElement("button"); view.type = "button"; view.className = "secondary-button"; view.textContent = "View"; view.addEventListener("click", () => viewResource(resource));
+      const share = document.createElement("button"); share.type = "button"; share.textContent = "Share with selected client"; share.disabled = !ui.client.value; share.addEventListener("click", () => shareResource(resource));
+      actions.append(view, share); card.append(actions); ui.resourceLibrary.append(card);
+    });
+    if (!active.length) ui.resourceLibrary.innerHTML = "<p>No information sheets uploaded yet.</p>";
+  }
+  function renderResourceHistory() {
+    const clientId = ui.client.value;
+    if (!clientId) { ui.resourceHistory.innerHTML = "<p>Choose a client to see their history.</p>"; return; }
+    const items = resourceShares.filter((share) => share.client_id === clientId);
+    ui.resourceHistory.innerHTML = items.map((share) => {
+      const resource = clientResources.find((item) => item.id === share.resource_id);
+      return `<article class="client-resource-history-item"><strong>${escapeHtml(resource?.title || "Resource")}</strong><small>Sent ${new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" }).format(new Date(share.shared_at))} · ${escapeHtml(share.sharing_method)}</small></article>`;
+    }).join("") || "<p>No information sheets have been recorded as sent to this client yet.</p>";
+  }
+  async function loadResourceShares() {
+    if (!resourceLibraryReady) return;
+    const { data, error } = await db.from("client_resource_shares").select("id,client_id,resource_id,sharing_method,shared_at").order("shared_at", { ascending: false });
+    resourceShares = error ? [] : (data || []); renderResourceHistory();
+  }
+  async function uploadResource(event) {
+    event.preventDefault();
+    const title = ui.resourceTitle.value.trim(); const file = ui.resourceFile.files?.[0];
+    if (!title || !file) { ui.resourceMessage.textContent = "Add a title and choose the information-sheet file."; return; }
+    if (file.size > 15728640) { ui.resourceMessage.textContent = "Please choose a file smaller than 15 MB."; return; }
+    const submit = ui.resourceUpload.querySelector("button[type='submit']"); submit.disabled = true; ui.resourceMessage.textContent = "Uploading securely…";
+    const path = `${admin.user.id}/${crypto.randomUUID()}-${safeFileName(file.name)}`;
+    try {
+      const { error: uploadError } = await db.storage.from(resourceBucket).upload(path, file, { contentType: file.type, upsert: false });
+      if (uploadError) throw uploadError;
+      const { error: rowError } = await db.from("client_resources").insert({ title, storage_path: path, file_name: file.name, mime_type: file.type || "application/octet-stream", file_size: file.size, created_by: admin.user.id });
+      if (rowError) { await db.storage.from(resourceBucket).remove([path]); throw rowError; }
+      ui.resourceUpload.reset(); ui.resourceMessage.textContent = `${title} is now in your reusable information-sheet library.`; await loadResources();
+    } catch (error) {
+      console.error(error); ui.resourceMessage.textContent = `The sheet could not be uploaded. ${String(error?.message || "Please try again.")}`;
+    } finally { submit.disabled = false; }
+  }
+  async function loadResources() {
+    if (!resourceLibraryReady) return;
+    const { data, error } = await db.from("client_resources").select("*").order("title");
+    clientResources = error ? [] : (data || []); renderResourceLibrary(); renderResourceHistory();
+  }
 
   function safeFileName(value) {
     return String(value || "image").toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "image";
@@ -332,6 +433,8 @@
   function renderClientReference() {
     renderPreviousNotes();
     renderWorkOverview();
+    renderResourceLibrary();
+    renderResourceHistory();
   }
   function renderWorkOverview() {
     const clientId = ui.client.value;
@@ -354,14 +457,17 @@
     structuredFieldsReady = !capability.error;
     const imageCapability = await db.from("clinical_note_attachments").select("id").limit(1);
     imageFieldsReady = !imageCapability.error;
+    const resourceCapability = await db.from("client_resources").select("id").limit(1);
+    resourceLibraryReady = !resourceCapability.error;
     document.querySelector(".note-structured-fields").hidden = !structuredFieldsReady;
     document.querySelector(".note-supervision-fields").hidden = !structuredFieldsReady;
     ui.imageFields.hidden = !imageFieldsReady;
     const { data, error } = await db.from("clients").select("id,first_name,surname,second_first_name,second_surname,status").order("first_name");
     if (error) { ui.message.textContent = "Clients could not be loaded."; return; }
-    clients = data || []; setOptions(ui.client, false); setOptions(ui.filter, true); clearForm(); await loadNotes();
+    clients = data || []; setOptions(ui.client, false); setOptions(ui.filter, true); clearForm(); await Promise.all([loadNotes(), loadResources(), loadResourceShares()]);
     if (!structuredFieldsReady) ui.message.textContent = "Your existing notes are working. The new interventions and supervision fields still need the one-time Supabase update.";
     else if (!imageFieldsReady) ui.message.textContent = "Your notes are working. Images and diagrams need the one-time Supabase attachment update before they appear.";
+    if (!resourceLibraryReady) ui.resourcePanel.hidden = true;
     const requestedId = new URLSearchParams(window.location.search).get("note");
     const requestedNote = notes.find((note) => note.id === requestedId);
     if (requestedNote) openNote(requestedNote);
@@ -369,6 +475,7 @@
   ui.improve.addEventListener("click", improve); ui.save.addEventListener("click", () => save("Draft")); ui.finalise.addEventListener("click", () => save("Final"));
   ui.clear.addEventListener("click", clearForm); ui.filter.addEventListener("change", render); ui.showArchived.addEventListener("change", render);
   ui.client.addEventListener("change", renderClientReference);
+  ui.resourceUpload.addEventListener("submit", uploadResource);
   ui.needsSupervision.addEventListener("change", () => { ui.supervisionWrap.hidden = !ui.needsSupervision.checked; supervisionStatus = ui.needsSupervision.checked ? "Outstanding" : "Not required"; supervisionDiscussedAt = null; if (ui.needsSupervision.checked) ui.supervisionQuestion.focus(); });
   ui.addImage.addEventListener("click", () => ui.imageInput.click());
   ui.abcSuggest.addEventListener("click", suggestAbc);
