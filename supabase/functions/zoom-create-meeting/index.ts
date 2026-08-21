@@ -50,12 +50,16 @@ Deno.serve(async (request) => {
     }
 
     const duration = Number.parseInt(String(booking.duration || ""), 10) || (booking.session_type === "Joint session" ? 80 : 50);
+    const meetingTitle = [booking.first_name, booking.second_first_name]
+      .map((name) => String(name || "").trim())
+      .filter(Boolean)
+      .join(" and ") || "Online appointment";
     const zoomHost = Deno.env.get("ZOOM_HOST_EMAIL") || userData.user.email || "me";
     const meetingResponse = await fetch(`https://api.zoom.us/v2/users/${encodeURIComponent(zoomHost)}/meetings`, {
       method: "POST",
       headers: { Authorization: `Bearer ${tokenBody.access_token}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        topic: "Online appointment",
+        topic: meetingTitle,
         type: 2,
         start_time: `${booking.preferred_date}T${String(booking.preferred_time).slice(0, 8)}`,
         duration,
