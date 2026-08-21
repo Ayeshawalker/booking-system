@@ -199,6 +199,25 @@
               <div class="notes-list-heading"><h3 id="client-work-overview-title">Strategies and things sent</h3><small>A quick view of everything recorded for this client.</small></div>
               <div id="client-work-overview" class="client-work-overview-grid"><p>No client selected.</p></div>
             </section>
+
+            <section id="client-resource-panel" class="client-resource-panel" aria-labelledby="client-resource-title">
+              <div class="notes-list-heading">
+                <h3 id="client-resource-title">Information sheets</h3>
+                <small>Upload a sheet once, then securely share it with any selected client.</small>
+              </div>
+              <form id="client-resource-upload" class="client-resource-upload">
+                <label>Sheet title<input id="client-resource-title-input" type="text" placeholder="For example: Healthy and unhealthy beliefs" /></label>
+                <label>File<input id="client-resource-file" type="file" accept="application/pdf,.docx,image/png,image/jpeg,image/webp" /></label>
+                <button type="submit">Upload sheet</button>
+              </form>
+              <p id="client-resource-message" class="field-note" aria-live="polite"></p>
+              <div id="client-resource-library" class="client-resource-library"><p>No information sheets uploaded yet.</p></div>
+              <div class="client-resource-history-heading">
+                <h4>Resources sent to this client</h4>
+                <small>A dated history is kept here automatically.</small>
+              </div>
+              <div id="client-resource-history" class="client-resource-history"><p>Choose a client to see their history.</p></div>
+            </section>
           </aside>
 
           <div class="notes-list-heading">
@@ -219,6 +238,6 @@
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="admin-auth.js?v=20260813-ten-hour-session"></script>
-    <script src="notes.js?v=20260820-simple-note-actions"></script>
+    <script src="notes.js?v=20260821-client-resource-library"></script>
   </body>
 </html>

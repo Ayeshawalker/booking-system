@@ -3652,6 +3652,18 @@ dd {
 .notes-reference-panel .client-work-overview { margin: 0; padding-top: 20px; border-top: 2px solid #efd9be; }
 .notes-reference-panel .client-work-overview-grid { grid-template-columns: 1fr; }
 .notes-reference-panel .client-work-overview-grid > section { padding: 16px; background: #fff; }
+.client-resource-panel { display: grid; gap: 14px; padding-top: 20px; border-top: 2px solid #efd9be; }
+.client-resource-upload { display: grid; gap: 10px; padding: 14px; border: 2px solid #f4cfad; border-radius: 15px; background: #fff; }
+.client-resource-upload label { display: grid; gap: 5px; color: #5b1533; font-weight: 800; }
+.client-resource-upload input { width: 100%; box-sizing: border-box; }
+.client-resource-upload button { width: 100%; }
+.client-resource-library, .client-resource-history { display: grid; gap: 10px; }
+.client-resource-card, .client-resource-history-item { display: grid; gap: 7px; padding: 13px; border: 1px solid #efcad1; border-radius: 13px; background: #fff; }
+.client-resource-card small, .client-resource-history-item small, .client-resource-history-heading small { color: #78636b; line-height: 1.4; }
+.client-resource-card-actions { display: flex; flex-wrap: wrap; gap: 7px; }
+.client-resource-card-actions button { width: auto; padding: 7px 10px; font-size: .76rem; }
+.client-resource-history-heading { display: grid; gap: 3px; margin-top: 8px; }
+.client-resource-history-heading h4 { margin: 0; color: #855408; }
 .notes-list-heading { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin-top: 24px; }
 .notes-list-heading h3 { margin: 0; color: #855408; }
 .secure-note-list-item { align-items: center; }
