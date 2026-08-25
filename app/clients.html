@@ -385,6 +385,13 @@
       </header>
       <div class="client-form-body contract-manager-body">
         <p id="contract-explanation"></p>
+        <label id="contract-type-field">Agreement to send
+          <select id="contract-type">
+            <option value="Standard individual">Standard individual therapy</option>
+            <option value="Betrayal trauma">Betrayal trauma therapy</option>
+            <option value="Couple">Couples counselling</option>
+          </select>
+        </label>
         <div id="contract-current-status" class="contract-current-status"></div>
         <div id="contract-link-panel" hidden>
           <label>Private signing link<input id="contract-signing-link" readonly /></label>
@@ -437,6 +444,6 @@
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="admin-auth.js?v=20260813-ten-hour-session"></script>
-    <script src="clients.js?v=20260819-intake-full-questions"></script>
+    <script src="clients.js?v=20260825-three-agreements"></script>
   </body>
 </html>

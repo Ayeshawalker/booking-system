@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Ayesha Jane Agreement Preview</title>
-    <link rel="stylesheet" href="styles.css?v=20260810-agreement-feedback" />
+    <link rel="stylesheet" href="styles.css?v=20260825-three-agreements" />
   </head>
   <body class="agreement-preview-page">
     <header class="site-header">
@@ -21,19 +21,32 @@
     <main class="agreement-preview-shell">
       <header class="agreement-preview-heading">
         <div><p class="admin-kicker">Agreement review</p><h1>Therapy agreements</h1>
-          <p>Review the client wording before electronic signing is activated.</p></div>
+          <p>Review the wording and the signing layout clients will receive.</p></div>
         <a class="secondary-button agreement-back-link" href="clients.html">Back to clients</a>
       </header>
       <div class="agreement-preview-tabs" role="tablist" aria-label="Agreement type">
-        <button type="button" role="tab" data-agreement="individual" aria-selected="true">Individual agreement</button>
-        <button type="button" role="tab" data-agreement="couples" aria-selected="false">Couples agreement</button>
+        <button type="button" role="tab" data-agreement="individual" aria-selected="true">Standard therapy</button>
+        <button type="button" role="tab" data-agreement="betrayal" aria-selected="false">Betrayal trauma</button>
+        <button type="button" role="tab" data-agreement="couples" aria-selected="false">Couples counselling</button>
       </div>
       <p id="agreement-preview-status" class="admin-message" role="status"></p>
       <article id="agreement-preview-document" class="agreement-document-card"></article>
+      <section class="agreement-signature-panel agreement-preview-signature" aria-label="Signing-page preview">
+        <p class="admin-kicker">Signing-page preview</p>
+        <h2>Electronic signature</h2>
+        <p>The real private client link contains working fields. These controls are shown here only to preview the layout.</p>
+        <label>Full name<input type="text" placeholder="Client types their full name" disabled /></label>
+        <div id="agreement-preview-second-signer" hidden>
+          <label>Second partner’s full name<input type="text" placeholder="Second partner signs separately" disabled /></label>
+        </div>
+        <label class="agreement-choice agreement-accept"><input type="checkbox" disabled /> I understand my personalised fees, payment terms and the 48-hour cancellation policy.</label>
+        <label class="agreement-choice agreement-accept"><input type="checkbox" disabled /> I have read and understood this agreement and agree to its terms.</label>
+        <button type="button" disabled>Sign agreement</button>
+      </section>
     </main>
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="admin-auth.js?v=20260813-ten-hour-session"></script>
-    <script src="agreement-preview.js?v=20260814-personalised-fee-preview"></script>
+    <script src="agreement-preview.js?v=20260825-three-agreements"></script>
   </body>
 </html>

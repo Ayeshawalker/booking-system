@@ -403,7 +403,7 @@
     appendCell(row, invoice.invoice_number);
     appendCell(row, invoice.client_name);
     appendCell(row, invoiceSessionDates(invoice).map(displayDate).join(" · "));
-    appendCell(row, displayDate(invoice.due_date));
+    appendCell(row, invoice.status === "Draft" ? "Set when sent" : displayDate(invoice.due_date));
     appendCell(row, currency(Number(invoice.amount) + Number(invoice.extra_amount || 0)));
     appendCell(
       row,
@@ -882,7 +882,7 @@
     const remove = document.createElement("button");
     remove.type = "button";
     remove.className = "payment-delete-button";
-    remove.textContent = "Delete appointment";
+    remove.textContent = "Delete";
     remove.addEventListener("click", () => deletePayment(payment, remove));
     const balanceForInvoice = Math.max(
       0,

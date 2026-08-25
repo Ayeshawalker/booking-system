@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Ayesha Jane Client Notes</title>
-    <link rel="stylesheet" href="styles.css?v=20260820-wide-note-history" />
+    <link rel="stylesheet" href="styles.css?v=20260825-note-image-download" />
   </head>
   <body class="notes-page">
     <header class="site-header">
@@ -157,8 +157,8 @@
             <div id="note-abc-review" class="note-abc-review" hidden>
               <p class="privacy-note"><strong>Clinician review required.</strong> Check that each statement is supported by the session before saving it.</p>
               <label>A — Activating event<textarea id="note-abc-a" rows="4" placeholder="What happened or triggered the response?"></textarea></label>
-              <label>B — Beliefs and interpretations<textarea id="note-abc-b" rows="4" placeholder="What beliefs, meanings or interpretations were identified?"></textarea></label>
-              <label>C — Consequences<textarea id="note-abc-c" rows="4" placeholder="What emotional, physical or behavioural consequences followed?"></textarea></label>
+              <label>B — Beliefs and interpretations<textarea id="note-abc-b" rows="8" placeholder="1. Demand: …&#10;2. Catastrophising: …&#10;3. I can’t cope / low frustration tolerance: …&#10;4. Self, life or other rating: …"></textarea></label>
+              <label>C — Consequences<textarea id="note-abc-c" rows="6" placeholder="Emotions: …&#10;Behaviours: …"></textarea></label>
               <label>Diagram title <span class="optional">(optional)</span><input id="note-abc-diagram-title" type="text" value="ABC explored in session" /></label>
               <div class="settings-button-row">
                 <button id="create-note-abc" type="button">Create reviewed diagram</button>
@@ -238,6 +238,6 @@
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="admin-auth.js?v=20260813-ten-hour-session"></script>
-    <script src="notes.js?v=20260821-client-resource-library"></script>
+    <script src="notes.js?v=20260825-structured-abc"></script>
   </body>
 </html>

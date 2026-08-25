@@ -147,14 +147,22 @@
   }
   function escapeXml(value) { return String(value || "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&apos;"})[c]); }
   function svgLines(value, width = 34) {
-    const words = String(value || "").trim().split(/\s+/).filter(Boolean); const rows = []; let row = "";
-    words.forEach((word) => { const next = row ? `${row} ${word}` : word; if (next.length > width && row) { rows.push(row); row = word; } else row = next; });
-    if (row) rows.push(row); return rows.slice(0, 10);
+    const rows = [];
+    String(value || "").split(/\r?\n/).map((line) => line.trim()).filter(Boolean).forEach((line) => {
+      const words = line.split(/\s+/).filter(Boolean); let row = "";
+      words.forEach((word) => {
+        const next = row ? `${row} ${word}` : word;
+        if (next.length > width && row) { rows.push(row); row = `   ${word}`; }
+        else row = next;
+      });
+      if (row) rows.push(row);
+    });
+    return rows.slice(0, 11);
   }
   function abcSvg(title, sections) {
     const cards = sections.map((section, index) => {
       const x = 54 + (index * 382); const lines = svgLines(section.text);
-      return `<rect x="${x}" y="190" width="338" height="420" rx="28" fill="${section.fill}" stroke="${section.stroke}" stroke-width="4"/><circle cx="${x + 48}" cy="242" r="27" fill="${section.stroke}"/><text x="${x + 48}" y="252" text-anchor="middle" font-family="Arial, sans-serif" font-size="29" font-weight="700" fill="white">${section.letter}</text><text x="${x + 88}" y="250" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#4f1531">${escapeXml(section.heading)}</text>${lines.map((line, lineIndex) => `<text x="${x + 28}" y="${315 + lineIndex * 31}" font-family="Arial, sans-serif" font-size="22" fill="#5f4550">${escapeXml(line)}</text>`).join("")}`;
+      return `<rect x="${x}" y="190" width="338" height="420" rx="28" fill="${section.fill}" stroke="${section.stroke}" stroke-width="4"/><circle cx="${x + 48}" cy="242" r="27" fill="${section.stroke}"/><text x="${x + 48}" y="252" text-anchor="middle" font-family="Arial, sans-serif" font-size="29" font-weight="700" fill="white">${section.letter}</text><text x="${x + 88}" y="250" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#4f1531">${escapeXml(section.heading)}</text>${lines.map((line, lineIndex) => `<text x="${x + 28}" y="${310 + lineIndex * 27}" font-family="Arial, sans-serif" font-size="19" fill="#5f4550">${escapeXml(line)}</text>`).join("")}`;
     }).join("");
     return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720"><defs><linearGradient id="accent" x1="0" x2="1"><stop stop-color="#ed168c"/><stop offset="1" stop-color="#f6a623"/></linearGradient></defs><rect width="1200" height="720" rx="38" fill="#fffaf1"/><rect x="0" y="0" width="1200" height="18" rx="9" fill="url(#accent)"/><text x="600" y="88" text-anchor="middle" font-family="Georgia, serif" font-size="42" font-weight="700" fill="#8a5808">${escapeXml(title || "ABC explored in session")}</text><text x="600" y="132" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#806873">Clinician-reviewed therapeutic working diagram</text>${cards}<text x="600" y="672" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" letter-spacing="3" fill="#8a5808">AYESHA JANE · THERAPY · COUNSELLING · COACHING</text></svg>`;
   }
@@ -166,9 +174,21 @@
       const { data, error } = await db.functions.invoke(window.BOOKING_CONFIG.clientNoteImproveFunction, { body: { roughNote: source, noteType: ui.type.value, instruction: "extract-abc" } });
       if (error) throw error;
       if (!data?.abc) throw new Error(data?.error || "No ABC suggestion was returned.");
-      ui.abcA.value = data.abc.activatingEvent || "Not clearly stated in the note.";
-      ui.abcB.value = data.abc.beliefs || "Not clearly stated in the note.";
-      ui.abcC.value = data.abc.consequences || "Not clearly stated in the note.";
+      const missing = "Not clearly stated in the note.";
+      const beliefs = data.abc.beliefs;
+      const consequences = data.abc.consequences;
+      ui.abcA.value = data.abc.activatingEvent || missing;
+      ui.abcB.value = beliefs && typeof beliefs === "object"
+        ? [
+            `1. Demand: ${beliefs.demands || missing}`,
+            `2. Catastrophising: ${beliefs.catastrophising || missing}`,
+            `3. I can’t cope / low frustration tolerance: ${beliefs.lowFrustrationTolerance || missing}`,
+            `4. Self, life or other rating: ${beliefs.selfLifeOtherRating || missing}`,
+          ].join("\n")
+        : String(beliefs || missing);
+      ui.abcC.value = consequences && typeof consequences === "object"
+        ? `Emotions: ${consequences.emotions || missing}\nBehaviours: ${consequences.behaviours || missing}`
+        : String(consequences || missing);
       ui.abcReview.hidden = false; ui.abcReview.scrollIntoView({ behavior: "smooth", block: "center" });
       ui.message.textContent = "ABC suggestion ready. Review and edit all three boxes before creating the diagram.";
     } catch (error) {
@@ -205,14 +225,36 @@
     const { data, error } = await db.storage.from(imageBucket).createSignedUrl(path, 3600);
     return error ? "" : data.signedUrl;
   }
+  async function downloadNoteImage(item) {
+    ui.message.textContent = "Preparing image download…";
+    try {
+      const blob = item.file || await fetch(item.previewUrl).then((response) => {
+        if (!response.ok) throw new Error("The secure image could not be opened.");
+        return response.blob();
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = safeFileName(item.file_name || `${item.caption || "note-image"}.png`);
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      ui.message.textContent = `${item.file_name || "Image"} downloaded.`;
+    } catch (error) {
+      console.error(error);
+      ui.message.textContent = "The image could not be downloaded. Please try again.";
+    }
+  }
   async function renderImages() {
     if (!imageFieldsReady) return;
     const saved = await Promise.all(noteImages.map(async (item) => ({ ...item, previewUrl: await signedImageUrl(item.storage_path) })));
     const all = [...saved.map((item) => ({ ...item, saved: true })), ...stagedImages.map((item) => ({ ...item, saved: false }))];
     if (!all.length) { ui.imageList.innerHTML = "<p>No images added to this note.</p>"; return; }
-    ui.imageList.innerHTML = all.map((item, index) => `<figure class="note-image-card" data-image-index="${index}" data-image-saved="${item.saved}"><img src="${escapeHtml(item.previewUrl)}" alt="${escapeHtml(item.caption || item.file_name || "Note image")}" /><figcaption><input class="note-image-caption" type="text" value="${escapeHtml(item.caption || "")}" placeholder="Caption, for example: ABC explored in session" /><button class="secondary-button note-image-remove" type="button">Remove</button></figcaption></figure>`).join("");
+    ui.imageList.innerHTML = all.map((item, index) => `<figure class="note-image-card" data-image-index="${index}" data-image-saved="${item.saved}"><img src="${escapeHtml(item.previewUrl)}" alt="${escapeHtml(item.caption || item.file_name || "Note image")}" /><figcaption><input class="note-image-caption" type="text" value="${escapeHtml(item.caption || "")}" placeholder="Caption, for example: ABC explored in session" /><button class="secondary-button note-image-download" type="button">Download image</button><button class="secondary-button note-image-remove" type="button">Remove</button></figcaption></figure>`).join("");
     ui.imageList.querySelectorAll(".note-image-card").forEach((card) => {
       const index = Number(card.dataset.imageIndex); const savedItem = card.dataset.imageSaved === "true";
+      card.querySelector(".note-image-download").addEventListener("click", () => downloadNoteImage(all[index]));
       card.querySelector(".note-image-caption").addEventListener("change", async (event) => {
         if (!savedItem) { stagedImages[index - saved.length].caption = event.target.value.trim(); return; }
         noteImages[index].caption = event.target.value.trim();

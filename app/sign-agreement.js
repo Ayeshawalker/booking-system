@@ -51,6 +51,14 @@
   }
   function render() {
     copy.innerHTML = markdown(agreement.agreement_text);
+    const agreementNames = {
+      "Standard individual": "Standard individual therapy agreement",
+      "Betrayal trauma": "Betrayal trauma therapy agreement",
+      Couple: "Couples counselling agreement",
+      Individual: "Individual therapy agreement",
+    };
+    document.querySelector(".agreement-signing-brand h1").textContent =
+      agreementNames[agreement.agreement_type] || "Therapy agreement";
     document.querySelector("#agreement-signing-intro").textContent = agreement.agreement_type === "Couple"
       ? "Each person should sign separately. The agreement is complete after both signatures."
       : "Please type your full name to sign this agreement.";

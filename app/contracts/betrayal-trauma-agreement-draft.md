@@ -1,14 +1,14 @@
-# Standard Individual Therapy Agreement
+# Betrayal Trauma Therapy Agreement
 
 ## Our work together
 
 This agreement sets out how we will work together. Please ask about anything that is unclear before signing.
 
-Therapy is collaborative. We will agree what you would like help with and review our work together as it progresses. Therapy can involve difficult thoughts and feelings, and a particular outcome cannot be guaranteed.
+Our work may explore the effects of betrayal on safety, trust, relationships, self-belief and wellbeing. We will work at a pace that supports emotional safety and stabilisation. You will not be required to disclose or explore anything before you feel ready. We will review the focus, pace and usefulness of therapy together.
 
 ## Sessions and reviews
 
-Individual sessions are **50 minutes**. We will review the focus, pace and usefulness of therapy together. You may ask for a review at any time.
+Individual sessions are **50 minutes**. You may ask for a review at any time.
 
 Please arrive on time. If you arrive late, the session will still finish at the scheduled time and the agreed fee remains payable.
 
@@ -44,9 +44,11 @@ For online sessions, please use a private space and a reliable connection where 
 
 I keep brief, relevant records. My Privacy Notice explains how information is used, protected, retained and deleted. Sessions must not be recorded, photographed, transcribed or processed with an AI tool unless we have both expressly agreed beforehand.
 
-## Safety and emergencies
+## Emotional safety and additional support
 
-Therapy is not an emergency service. If there is immediate danger, call **999** or attend A&E. For urgent medical help, contact **NHS 111**. Samaritans can be contacted on **116 123**.
+Betrayal-trauma work can bring up strong emotions or memories between sessions. We will discuss ways to support pacing and stability. This service is not crisis support and does not replace medical or specialist services. If another form of support would be safer or more suitable, I will discuss this with you.
+
+If there is immediate danger, call **999** or attend A&E. For urgent medical help, contact **NHS 111**. Samaritans can be contacted on **116 123**.
 
 ## Ending therapy
 
