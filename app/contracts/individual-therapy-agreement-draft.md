@@ -46,6 +46,10 @@ Comfortable and informal clothing is entirely welcome. I ask only that you are d
 
 I keep brief, relevant records. My Privacy Notice explains how information is used, protected, retained and deleted. Sessions must not be recorded, photographed, transcribed or processed with an AI tool unless we have both expressly agreed beforehand.
 
+## Professional and social boundaries
+
+Our relationship is professional. I will not knowingly connect with current clients through personal social-media accounts. If we happen to meet in public, I will not acknowledge you first, in order to protect your privacy and confidentiality. You are, of course, welcome to acknowledge me if you wish.
+
 ## Safety and emergencies
 
 Therapy is not an emergency service. If there is immediate danger, call **999** or attend A&E. For urgent medical help, contact **NHS 111**. Samaritans can be contacted on **116 123**.

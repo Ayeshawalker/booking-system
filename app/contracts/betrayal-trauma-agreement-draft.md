@@ -46,6 +46,10 @@ Comfortable and informal clothing is entirely welcome. I ask only that you are d
 
 I keep brief, relevant records. My Privacy Notice explains how information is used, protected, retained and deleted. Sessions must not be recorded, photographed, transcribed or processed with an AI tool unless we have both expressly agreed beforehand.
 
+## Professional and social boundaries
+
+Our relationship is professional. I will not knowingly connect with current clients through personal social-media accounts. If we happen to meet in public, I will not acknowledge you first, in order to protect your privacy and confidentiality. You are, of course, welcome to acknowledge me if you wish.
+
 ## Emotional safety and additional support
 
 Betrayal-trauma work can bring up strong emotions or memories between sessions. We will discuss ways to support pacing and stability. This service is not crisis support and does not replace medical or specialist services. If another form of support would be safer or more suitable, I will discuss this with you.
