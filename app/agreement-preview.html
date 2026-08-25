@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Ayesha Jane Agreement Preview</title>
-    <link rel="stylesheet" href="styles.css?v=20260825-three-agreements" />
+    <link rel="stylesheet" href="styles.css?v=20260825-warmer-agreements" />
   </head>
   <body class="agreement-preview-page">
     <header class="site-header">
@@ -34,11 +34,16 @@
       <section class="agreement-signature-panel agreement-preview-signature" aria-label="Signing-page preview">
         <p class="admin-kicker">Signing-page preview</p>
         <h2>Electronic signature</h2>
-        <p>The real private client link contains working fields. These controls are shown here only to preview the layout.</p>
+        <p>This is how the signing section appears on the private link sent to a client. The controls are disabled here only because this page is a preview.</p>
         <label>Full name<input type="text" placeholder="Client types their full name" disabled /></label>
         <div id="agreement-preview-second-signer" hidden>
           <label>Second partner’s full name<input type="text" placeholder="Second partner signs separately" disabled /></label>
         </div>
+        <fieldset>
+          <legend>Please tick one communication preference</legend>
+          <label class="agreement-choice"><input type="radio" disabled /> I am happy for invoices, appointments and documents to be shared with me via WhatsApp.</label>
+          <label class="agreement-choice"><input type="radio" disabled /> I would prefer another method.</label>
+        </fieldset>
         <label class="agreement-choice agreement-accept"><input type="checkbox" disabled /> I understand my personalised fees, payment terms and the 48-hour cancellation policy.</label>
         <label class="agreement-choice agreement-accept"><input type="checkbox" disabled /> I have read and understood this agreement and agree to its terms.</label>
         <button type="button" disabled>Sign agreement</button>
@@ -47,6 +52,6 @@
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="admin-auth.js?v=20260813-ten-hour-session"></script>
-    <script src="agreement-preview.js?v=20260825-three-agreements"></script>
+    <script src="agreement-preview.js?v=20260825-warmer-agreements"></script>
   </body>
 </html>

@@ -4,21 +4,19 @@
 
 This agreement sets out how we will work together. Please ask about anything that is unclear before signing.
 
-Therapy is collaborative. We will agree what you would like help with and review our work together as it progresses. Therapy can involve difficult thoughts and feelings, and a particular outcome cannot be guaranteed.
+Therapy is collaborative, and we will agree together what you would like help with. Therapy can sometimes involve difficult thoughts and feelings, and a particular outcome cannot be guaranteed.
 
-## Sessions and reviews
+## Sessions
 
-Individual sessions are **50 minutes**. We will review the focus, pace and usefulness of therapy together. You may ask for a review at any time.
+Individual sessions are **50 minutes**.
 
-Please arrive on time. If you arrive late, the session will still finish at the scheduled time and the agreed fee remains payable.
+Sessions are usually booked directly after one another. If you arrive late, we will therefore still need to finish at the agreed time so that the next person is not kept waiting.
 
-## Confidentiality and its limits
+## Confidentiality
 
-What you tell me is confidential, but confidentiality is not absolute. If I believe that you or another person is at serious risk of harm, I may need to share relevant information with an appropriate person or service, even without your consent. I may also need to share information where safeguarding responsibilities apply or where disclosure is required by law or a court.
+Confidentiality is very important to me. However, if I feel that there may be a risk of harm to you or another person, I may need to share relevant information to help keep people safe.
 
-Where it is safe and practical, I will discuss this with you first. I will share only the information needed for the purpose.
-
-I discuss my work in confidential professional supervision. I avoid identifying details wherever possible, and my supervisor is also required to protect confidentiality.
+Wherever possible, I will always endeavour to speak with you first.
 
 ## Your agreed fees
 
@@ -28,9 +26,7 @@ Payment is due within the period shown on your invoice. Fees may be reviewed no 
 
 ## Cancellation and missed sessions
 
-Please give at least **48 clear hours’ notice** to cancel or rearrange an appointment. A session cancelled or missed with less than 48 hours’ notice **will be charged at the agreed fee**. Genuine emergencies or exceptional circumstances may be considered individually.
-
-If I cancel, no fee will be charged and I will offer another appointment where possible.
+Please give at least **48 clear hours’ notice** to cancel or rearrange an appointment. A session cancelled or missed with less than 48 hours’ notice **will need to be charged at the agreed fee**. Genuine emergencies or exceptional circumstances may be considered individually.
 
 ## Contact between sessions
 

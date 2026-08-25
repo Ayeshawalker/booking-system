@@ -55,8 +55,8 @@
       const response = await fetch(sources[type], { cache: "no-store" });
       if (!response.ok) throw new Error("Agreement draft not found");
       const sampleFees = type === "couples"
-        ? "- Online 80-minute couples session: **fee recorded for this client**\n- In-person 80-minute couples session: **fee recorded for this client**\n\nThese are the fees agreed for you and may differ from fees agreed with other clients."
-        : "- Online 50-minute individual session: **fee recorded for this client**\n- In-person 50-minute individual session: **fee recorded for this client**\n\nThese are the fees agreed for you and may differ from fees agreed with other clients.";
+        ? "- Online 80-minute couples session: **the fee agreed with this client**"
+        : "- Online 50-minute individual session: **the fee agreed with this client**";
       const agreementText = (await response.text()).replace("{{AGREED_FEES}}", sampleFees);
       card.innerHTML = renderMarkdown(agreementText);
       status.textContent = "";
