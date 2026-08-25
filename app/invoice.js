@@ -18,6 +18,17 @@
     return new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(Number(value));
   }
 
+  function confirmInvoiceWasSent() {
+    const dialog = document.querySelector("#invoice-sent-confirmation");
+    return new Promise((resolve) => {
+      dialog.returnValue = "no";
+      dialog.addEventListener("close", () => resolve(dialog.returnValue === "yes"), {
+        once: true,
+      });
+      dialog.showModal();
+    });
+  }
+
   function invoiceSessionDates(invoice) {
     const itemMarker = String(invoice.description || "").match(/\[\[ITEMS:([^\]]+)\]\]/i);
     if (itemMarker) {
@@ -163,6 +174,11 @@
   setText("#invoice-sort-code", bank.sort_code || "Add securely in Settings");
   setText("#invoice-account-number", bank.account_number || "Add securely in Settings");
   setText("#invoice-reference", invoice.invoice_number);
+  const paymentLink = String(invoice.payment_link || "").trim();
+  if (paymentLink) {
+    document.querySelector("#invoice-payment-link").href = paymentLink;
+    document.querySelector("#invoice-link-method").hidden = false;
+  }
   document.title = `${formatDate(sessionDates[0])} · Invoice · ${invoice.client_name}`;
   loading.hidden = true;
   document.querySelector("#invoice-document").hidden = false;
@@ -215,6 +231,17 @@
         .set(pdfOptions)
         .from(invoiceDocument)
         .save();
+      if (invoice.status === "Draft") {
+        const sent = await confirmInvoiceWasSent();
+        if (sent) {
+          await recordInvoiceAsSent(
+            "Invoice marked as sent. It now appears in Sent and unpaid.",
+          );
+        } else {
+          document.querySelector("#invoice-page-message").textContent =
+            "Invoice downloaded and left as a draft.";
+        }
+      }
     } catch (error) {
       console.error(error);
       document.querySelector("#invoice-page-message").textContent =
@@ -413,6 +440,27 @@
       session_date: sessionDate,
       fee_due: amount + extraAmount,
     }).eq("source_reference", `invoice:${invoice.id}`);
+    window.location.reload();
+  });
+
+  const paymentLinkForm = document.querySelector("#invoice-payment-link-form");
+  paymentLinkForm.elements.paymentLink.value = paymentLink;
+  paymentLinkForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const link = String(new FormData(paymentLinkForm).get("paymentLink") || "").trim();
+    const submit = paymentLinkForm.querySelector("button[type='submit']");
+    const message = document.querySelector("#invoice-payment-link-message");
+    submit.disabled = true;
+    message.textContent = "Saving…";
+    const { error } = await client
+      .from("invoices")
+      .update({ payment_link: link || null })
+      .eq("id", invoice.id);
+    if (error) {
+      submit.disabled = false;
+      message.textContent = "The payment link could not be saved.";
+      return;
+    }
     window.location.reload();
   });
 

@@ -35,6 +35,8 @@
     contractMessage: document.querySelector("#contract-dialog-message"),
     createContractButton: document.querySelector("#create-contract-link"),
     cancelContractButton: document.querySelector("#cancel-current-contract"),
+    contractType: document.querySelector("#contract-type"),
+    contractTypeField: document.querySelector("#contract-type-field"),
     intakeDialog: document.querySelector("#intake-dialog"),
     intakeDialogTitle: document.querySelector("#intake-dialog-title"),
     intakeStatus: document.querySelector("#intake-current-status"),
@@ -331,8 +333,6 @@
       feeLines.push(`- In-person ${sessionLength}: **${formatFee(inPersonValue)}**`);
     }
     return [
-      "### Your agreed fees at the date of this agreement",
-      "",
       ...feeLines,
       "",
       "These are the fees agreed for you and may differ from fees agreed with other clients.",
@@ -345,6 +345,7 @@
     controls.contractLinkPanel.hidden = !hasAgreement;
     controls.cancelContractButton.hidden = !hasAgreement || agreement.status === "Signed";
     controls.createContractButton.hidden = hasAgreement;
+    controls.contractTypeField.hidden = hasAgreement;
     if (!hasAgreement) {
       controls.contractStatus.textContent = "No active signing link has been created yet.";
       return;
@@ -365,6 +366,15 @@
     controls.contractExplanation.textContent = client.record_type === "Couple"
       ? "This couples agreement requires a separate electronic signature from each person. Both can use the same private link."
       : "This individual agreement records the client's electronic signature and communication preference.";
+    const isCouple = client.record_type === "Couple";
+    [...controls.contractType.options].forEach((option) => {
+      option.hidden = isCouple ? option.value !== "Couple" : option.value === "Couple";
+    });
+    controls.contractType.value = isCouple
+      ? "Couple"
+      : (client.specialities || []).includes("Betrayal trauma")
+        ? "Betrayal trauma"
+        : "Standard individual";
     showAgreement(null);
     controls.contractDialog.showModal();
     const { data, error } = await supabaseClient.from("client_agreements")
@@ -385,8 +395,13 @@
     controls.createContractButton.disabled = true;
     controls.contractMessage.textContent = "Creating the private signing link…";
     try {
-      const type = contractClient.record_type === "Couple" ? "Couple" : "Individual";
-      const file = type === "Couple" ? "contracts/couples-therapy-agreement-draft.md" : "contracts/individual-therapy-agreement-draft.md";
+      const type = controls.contractType.value;
+      const files = {
+        "Standard individual": "contracts/individual-therapy-agreement-draft.md",
+        "Betrayal trauma": "contracts/betrayal-trauma-agreement-draft.md",
+        Couple: "contracts/couples-therapy-agreement-draft.md",
+      };
+      const file = files[type];
       const response = await fetch(file, { cache: "no-store" });
       if (!response.ok) throw new Error("The agreement draft could not be loaded.");
       const agreementTemplate = await response.text();
@@ -398,7 +413,7 @@
       const secondName = [contractClient.second_first_name, contractClient.second_surname].filter(Boolean).join(" ");
       const { data, error } = await supabaseClient.from("client_agreements").insert({
         client_id: contractClient.id, agreement_type: type,
-        agreement_version: "2026-08-14", agreement_text: agreementText,
+        agreement_version: "2026-08-25", agreement_text: agreementText,
         signer_one_expected_name: firstName,
         signer_two_expected_name: type === "Couple" ? secondName : null,
         created_by: admin.user.id,

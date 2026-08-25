@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Ayesha Jane Invoice</title>
-    <link rel="stylesheet" href="styles.css?v=20260809-per-session-format" />
+    <link rel="stylesheet" href="styles.css?v=20260822-invoice-sent-confirmation" />
   </head>
   <body class="invoice-page">
     <div class="invoice-page-actions">
@@ -68,10 +68,22 @@
             <p><strong>PayPal account</strong><br /><span>ayeshajane67@gmail.com</span></p>
             <p class="invoice-payment-help">In PayPal, choose “Send money” and use the invoice number shown above as the payment reference.</p>
           </div>
+          <div id="invoice-link-method" class="invoice-payment-method" hidden>
+            <p class="invoice-label">Option 3 · Payment link</p>
+            <p><a id="invoice-payment-link" href="#" target="_blank" rel="noopener">Pay securely online</a></p>
+            <p class="invoice-payment-help">Use the link above to pay this invoice online.</p>
+          </div>
         </section>
-        <p class="invoice-thanks">Thank you. Please use the invoice number as your payment reference for either payment method.<br />Ayesha Jane Therapy · Counselling · Coaching</p>
+        <p class="invoice-thanks">Thank you. Please use the invoice number as your payment reference where requested.<br />Ayesha Jane Therapy · Counselling · Coaching</p>
       </div>
     </article>
+
+    <form id="invoice-payment-link-form" class="invoice-extra-form invoice-link-form">
+      <div><p class="admin-kicker">Payment option</p><h2>GoCardless payment link</h2><p>Paste the unique link for this client and this invoice amount.</p></div>
+      <label>Payment link<input name="paymentLink" type="url" inputmode="url" placeholder="https://pay.gocardless.com/…" autocomplete="off" /></label>
+      <button type="submit">Save payment link</button>
+      <p id="invoice-payment-link-message" class="admin-message" role="status"></p>
+    </form>
 
     <form id="invoice-extra-form" class="invoice-extra-form">
       <div><p class="admin-kicker">Invoice adjustment</p><h2>Add extra session time</h2><p>Use this when a session ran longer than originally booked.</p></div>
@@ -81,10 +93,21 @@
       <p id="invoice-extra-message" class="admin-message" role="status"></p>
     </form>
 
+    <dialog id="invoice-sent-confirmation" class="invoice-sent-confirmation">
+      <form method="dialog">
+        <h2>Have you sent this invoice?</h2>
+        <p>The PDF has downloaded. Confirm whether you have sent it to the client.</p>
+        <div class="dialog-actions">
+          <button type="submit" value="no" class="secondary-button">No, keep as draft</button>
+          <button type="submit" value="yes">Yes, mark as sent</button>
+        </div>
+      </form>
+    </dialog>
+
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="admin-auth.js?v=20260813-ten-hour-session"></script>
     <script src="vendor/html2pdf.bundle.min.js?v=0.10.1"></script>
-    <script src="invoice.js?v=20260816-auto-mark-sent"></script>
+    <script src="invoice.js?v=20260822-confirm-sent-after-download"></script>
   </body>
 </html>

@@ -43,7 +43,7 @@ Deno.serve(async (request) => {
     if (agreement.status === "Signed") return json({ error: "This agreement has already been fully signed." }, 409);
     if (body.accepted !== true) return json({ error: "Please confirm that you agree to the agreement." }, 400);
     if (agreement.agreement_version >= "2026-08-14" && body.feesAndCancellationAccepted !== true) {
-      return json({ error: "Please confirm that you understand the fees and 48-hour policy." }, 400);
+      return json({ error: "Please confirm that you understand your personalised fees and the 48-hour policy." }, 400);
     }
 
     const signer = Number(body.signer);
@@ -68,7 +68,7 @@ Deno.serve(async (request) => {
       updated_at: now,
     };
     const otherSigned = signer === 1 ? agreement.signer_two_signed_at : agreement.signer_one_signed_at;
-    const complete = agreement.agreement_type === "Individual" || Boolean(otherSigned);
+    const complete = agreement.agreement_type !== "Couple" || Boolean(otherSigned);
     update.status = complete ? "Signed" : "Partially signed";
     if (complete) update.completed_at = now;
     const { error: updateError } = await db.from("client_agreements").update(update).eq("id", agreement.id);

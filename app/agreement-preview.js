@@ -5,8 +5,10 @@
   const tabs = [...document.querySelectorAll("[data-agreement]")];
   const sources = {
     individual: "contracts/individual-therapy-agreement-draft.md",
+    betrayal: "contracts/betrayal-trauma-agreement-draft.md",
     couples: "contracts/couples-therapy-agreement-draft.md",
   };
+  const secondSigner = document.querySelector("#agreement-preview-second-signer");
   const escapeHtml = (value) => String(value).replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
   const inline = (value) => escapeHtml(value).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
@@ -47,13 +49,14 @@
 
   async function showAgreement(type) {
     tabs.forEach((tab) => tab.setAttribute("aria-selected", String(tab.dataset.agreement === type)));
+    secondSigner.hidden = type !== "couples";
     status.textContent = "Loading agreement…";
     try {
       const response = await fetch(sources[type], { cache: "no-store" });
       if (!response.ok) throw new Error("Agreement draft not found");
       const sampleFees = type === "couples"
-        ? "### Your agreed fees at the date of this agreement\n\n- Online 80-minute couples session: **fee recorded for this client**\n- In-person 80-minute couples session: **fee recorded for this client**\n\nThese are the fees agreed for you and may differ from fees agreed with other clients."
-        : "### Your agreed fees at the date of this agreement\n\n- Online 50-minute individual session: **fee recorded for this client**\n- In-person 50-minute individual session: **fee recorded for this client**\n\nThese are the fees agreed for you and may differ from fees agreed with other clients.";
+        ? "- Online 80-minute couples session: **fee recorded for this client**\n- In-person 80-minute couples session: **fee recorded for this client**\n\nThese are the fees agreed for you and may differ from fees agreed with other clients."
+        : "- Online 50-minute individual session: **fee recorded for this client**\n- In-person 50-minute individual session: **fee recorded for this client**\n\nThese are the fees agreed for you and may differ from fees agreed with other clients.";
       const agreementText = (await response.text()).replace("{{AGREED_FEES}}", sampleFees);
       card.innerHTML = renderMarkdown(agreementText);
       status.textContent = "";

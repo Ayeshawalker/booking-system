@@ -2139,6 +2139,17 @@ dd {
 .invoice-extra-form label { display: grid; gap: 5px; font-weight: 700; }
 .invoice-extra-form input { width: 100%; border: 1px solid var(--border); border-radius: 7px; padding: 10px; font: inherit; }
 .invoice-extra-form .admin-message { grid-column: 1 / -1; }
+.invoice-link-form { grid-template-columns: minmax(240px, 1fr) minmax(300px, 1.5fr) auto; }
+.invoice-sent-confirmation {
+  width: min(460px, calc(100% - 32px));
+  padding: 24px;
+  border: 0;
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+}
+.invoice-sent-confirmation::backdrop { background: rgba(48, 31, 25, 0.48); }
+.invoice-sent-confirmation h2 { margin-top: 0; }
+.invoice-sent-confirmation .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
 
 @media print {
   .invoice-page { padding: 0; background: #fff; }
@@ -3501,7 +3512,7 @@ dd {
 }
 .agreement-preview-heading p:last-child { color: #78646d; }
 .agreement-preview-tabs {
-  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px; margin: 28px 0;
 }
 .agreement-preview-tabs button {
@@ -3539,6 +3550,10 @@ dd {
 }
 .agreement-consent-options label { display: flex; align-items: flex-start; gap: 12px; }
 .agreement-consent-options input { width: 21px; height: 21px; margin-top: 3px; accent-color: #e91e83; }
+.agreement-preview-signature { display: grid; gap: 18px; margin-top: 24px; border: 2px solid #ffc8b2; border-radius: 28px; }
+.agreement-preview-signature h2, .agreement-preview-signature p { margin: 0; }
+.agreement-preview-signature > label:not(.agreement-choice),
+.agreement-preview-signature > div label { display: grid; gap: 7px; font-weight: 800; }
 @media (max-width: 680px) {
   .agreement-preview-heading { align-items: flex-start; flex-direction: column; }
   .agreement-preview-tabs { grid-template-columns: 1fr; }
@@ -3682,8 +3697,12 @@ dd {
 .note-image-list > p { grid-column: 1 / -1; color: #78636b; }
 .note-image-card { display: grid; gap: 10px; margin: 0; padding: 12px; border: 1px solid #f4bea4; border-radius: 14px; background: #fff; }
 .note-image-card img { width: 100%; max-height: 420px; object-fit: contain; border-radius: 10px; background: #faf7f4; }
-.note-image-card figcaption { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.note-image-card figcaption { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: center; }
 .note-image-caption { min-width: 0; }
+@media (max-width: 760px) {
+  .note-image-card figcaption { grid-template-columns: 1fr 1fr; }
+  .note-image-caption { grid-column: 1 / -1; }
+}
 .note-supervision-fields legend { padding: 0 10px; color: #bd1267; font-weight: 900; }
 .note-supervision-fields a { color: #bd1267; font-weight: 800; }
 .client-work-overview { margin-top: 26px; padding-top: 8px; }

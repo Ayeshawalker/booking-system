@@ -811,28 +811,29 @@
       return;
     }
 
-    // For current and future periods, use confirmed booking records rather
-    // than the visible Google event list. Google and Zoom can leave an older
-    // copy behind after a time is changed; those copies must not increase the
-    // session totals or earnings.
-    const countedBookings = new Set();
-    state.summaryBookings.forEach((booking) => {
-      if (String(booking.status).toLowerCase() !== "confirmed") return;
-      bookingOccurrences(booking).forEach((occurrence) => {
-        const sessionDate = dateFromKey(occurrence.date);
-        if (sessionDate < range.start || sessionDate >= range.end) return;
-        const clientIdentity = booking.client_id || normalisePersonName(bookingClientName(booking));
-        // A moved appointment can occasionally leave both its old and new
-        // saved time behind. A client still counts as one session that day.
-        const key = `${clientIdentity}:${occurrence.date}`;
-        if (countedBookings.has(key)) return;
-        countedBookings.add(key);
-        if (String(booking.session_type).toLowerCase() === "joint session") couples += 1;
-        else individuals += 1;
-        if (String(occurrence.format).toLowerCase() === "in person") inPerson += 1;
-        else online += 1;
-        earnings += Number(booking.price || 0);
-      });
+    // For current and future periods, make the totals agree with the confirmed
+    // sessions actually shown in this calendar period. Expanding every saved
+    // block-booking pattern here can count a projected occurrence after that
+    // occurrence has been moved, removed or was never added to the calendar.
+    const countedOccurrences = new Set();
+    state.events.forEach((event) => {
+      // Only booking-system records are authoritative. An ordinary Google
+      // event can contain a saved client's name and must not become a session
+      // merely because its title happens to match that client.
+      if (!event.bookingRequestId || !isClientEvent(event) || isPendingEvent(event)) return;
+      const start = eventDates(event).start;
+      if (start < range.start || start >= range.end) return;
+      // One therapist cannot conduct two sessions in the same appointment
+      // slot. If separate saved records overlap at the exact same start time,
+      // count the slot once rather than inflating the weekly totals.
+      const key = `${localDateKey(start)}:${String(start.getHours()).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")}`;
+      if (countedOccurrences.has(key)) return;
+      countedOccurrences.add(key);
+      if (isCoupleEvent(event)) couples += 1;
+      else individuals += 1;
+      if (isInPersonEvent(event)) inPerson += 1;
+      else online += 1;
+      earnings += feeForEvent(event);
     });
 
     controls.individualSessions.textContent = String(individuals);
