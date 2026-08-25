@@ -43,7 +43,7 @@ Deno.serve(async (request) => {
     if (agreement.status === "Signed") return json({ error: "This agreement has already been fully signed." }, 409);
     if (body.accepted !== true) return json({ error: "Please confirm that you agree to the agreement." }, 400);
     if (agreement.agreement_version >= "2026-08-14" && body.feesAndCancellationAccepted !== true) {
-      return json({ error: "Please confirm that you understand your personalised fees and the 48-hour policy." }, 400);
+      return json({ error: "Please confirm that you understand your fees and the 48-hour policy." }, 400);
     }
 
     const signer = Number(body.signer);

@@ -50,6 +50,10 @@ Comfortable and informal clothing is entirely welcome. I ask only that you are b
 
 I keep brief, relevant records. My Privacy Notice explains how information is used, protected, retained and deleted. Sessions must not be recorded, photographed, transcribed or processed with an AI tool unless everyone has expressly agreed beforehand.
 
+## Professional and social boundaries
+
+Our relationship is professional. I will not knowingly connect with current clients through personal social-media accounts. If we happen to meet in public, I will not acknowledge either of you first, in order to protect your privacy and confidentiality. You are, of course, welcome to acknowledge me if you wish.
+
 ## Safety and suitability
 
 Couples counselling may not be suitable where there is coercion, intimidation, violence or an inability to participate freely. I may pause joint sessions, review safety, or recommend other support.
