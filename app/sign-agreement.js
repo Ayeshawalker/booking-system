@@ -52,7 +52,7 @@
   function render() {
     copy.innerHTML = markdown(agreement.agreement_text);
     const agreementNames = {
-      "Standard individual": "Standard individual therapy agreement",
+      "Standard individual": "Individual therapy agreement",
       "Betrayal trauma": "Betrayal trauma therapy agreement",
       Couple: "Couples counselling agreement",
       Individual: "Individual therapy agreement",
