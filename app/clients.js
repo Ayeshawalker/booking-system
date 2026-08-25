@@ -30,6 +30,7 @@
     contractDialogTitle: document.querySelector("#contract-dialog-title"),
     contractExplanation: document.querySelector("#contract-explanation"),
     contractStatus: document.querySelector("#contract-current-status"),
+    contractFeePreview: document.querySelector("#contract-fee-preview"),
     contractLinkPanel: document.querySelector("#contract-link-panel"),
     contractSigningLink: document.querySelector("#contract-signing-link"),
     contractMessage: document.querySelector("#contract-dialog-message"),
@@ -337,9 +338,27 @@
     ].join("\n");
   }
 
+  function contractFeeSummary(client) {
+    const onlineValue = client.agreed_online_fee_gbp ?? client.agreed_session_fee_gbp;
+    const inPersonValue = client.agreed_in_person_fee_gbp;
+    const fees = [];
+    if (onlineValue !== null && onlineValue !== undefined && onlineValue !== "") {
+      fees.push(`Online ${formatFee(onlineValue)}`);
+    }
+    if (inPersonValue !== null && inPersonValue !== undefined && inPersonValue !== "") {
+      fees.push(`In person ${formatFee(inPersonValue)}`);
+    }
+    return fees.length ? fees.join(" · ") : "No fee is currently recorded";
+  }
+
+  function showContractFee(client) {
+    controls.contractFeePreview.textContent = `Fee that will appear: ${contractFeeSummary(client)}`;
+  }
+
   function showAgreement(agreement) {
     currentAgreement = agreement || null;
     const hasAgreement = Boolean(agreement);
+    controls.contractFeePreview.hidden = hasAgreement;
     controls.contractLinkPanel.hidden = !hasAgreement;
     controls.cancelContractButton.hidden = !hasAgreement || agreement.status === "Signed";
     controls.createContractButton.hidden = hasAgreement;
@@ -359,6 +378,7 @@
 
   async function openContractManager(client) {
     contractClient = client;
+    showContractFee(client);
     controls.contractMessage.textContent = "";
     controls.contractDialogTitle.textContent = clientNames(client);
     controls.contractExplanation.textContent = client.record_type === "Couple"
@@ -391,9 +411,27 @@
   async function createContractLink() {
     if (!contractClient) return;
     controls.createContractButton.disabled = true;
-    controls.contractMessage.textContent = "Creating the private signing link…";
+    controls.contractMessage.textContent = "Checking the latest saved fee…";
     try {
       const type = controls.contractType.value;
+      const { data: latestClient, error: clientError } = await supabaseClient
+        .from("clients")
+        .select(selectedColumns)
+        .eq("id", contractClient.id)
+        .single();
+      if (clientError) throw new Error("The latest saved client fee could not be checked.");
+      contractClient = latestClient;
+      clients = clients.map((client) => client.id === latestClient.id ? latestClient : client);
+      showContractFee(latestClient);
+      agreedFeesForContract(latestClient, type);
+      const confirmed = window.confirm(
+        `The agreement will show:\n\n${contractFeeSummary(latestClient)}\n\nCreate this signing link?`,
+      );
+      if (!confirmed) {
+        controls.contractMessage.textContent = "No signing link was created.";
+        return;
+      }
+      controls.contractMessage.textContent = "Creating the private signing link…";
       const files = {
         "Standard individual": "contracts/individual-therapy-agreement-draft.md",
         "Betrayal trauma": "contracts/betrayal-trauma-agreement-draft.md",
