@@ -18,9 +18,11 @@ Confidentiality is very important to me. However, if I feel that there may be a 
 
 Wherever possible, I will always endeavour to speak with you first.
 
-## Individual contact and no-secrets policy
+## Individual sessions and openness
 
-Information shared with me individually may be relevant to the couples work. I will not automatically repeat everything to the other partner. However, I cannot agree to hold information that prevents me from working fairly with both of you. I will support the person who shared it to consider how it can be brought into a joint session. If important information cannot be included in the shared work, couples counselling may need to pause or end.
+Occasional individual sessions can be a helpful part of couples counselling. They can give each of you space to reflect more freely, while still remaining part of our work with your relationship rather than becoming separate individual therapy.
+
+I will treat anything shared with me individually with care and will not routinely repeat every detail to the other partner. At the same time, couples counselling works best when important matters affecting the relationship can be brought into the shared sessions. If something significant arises, we will talk about how it can be shared thoughtfully and with support, so that I can continue to work openly and fairly with you both.
 
 ## Your agreed fees
 

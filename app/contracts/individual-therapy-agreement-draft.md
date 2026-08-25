@@ -1,4 +1,4 @@
-# Standard Individual Therapy Agreement
+# Individual Therapy Agreement
 
 ## Our work together
 
