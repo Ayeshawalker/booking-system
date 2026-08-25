@@ -38,7 +38,13 @@ WhatsApp or email may be used for appointments, invoices and brief administrativ
 
 ## Online sessions
 
-Each person should join from a private space where possible. Do not join while driving or doing anything that needs your full attention. If technology interrupts the session, we will try to reconnect and agree what to do.
+Each person should join from a private space with a reliable connection where possible and a suitably charged device. Please minimise interruptions and do not join while driving or doing anything that needs your full attention. If technology interrupts the session, please rejoin as soon as you are able; I will do the same.
+
+## Readiness and the therapeutic setting
+
+Please do not attend a session while under the influence of alcohol or non-prescribed drugs. Prescribed medication should be taken in accordance with your clinician’s advice. If I believe that intoxication means a session cannot proceed safely or meaningfully, I may pause or end the session and the late-cancellation fee may still apply.
+
+Comfortable and informal clothing is entirely welcome. I ask only that you are both dressed in a way that is suitable for a shared professional therapeutic space, so that clear and respectful boundaries are maintained whether we meet online or in person.
 
 ## Records and recordings
 
