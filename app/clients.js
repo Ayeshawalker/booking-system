@@ -318,7 +318,7 @@
 
   function agreedFeesForContract(client, type) {
     const onlineValue = client.agreed_online_fee_gbp ?? client.agreed_session_fee_gbp;
-    const inPersonValue = client.agreed_in_person_fee_gbp ?? client.agreed_session_fee_gbp;
+    const inPersonValue = client.agreed_in_person_fee_gbp;
     const hasOnlineFee = onlineValue !== null && onlineValue !== undefined && onlineValue !== "";
     const hasInPersonFee = inPersonValue !== null && inPersonValue !== undefined && inPersonValue !== "";
     if (!hasOnlineFee && !hasInPersonFee) {
@@ -334,8 +334,6 @@
     }
     return [
       ...feeLines,
-      "",
-      "These are the fees agreed for you and may differ from fees agreed with other clients.",
     ].join("\n");
   }
 

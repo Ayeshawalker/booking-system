@@ -4,21 +4,19 @@
 
 This agreement sets out how we will work together. Please ask about anything that is unclear before signing.
 
-The relationship and the work you agree to undertake together are the focus. I will aim to work fairly with both partners and will not take sides. We will review the focus, pace and usefulness of counselling together.
+The relationship and the work you agree to undertake together are the focus. I will aim to work fairly with both partners and will not take sides.
 
-## Sessions and reviews
+## Sessions
 
 Couples sessions are **80 minutes**. Both partners are encouraged to attend consistently. If one person cannot attend, we will agree whether to rearrange, meet individually as part of the couples work, or pause that session.
 
-Please arrive on time. If you arrive late, the session will still finish at the scheduled time and the agreed fee remains payable.
+Sessions are usually booked directly after one another. If you arrive late, we will therefore still need to finish at the agreed time so that the next person is not kept waiting.
 
-## Confidentiality and its limits
+## Confidentiality
 
-What you tell me is confidential, but confidentiality is not absolute. If I believe that either partner or another person is at serious risk of harm, I may need to share relevant information with an appropriate person or service, even without consent. I may also need to share information where safeguarding responsibilities apply or where disclosure is required by law or a court.
+Confidentiality is very important to me. However, if I feel that there may be a risk of harm to either partner or another person, I may need to share relevant information to help keep people safe.
 
-Where it is safe and practical, I will discuss this with you first. I will share only the information needed for the purpose.
-
-I discuss my work in confidential professional supervision. I avoid identifying details wherever possible, and my supervisor is also required to protect confidentiality.
+Wherever possible, I will always endeavour to speak with you first.
 
 ## Individual contact and no-secrets policy
 
@@ -32,9 +30,7 @@ Both partners are responsible for ensuring the fee is paid, unless we agree othe
 
 ## Cancellation and changes
 
-Please give at least **48 clear hours’ notice** to cancel, rearrange or shorten an appointment. A session cancelled or missed with less than 48 hours’ notice **will be charged at the agreed fee**. If an 80-minute appointment is shortened with less than 48 hours’ notice, the agreed 80-minute fee remains payable. Genuine emergencies or exceptional circumstances may be considered individually.
-
-If I cancel, no fee will be charged and I will offer another appointment where possible.
+Please give at least **48 clear hours’ notice** to cancel, rearrange or shorten an appointment. A session cancelled or missed with less than 48 hours’ notice **will need to be charged at the agreed fee**. If an 80-minute appointment is shortened with less than 48 hours’ notice, the agreed 80-minute fee will still need to be charged. Genuine emergencies or exceptional circumstances may be considered individually.
 
 ## Contact between sessions
 
