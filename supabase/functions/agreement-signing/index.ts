@@ -24,7 +24,7 @@ async function sendSigningNotification(
   complete: boolean,
 ) {
   const apiKey = Deno.env.get("RESEND_API_KEY") || "";
-  const recipient = Deno.env.get("AGREEMENT_NOTIFICATION_EMAIL") || "ayeshajane67@gmail.com";
+  const recipient = Deno.env.get("AGREEMENT_NOTIFICATION_EMAIL") || "info@ayeshajane.com";
   if (!apiKey) {
     console.warn("Agreement notification skipped because RESEND_API_KEY is not configured.");
     return;
@@ -50,7 +50,8 @@ async function sendSigningNotification(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: Deno.env.get("AGREEMENT_NOTIFICATION_FROM") || "Ayesha Jane notifications <onboarding@resend.dev>",
+      from: Deno.env.get("AGREEMENT_NOTIFICATION_FROM") || "Ayesha Jane <info@ayeshajane.com>",
+      reply_to: "info@ayeshajane.com",
       to: [recipient],
       subject: complete
         ? `Agreement completed: ${signerName}`
