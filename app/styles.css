@@ -3653,7 +3653,7 @@ dd {
 .notes-editor-main textarea { width: 100%; box-sizing: border-box; resize: vertical; }
 .notes-editor-main #client-note-rough { min-height: 260px; }
 .notes-editor-main #client-note-improved { min-height: 320px; }
-.notes-reference-panel { position: sticky; top: 18px; display: grid; gap: 22px; max-height: calc(100vh - 36px); overflow: auto; padding: 20px; border: 2px solid #f4cfad; border-radius: 20px; background: #fffaf1; }
+.notes-reference-panel { position: static; display: grid; gap: 22px; max-height: none; overflow: visible; padding: 20px; border: 2px solid #f4cfad; border-radius: 20px; background: #fffaf1; }
 .notes-reference-panel .notes-list-heading { align-items: start; flex-direction: column; gap: 5px; margin: 0 0 14px; }
 .notes-reference-panel .notes-list-heading small { color: #78636b; line-height: 1.45; }
 .previous-client-notes-list { display: grid; gap: 14px; }
