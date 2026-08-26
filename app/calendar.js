@@ -1498,14 +1498,21 @@
       heading.append(name, frequency);
       const note = document.createElement("input");
       note.type = "text";
-      note.value = client.frequency_notes || state.clientCheckNotes[noteKey] || "";
+      const hasLocalDraft = Object.prototype.hasOwnProperty.call(
+        state.clientCheckNotes,
+        noteKey,
+      );
+      note.value = hasLocalDraft
+        ? state.clientCheckNotes[noteKey]
+        : client.frequency_notes || "";
       note.placeholder = "Brief note — carries forward until cleared…";
       note.setAttribute("aria-label", `Ongoing calendar note for ${bookingClientDisplayName(client)}`);
       let lastSavedValue = String(client.frequency_notes || "").trim();
       note.addEventListener("input", () => {
         const value = note.value.trim();
-        if (value) state.clientCheckNotes[noteKey] = value;
-        else delete state.clientCheckNotes[noteKey];
+        // Keep even an empty draft until the database confirms the save. This
+        // prevents an older saved note reappearing when the week is changed.
+        state.clientCheckNotes[noteKey] = value;
         localStorage.setItem(
           clientCheckNotesStorageKey,
           JSON.stringify(state.clientCheckNotes),
@@ -1533,6 +1540,11 @@
         }
         client.frequency_notes = value || null;
         lastSavedValue = value;
+        delete state.clientCheckNotes[noteKey];
+        localStorage.setItem(
+          clientCheckNotesStorageKey,
+          JSON.stringify(state.clientCheckNotes),
+        );
         save.textContent = "Saved";
         window.setTimeout(() => { save.textContent = "Save"; }, 1600);
       };

@@ -17,6 +17,60 @@ function clean(value: unknown, maximum = 200) {
   return String(value || "").trim().slice(0, maximum);
 }
 
+async function sendSigningNotification(
+  agreement: Record<string, unknown>,
+  signerName: string,
+  signedAt: string,
+  complete: boolean,
+) {
+  const apiKey = Deno.env.get("RESEND_API_KEY") || "";
+  const recipient = Deno.env.get("AGREEMENT_NOTIFICATION_EMAIL") || "info@ayeshajane.com";
+  if (!apiKey) {
+    console.warn("Agreement notification skipped because RESEND_API_KEY is not configured.");
+    return;
+  }
+  const agreementType = agreement.agreement_type === "Couple"
+    ? "couples counselling agreement"
+    : agreement.agreement_type === "Betrayal trauma"
+      ? "betrayal trauma therapy agreement"
+      : "individual therapy agreement";
+  const status = complete
+    ? "The agreement is now complete."
+    : "The first signature has been received and the second signature is still awaited.";
+  const date = new Intl.DateTimeFormat("en-GB", {
+    dateStyle: "long",
+    timeStyle: "short",
+    timeZone: "Europe/London",
+  }).format(new Date(signedAt));
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    signal: AbortSignal.timeout(10000),
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: Deno.env.get("AGREEMENT_NOTIFICATION_FROM") || "Ayesha Jane <info@ayeshajane.com>",
+      reply_to: "info@ayeshajane.com",
+      to: [recipient],
+      subject: complete
+        ? `Agreement completed: ${signerName}`
+        : `Agreement signed by ${signerName}`,
+      text: [
+        `${signerName} signed the ${agreementType} on ${date}.`,
+        "",
+        status,
+        "",
+        "You can view the signed agreement from the client’s record in your booking system.",
+      ].join("\n"),
+    }),
+  });
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(`Resend returned ${response.status}: ${detail.slice(0, 300)}`);
+  }
+}
+
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
@@ -78,6 +132,11 @@ Deno.serve(async (request) => {
       contract_status: complete ? "Signed" : "Sent",
       contract_signed_date: complete ? now.slice(0, 10) : null,
     }).eq("id", agreement.client_id);
+    try {
+      await sendSigningNotification(agreement, name, now, complete);
+    } catch (notificationError) {
+      console.error("Agreement was signed, but its email notification could not be sent.", notificationError);
+    }
     return json({ success: true, complete });
   } catch (error) {
     console.error(error);
