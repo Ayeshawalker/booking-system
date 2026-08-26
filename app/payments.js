@@ -851,6 +851,35 @@
     render();
   }
 
+  async function markSessionAttended(payment, button) {
+    const matches = bookingsForPayment(payment).filter((booking) => booking.status === "closed");
+    if (!matches.length) {
+      controls.message.textContent = "The cancelled booking could not be found.";
+      return;
+    }
+    if (!window.confirm(
+      `Mark the ${displayDate(payment.session_date)} session for ${payment.client_name} as attended?`,
+    )) return;
+    button.disabled = true;
+    const ids = matches.map((booking) => booking.id);
+    const { error } = await supabaseClient
+      .from("booking_requests")
+      .update({ status: "confirmed" })
+      .in("id", ids);
+    if (error) {
+      button.disabled = false;
+      controls.message.textContent = "The session status could not be corrected.";
+      console.error(error);
+      return;
+    }
+    bookingRequests = bookingRequests.map((booking) =>
+      ids.includes(booking.id) ? { ...booking, status: "confirmed" } : booking
+    );
+    controls.message.textContent =
+      `The ${displayDate(payment.session_date)} session for ${payment.client_name} is now marked as attended.`;
+    render();
+  }
+
   function renderRow(payment) {
     const row = document.createElement("tr");
     const bookingState = paymentBookingState(payment);
@@ -884,6 +913,14 @@
     remove.className = "payment-delete-button";
     remove.textContent = "Delete";
     remove.addEventListener("click", () => deletePayment(payment, remove));
+    if (bookingState === "cancelled") {
+      const attended = document.createElement("button");
+      attended.type = "button";
+      attended.className = "payment-attended-button";
+      attended.textContent = "Mark session as attended";
+      attended.addEventListener("click", () => markSessionAttended(payment, attended));
+      actions.append(attended);
+    }
     const balanceForInvoice = Math.max(
       0,
       Number(payment.fee_due || 0) - Number(payment.amount_received || 0),
