@@ -905,7 +905,7 @@
       window.alert("This client record could not be found. Please close the box, refresh the page and try again.");
       return;
     }
-    const name = clientName(client);
+    const name = clientNames(client);
     const confirmed = window.confirm(
       `Permanently delete ${name}?\n\nOnly continue if this is the duplicate record. This cannot be undone.`,
     );
