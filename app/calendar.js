@@ -365,6 +365,25 @@
     controls.message.append(document.createTextNode(" "), button);
   }
 
+  async function invokeAppointmentReminder(body) {
+    const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+    const accessToken = sessionData?.session?.access_token;
+    if (sessionError || !accessToken) throw new Error("Your admin session has expired. Please sign in again.");
+    const config = window.BOOKING_CONFIG || {};
+    const functionName = config.appointmentRemindersFunction || "appointment-reminders";
+    const response = await fetch(`${config.supabaseUrl}/functions/v1/${functionName}`, {
+      method: "POST",
+      headers: {
+        apikey: config.supabaseAnonKey,
+        Authorization: `Bearer ${config.supabaseAnonKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ ...body, adminAccessToken: accessToken }),
+    });
+    const data = await response.json().catch(() => ({}));
+    return response.ok ? { data, error: null } : { data, error: new Error(data?.error || `Email service returned ${response.status}.`) };
+  }
+
   async function offerEmailConfirmation(client, booking, successText) {
     const savedEmails = [...new Set([client?.email, client?.second_email]
       .map((email) => String(email || "").trim()).filter(Boolean))];
@@ -385,10 +404,7 @@
     let data;
     let error;
     try {
-      ({ data, error } = await supabaseClient.functions.invoke(
-        window.BOOKING_CONFIG?.appointmentRemindersFunction || "appointment-reminders",
-        { body: { action: "send_confirmation", bookingId: booking.id } },
-      ));
+      ({ data, error } = await invokeAppointmentReminder({ action: "send_confirmation", bookingId: booking.id }));
     } catch (caughtError) {
       error = caughtError;
     }
@@ -413,10 +429,7 @@
     testButton.addEventListener("click", async () => {
       testButton.disabled = true;
       testButton.textContent = "Sending test…";
-      const { data: testData, error: testError } = await supabaseClient.functions.invoke(
-        window.BOOKING_CONFIG?.appointmentRemindersFunction || "appointment-reminders",
-        { body: { action: "test_reminder", bookingId: booking.id } },
-      );
+      const { data: testData, error: testError } = await invokeAppointmentReminder({ action: "test_reminder", bookingId: booking.id });
       if (testError || testData?.error) {
         testButton.disabled = false;
         testButton.textContent = "Try test reminder again";
@@ -434,10 +447,7 @@
     let data;
     let error;
     try {
-      ({ data, error } = await supabaseClient.functions.invoke(
-        window.BOOKING_CONFIG?.appointmentRemindersFunction || "appointment-reminders",
-        { body: { action: "send_confirmation", bookingId: booking.id } },
-      ));
+      ({ data, error } = await invokeAppointmentReminder({ action: "send_confirmation", bookingId: booking.id }));
     } catch (caughtError) {
       error = caughtError;
     }
@@ -462,10 +472,7 @@
     testButton.addEventListener("click", async () => {
       testButton.disabled = true;
       testButton.textContent = "Sending test…";
-      const { data: testData, error: testError } = await supabaseClient.functions.invoke(
-        window.BOOKING_CONFIG?.appointmentRemindersFunction || "appointment-reminders",
-        { body: { action: "test_reminder", bookingId: booking.id } },
-      );
+      const { data: testData, error: testError } = await invokeAppointmentReminder({ action: "test_reminder", bookingId: booking.id });
       if (testError || testData?.error) {
         testButton.disabled = false;
         testButton.textContent = "Try test reminder again";
