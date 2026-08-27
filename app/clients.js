@@ -99,6 +99,7 @@
   let currentAgreement = null;
   let intakeClient = null;
   let currentIntake = null;
+  let intakeManagerType = null;
 
   function clientNames(client) {
     const first = [client.first_name, client.surname].filter(Boolean).join(" ");
@@ -293,9 +294,15 @@
     intakeButton.textContent = client.intake_status === "Completed" ? "Intake ✓" : "Intake";
     intakeButton.addEventListener("click", () => openIntakeManager(client));
 
+    const impactButton = document.createElement("button");
+    impactButton.type = "button";
+    impactButton.className = "table-action-button";
+    impactButton.textContent = "Impact statement";
+    impactButton.addEventListener("click", () => openIntakeManager(client, "Impact statement"));
+
     const actionGroup = document.createElement("div");
     actionGroup.className = "table-action-group";
-    actionGroup.append(bookLink, contractButton, intakeButton, editButton);
+    actionGroup.append(bookLink, contractButton, intakeButton, impactButton, editButton);
     actionCell.append(actionGroup);
 
     row.append(
@@ -477,9 +484,9 @@
     controls.contractMessage.textContent = "The old link has been cancelled. You can create a new one.";
   }
 
-  function intakeSigningUrl(token) {
+  function intakeSigningUrl(token, formType) {
     const baseUrl = window.BOOKING_CONFIG?.publicClientBaseUrl || window.location.href;
-    const url = new URL("sign-intake.html", baseUrl);
+    const url = new URL(formType === "Impact statement" ? "impact-statement.html" : "sign-intake.html", baseUrl);
     url.searchParams.set("token", token);
     return url.href;
   }
@@ -560,14 +567,14 @@
     controls.cancelIntakeButton.hidden = !exists || intake.status === "Completed";
     controls.intakeResponsePanel.hidden = !exists || intake.status !== "Completed";
     if (!exists) { controls.intakeStatus.textContent = "No active intake link has been created yet."; return; }
-    const url = intakeSigningUrl(intake.access_token);
+    const url = intakeSigningUrl(intake.access_token, intake.form_type);
     controls.intakeSigningLink.value = url;
     document.querySelector("#open-intake-link").href = url;
     const firstName = intakeClient.first_name || "there";
-    const formLabel = intake.form_type === "Betrayal trauma" ? "betrayal trauma therapy" : "therapy";
-    const text = `Hi ${firstName}, here is your private ${formLabel} intake form to complete and sign: ${url}`;
+    const formLabel = intake.form_type === "Impact statement" ? "Impact Statement" : intake.form_type === "Betrayal trauma" ? "betrayal trauma therapy intake form" : "therapy intake form";
+    const text = `Hi ${firstName}, here is your private ${formLabel} to complete: ${url}`;
     document.querySelector("#whatsapp-intake-link").href = `https://wa.me/?text=${encodeURIComponent(text)}`;
-    controls.intakeStatus.textContent = `${intake.form_type} intake · ${intake.status}`;
+    controls.intakeStatus.textContent = `${intake.form_type}${intake.form_type === "Impact statement" ? "" : " intake"} · ${intake.status}`;
     if (intake.status === "Completed") {
       const signedDate = intake.signed_at ? new Intl.DateTimeFormat("en-GB", { dateStyle: "long" }).format(new Date(intake.signed_at)) : "date unavailable";
       controls.intakeSignedBy.textContent = `Electronically signed by ${intake.signer_name || "client"} on ${signedDate}.`;
@@ -575,16 +582,21 @@
     }
   }
 
-  async function openIntakeManager(client) {
+  async function openIntakeManager(client, requestedType = null) {
     intakeClient = client; controls.intakeMessage.textContent = "";
+    intakeManagerType = requestedType;
     const specialities = Array.isArray(client.specialities) ? client.specialities : [];
-    controls.intakeFormType.value = specialities.includes("Betrayal trauma") ? "Betrayal trauma" : "Individual";
-    controls.intakeDialogTitle.textContent = clientNames(client); showIntake(null);
+    controls.intakeFormType.value = requestedType || (specialities.includes("Betrayal trauma") ? "Betrayal trauma" : "Individual");
+    controls.intakeDialogTitle.textContent = requestedType === "Impact statement" ? `Impact Statement · ${clientNames(client)}` : clientNames(client); showIntake(null);
+    controls.intakeFormTypeField.hidden = requestedType === "Impact statement";
     controls.intakeDialog.showModal();
-    const { data, error } = await supabaseClient.from("client_intake_forms")
+    let query = supabaseClient.from("client_intake_forms")
       .select("id,form_type,form_version,access_token,status,answers,signer_name,signed_at,created_at")
       .eq("client_id", client.id).neq("status", "Cancelled")
-      .order("created_at", { ascending: false }).limit(1).maybeSingle();
+      .order("created_at", { ascending: false }).limit(1);
+    query = requestedType ? query.eq("form_type", requestedType) : query.neq("form_type", "Impact statement");
+    const { data: rows, error } = await query;
+    const data = rows?.[0] || null;
     if (error) {
       controls.intakeMessage.textContent = error.message.includes("client_intake_forms")
         ? "The one-time intake setup has not been run in Supabase yet."
@@ -598,12 +610,14 @@
     if (!intakeClient) return;
     controls.createIntakeButton.disabled = true; controls.intakeMessage.textContent = "Creating the private form link…";
     const { data, error } = await supabaseClient.from("client_intake_forms").insert({
-      client_id: intakeClient.id, form_type: controls.intakeFormType.value, form_version: "2026-08-17", created_by: admin.user.id,
+      client_id: intakeClient.id, form_type: intakeManagerType || controls.intakeFormType.value, form_version: "2026-08-27", created_by: admin.user.id,
     }).select("id,form_type,form_version,access_token,status,answers,signer_name,signed_at,created_at").single();
     if (error) controls.intakeMessage.textContent = "The link could not be created. " + error.message;
     else {
-      await supabaseClient.from("clients").update({ intake_status: "Sent", intake_completed_date: null }).eq("id", intakeClient.id);
-      intakeClient.intake_status = "Sent"; intakeClient.intake_completed_date = null;
+      if ((intakeManagerType || controls.intakeFormType.value) !== "Impact statement") {
+        await supabaseClient.from("clients").update({ intake_status: "Sent", intake_completed_date: null }).eq("id", intakeClient.id);
+        intakeClient.intake_status = "Sent"; intakeClient.intake_completed_date = null;
+      }
       showIntake(data); controls.intakeMessage.textContent = "The private intake link is ready to test or send."; renderClients();
     }
     controls.createIntakeButton.disabled = false;
@@ -613,8 +627,11 @@
     if (!currentIntake || !window.confirm("Cancel this intake link? It will stop working immediately.")) return;
     const { error } = await supabaseClient.from("client_intake_forms").update({ status: "Cancelled", updated_at: new Date().toISOString() }).eq("id", currentIntake.id);
     if (error) { controls.intakeMessage.textContent = "The link could not be cancelled."; return; }
-    await supabaseClient.from("clients").update({ intake_status: "Not sent", intake_completed_date: null }).eq("id", intakeClient.id);
-    intakeClient.intake_status = "Not sent"; showIntake(null); renderClients();
+    if (currentIntake.form_type !== "Impact statement") {
+      await supabaseClient.from("clients").update({ intake_status: "Not sent", intake_completed_date: null }).eq("id", intakeClient.id);
+      intakeClient.intake_status = "Not sent";
+    }
+    showIntake(null); renderClients();
     controls.intakeMessage.textContent = "The old link has been cancelled. You can create a new one.";
   }
 
@@ -980,7 +997,7 @@
   document.querySelector("#copy-intake-link").addEventListener("click", async () => {
     try {
       await navigator.clipboard.writeText(controls.intakeSigningLink.value);
-      controls.intakeMessage.textContent = "Intake link copied. You can now paste it into WhatsApp or an email.";
+      controls.intakeMessage.textContent = `${currentIntake?.form_type === "Impact statement" ? "Impact Statement" : "Intake"} link copied. You can now paste it into WhatsApp or an email.`;
     } catch (_) {
       controls.intakeSigningLink.select();
       controls.intakeMessage.textContent = "The link is selected. Press Command and C to copy it.";

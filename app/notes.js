@@ -17,6 +17,8 @@
     previousNotes: document.querySelector("#client-previous-notes"),
     intakeStatus: document.querySelector("#notes-intake-status"), intakeButton: document.querySelector("#view-notes-intake"),
     intakeAnswers: document.querySelector("#notes-intake-answers"),
+    impactStatus: document.querySelector("#notes-impact-status"), impactButton: document.querySelector("#view-notes-impact"),
+    impactAnswers: document.querySelector("#notes-impact-answers"),
     imageFields: document.querySelector(".note-image-fields"), imageDropzone: document.querySelector("#note-image-dropzone"),
     imageInput: document.querySelector("#note-image-input"), addImage: document.querySelector("#add-note-image"), imageList: document.querySelector("#note-image-list"),
     abcSuggest: document.querySelector("#suggest-note-abc"), abcReview: document.querySelector("#note-abc-review"),
@@ -42,6 +44,7 @@
   let clientResources = [];
   let resourceShares = [];
   const intakeByClient = new Map();
+  const impactByClient = new Map();
   const imageBucket = "clinical-note-images";
   const resourceBucket = "client-resources";
 
@@ -95,12 +98,33 @@
     if (intakeByClient.has(clientId)) { showIntakeReference(intakeByClient.get(clientId)); return; }
     const { data, error } = await db.from("client_intake_forms")
       .select("id,form_type,status,answers,signer_name,signed_at,created_at")
-      .eq("client_id", clientId).eq("status", "Completed")
+      .eq("client_id", clientId).eq("status", "Completed").neq("form_type", "Impact statement")
       .order("created_at", { ascending: false }).limit(1).maybeSingle();
     if (error) {
       console.error(error); ui.intakeStatus.textContent = "The intake form could not be loaded."; return;
     }
     intakeByClient.set(clientId, data || null); showIntakeReference(data || null);
+  }
+
+  function showImpactReference(statement) {
+    ui.impactAnswers.hidden = true; ui.impactAnswers.innerHTML = "";
+    if (!ui.client.value) { ui.impactStatus.textContent = "Choose a client to see their Impact Statement."; ui.impactButton.hidden = true; return; }
+    if (!statement) { ui.impactStatus.textContent = "No submitted Impact Statement is recorded for this client."; ui.impactButton.hidden = true; return; }
+    const date = statement.signed_at ? new Intl.DateTimeFormat("en-GB", { dateStyle: "long" }).format(new Date(statement.signed_at)) : "date unavailable";
+    ui.impactStatus.textContent = `Submitted by ${statement.signer_name || "the client"} on ${date}.`;
+    ui.impactButton.hidden = false; ui.impactButton.textContent = "View Impact Statement";
+    const labels = { impact_intention: "Intention for writing", impact_pause_plan: "Pause plan", impact_support_person: "Support person", impact_reflections: "Reflections" };
+    ui.impactAnswers.innerHTML = Object.entries(statement.answers || {}).filter(([,v])=>v && (!Array.isArray(v)||v.length)).map(([key,value])=>`<article><h4>${escapeHtml(labels[key]||key)}</h4>${Array.isArray(value)?value.map((item,index)=>`<p><strong>${index+1}.</strong> ${escapeHtml(item)}</p>`).join(""):`<p>${escapeHtml(value)}</p>`}</article>`).join("") || "<p>No written responses were recorded.</p>";
+  }
+
+  async function loadImpactReference() {
+    const clientId = ui.client.value;
+    if (!clientId) { showImpactReference(null); return; }
+    if (impactByClient.has(clientId)) { showImpactReference(impactByClient.get(clientId)); return; }
+    ui.impactStatus.textContent = "Loading Impact Statement…"; ui.impactButton.hidden = true;
+    const { data, error } = await db.from("client_intake_forms").select("id,status,answers,signer_name,signed_at,created_at").eq("client_id",clientId).eq("form_type","Impact statement").eq("status","Completed").order("created_at",{ascending:false}).limit(1).maybeSingle();
+    if (error) { console.error(error); ui.impactStatus.textContent = "The Impact Statement could not be loaded."; return; }
+    impactByClient.set(clientId,data||null); showImpactReference(data||null);
   }
 
   function clientGreeting(client) {
@@ -551,6 +575,7 @@
     renderResourceLibrary();
     renderResourceHistory();
     loadIntakeReference();
+    loadImpactReference();
   }
   function renderWorkOverview() {
     const clientId = ui.client.value;
@@ -595,6 +620,11 @@
     const opening = ui.intakeAnswers.hidden;
     ui.intakeAnswers.hidden = !opening;
     ui.intakeButton.textContent = opening ? "Hide intake form" : "View intake form";
+  });
+  ui.impactButton.addEventListener("click", () => {
+    const opening = ui.impactAnswers.hidden;
+    ui.impactAnswers.hidden = !opening;
+    ui.impactButton.textContent = opening ? "Hide Impact Statement" : "View Impact Statement";
   });
   ui.resourceUpload.addEventListener("submit", uploadResource);
   ui.resourceFile.addEventListener("change", () => {

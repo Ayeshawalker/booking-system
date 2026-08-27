@@ -19,6 +19,7 @@ const allowedFields = new Set([
   "attachment_self_reliance", "attachment_vulnerability", "attachment_push_pull",
   "attachment_pattern_notes", "attachment_security_needs", "childhood_environment",
   "family_origin_experiences", "family_origin_context",
+  "impact_intention", "impact_pause_plan", "impact_support_person", "impact_reflections",
 ]);
 
 function json(body: unknown, status = 200) {
@@ -33,7 +34,7 @@ function cleanAnswers(input: unknown) {
   for (const [key, value] of Object.entries(input as Record<string, unknown>)) {
     if (!allowedFields.has(key)) continue;
     output[key] = Array.isArray(value)
-      ? value.slice(0, 30).map((item) => clean(item, 300)).filter(Boolean)
+      ? value.slice(0, key === "impact_reflections" ? 50 : 30).map((item) => clean(item, key === "impact_reflections" ? 6000 : 300)).filter(Boolean)
       : clean(value, 6000);
   }
   return output;
@@ -48,7 +49,7 @@ Deno.serve(async (request) => {
     const token = clean(body.token, 80);
     if (!token) return json({ error: "This intake link is incomplete." }, 400);
     const { data: intake, error } = await db.from("client_intake_forms")
-      .select("id,client_id,form_type,form_version,status,signer_name,signed_at,created_at")
+      .select("id,client_id,form_type,form_version,status,answers,signer_name,signed_at,created_at")
       .eq("access_token", token).maybeSingle();
     if (error || !intake || intake.status === "Cancelled") return json({ error: "This intake link is invalid or is no longer active." }, 404);
     const { data: client } = await db.from("clients")
@@ -56,8 +57,25 @@ Deno.serve(async (request) => {
       .eq("id", intake.client_id).maybeSingle();
     const clientName = client ? [client.first_name, client.surname].filter(Boolean).join(" ") : "Client";
     if (body.action === "view") return json({ intake: { ...intake, client_name: clientName } });
+    if (intake.form_type === "Impact statement" && body.action === "save") {
+      if (intake.status === "Completed") return json({ error: "This impact statement has already been submitted." }, 409);
+      const { error: draftError } = await db.from("client_intake_forms").update({ answers: cleanAnswers(body.answers), updated_at: new Date().toISOString() }).eq("id", intake.id);
+      if (draftError) throw draftError;
+      return json({ success: true, saved: true });
+    }
     if (body.action !== "submit") return json({ error: "Unknown action." }, 400);
     if (intake.status === "Completed") return json({ error: "This form has already been completed." }, 409);
+    if (intake.form_type === "Impact statement") {
+      const answers = cleanAnswers(body.answers);
+      const reflections = Array.isArray(answers.impact_reflections) ? answers.impact_reflections.filter(Boolean) : [];
+      if (!reflections.length) return json({ error: "Please add at least one reflection before submitting." }, 400);
+      const signerName = clean(body.signerName, 160);
+      if (signerName.length < 2 || body.confirmReady !== true) return json({ error: "Please type your name and confirm that you are ready to submit." }, 400);
+      const now = new Date().toISOString();
+      const { error: impactError } = await db.from("client_intake_forms").update({ answers, signer_name: signerName, signed_at: now, status: "Completed", completed_at: now, updated_at: now }).eq("id", intake.id);
+      if (impactError) throw impactError;
+      return json({ success: true });
+    }
     if (body.confirmAccurate !== true || body.confirmNotEmergency !== true || body.confirmAssessment !== true) {
       return json({ error: "Please tick all three confirmations before signing." }, 400);
     }
