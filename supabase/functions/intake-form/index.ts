@@ -19,7 +19,13 @@ const allowedFields = new Set([
   "attachment_self_reliance", "attachment_vulnerability", "attachment_push_pull",
   "attachment_pattern_notes", "attachment_security_needs", "childhood_environment",
   "family_origin_experiences", "family_origin_context",
-  "impact_intention", "impact_pause_plan", "impact_support_person", "impact_reflections",
+  "impact_intention", "impact_distress_threshold", "impact_pause_plan", "impact_support_person",
+  "impact_emotions", "impact_body", "impact_thoughts", "impact_trust_safety", "impact_self", "impact_daily_life",
+  "impact_top_three", "impact_unseen", "impact_before_believed", "impact_discovery", "impact_hardest",
+  "impact_now_find", "impact_losses", "impact_pain", "impact_reassurance", "impact_unsafe", "impact_safer",
+  "impact_opening_sentence", "impact_key_sentence", "impact_sharing_needs", "impact_after_writing", "impact_reflections",
+  "guide_gradually", "guide_therapist", "guide_grounding", "guide_draft", "guide_lived", "guide_included",
+  "guide_language", "guide_questions", "guide_understand", "guide_timing",
 ]);
 
 function json(body: unknown, status = 200) {
@@ -67,8 +73,8 @@ Deno.serve(async (request) => {
     if (intake.status === "Completed") return json({ error: "This form has already been completed." }, 409);
     if (intake.form_type === "Impact statement") {
       const answers = cleanAnswers(body.answers);
-      const reflections = Array.isArray(answers.impact_reflections) ? answers.impact_reflections.filter(Boolean) : [];
-      if (!reflections.length) return json({ error: "Please add at least one reflection before submitting." }, 400);
+      const hasWriting = Object.entries(answers).some(([key,value]) => key.startsWith("impact_") && (Array.isArray(value) ? value.length : String(value || "").trim()));
+      if (!hasWriting) return json({ error: "Please add at least one written response before submitting." }, 400);
       const signerName = clean(body.signerName, 160);
       if (signerName.length < 2 || body.confirmReady !== true) return json({ error: "Please type your name and confirm that you are ready to submit." }, 400);
       const now = new Date().toISOString();
