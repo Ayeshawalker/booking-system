@@ -175,8 +175,10 @@
   }
   async function uploadResource(event) {
     event.preventDefault();
-    const title = ui.resourceTitle.value.trim(); const file = ui.resourceFile.files?.[0];
-    if (!title || !file) { ui.resourceMessage.textContent = "Add a title and choose the information-sheet file."; return; }
+    const file = ui.resourceFile.files?.[0];
+    if (!file) { ui.resourceMessage.textContent = "Choose the information-sheet file first."; return; }
+    const title = ui.resourceTitle.value.trim() || String(file.name || "Information sheet").replace(/\.[^.]+$/, "");
+    ui.resourceTitle.value = title;
     if (file.size > 15728640) { ui.resourceMessage.textContent = "Please choose a file smaller than 15 MB."; return; }
     const extension = String(file.name || "").toLowerCase().match(/\.[a-z0-9]+$/)?.[0] || "";
     const mimeByExtension = {
@@ -191,19 +193,21 @@
       ui.resourceMessage.textContent = "That file type is not supported. Please use PDF, Word, Pages, RTF, text, PNG, JPEG or WebP.";
       return;
     }
-    const submit = ui.resourceUpload.querySelector("button[type='submit']"); submit.disabled = true; ui.resourceMessage.textContent = "Uploading securely…";
+    const submit = ui.resourceUpload.querySelector("button[type='submit']");
+    submit.disabled = true; submit.textContent = "Uploading…"; ui.resourceMessage.textContent = `Uploading ${file.name} securely…`;
     const path = `${admin.user.id}/${crypto.randomUUID()}-${safeFileName(file.name)}`;
     try {
       const { data: uploadedFile, error: uploadError } = await db.storage.from(resourceBucket).upload(path, file, { contentType: mimeType, upsert: false });
       if (uploadError) throw uploadError;
       if (!uploadedFile?.path) throw new Error("The storage service did not confirm the uploaded file.");
+      submit.textContent = "Adding to library…";
       ui.resourceMessage.textContent = "File uploaded. Adding it to the information-sheet library…";
       const { error: rowError } = await db.from("client_resources").insert({ title, storage_path: path, file_name: file.name, mime_type: mimeType, file_size: file.size, created_by: admin.user.id });
       if (rowError) { await db.storage.from(resourceBucket).remove([path]); throw rowError; }
       ui.resourceUpload.reset(); ui.resourceMessage.textContent = `${title} is now in your reusable information-sheet library.`; await loadResources();
     } catch (error) {
       console.error(error); ui.resourceMessage.textContent = `The sheet could not be uploaded. ${String(error?.message || error?.error || "Please try again.")}`;
-    } finally { submit.disabled = false; }
+    } finally { submit.disabled = false; submit.textContent = "Upload sheet"; }
   }
   async function loadResources() {
     if (!resourceLibraryReady) return;
@@ -593,6 +597,14 @@
     ui.intakeButton.textContent = opening ? "Hide intake form" : "View intake form";
   });
   ui.resourceUpload.addEventListener("submit", uploadResource);
+  ui.resourceFile.addEventListener("change", () => {
+    const file = ui.resourceFile.files?.[0];
+    if (!file) return;
+    if (!ui.resourceTitle.value.trim()) {
+      ui.resourceTitle.value = String(file.name || "Information sheet").replace(/\.[^.]+$/, "");
+    }
+    ui.resourceMessage.textContent = `${file.name} selected. Choose Upload sheet to add it to the library.`;
+  });
   ui.needsSupervision.addEventListener("change", () => { ui.supervisionWrap.hidden = !ui.needsSupervision.checked; supervisionStatus = ui.needsSupervision.checked ? "Outstanding" : "Not required"; supervisionDiscussedAt = null; if (ui.needsSupervision.checked) ui.supervisionQuestion.focus(); });
   ui.addImage.addEventListener("click", () => ui.imageInput.click());
   ui.abcSuggest.addEventListener("click", suggestAbc);
