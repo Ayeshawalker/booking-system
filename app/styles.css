@@ -3491,6 +3491,13 @@ dd {
   justify-content: flex-end;
 }
 
+.former-clients-button.is-active,
+.former-clients-button[aria-pressed="true"] {
+  border-color: #655860;
+  background: #655860;
+  color: #ffffff;
+}
+
 .agreement-preview-link,
 .agreement-back-link {
   display: inline-flex;

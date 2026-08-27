@@ -35,6 +35,9 @@
           </p>
         </div>
         <div class="client-heading-actions">
+          <button id="former-clients" class="secondary-button former-clients-button" type="button" aria-pressed="false">
+            Former clients (0)
+          </button>
           <a class="secondary-button agreement-preview-link" href="agreement-preview.html">
             Preview agreements
           </a>
@@ -70,7 +73,7 @@
           <label>
             <span>Status</span>
             <select id="client-status-filter">
-              <option value="">All statuses</option>
+              <option value="">Current clients</option>
               <option value="Prospective">Prospective</option>
               <option value="Active">Active</option>
               <option value="Paused">Paused</option>
@@ -445,6 +448,6 @@
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="admin-auth.js?v=20260813-ten-hour-session"></script>
-    <script src="clients.js?v=20260826-delete-client-fix"></script>
+    <script src="clients.js?v=20260827-former-clients-button"></script>
   </body>
 </html>
