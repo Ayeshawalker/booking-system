@@ -187,6 +187,16 @@
           </div>
 
           <aside class="notes-reference-panel" aria-label="Earlier notes and client overview">
+            <section class="notes-intake-reference" aria-labelledby="notes-intake-title">
+              <div class="notes-list-heading">
+                <h3 id="notes-intake-title">Intake form</h3>
+                <small>Review the selected client’s completed intake while writing your note.</small>
+              </div>
+              <p id="notes-intake-status">Choose a client to see their intake form.</p>
+              <button id="view-notes-intake" class="secondary-button" type="button" hidden>View intake form</button>
+              <div id="notes-intake-answers" class="notes-intake-answers" hidden></div>
+            </section>
+
             <section class="previous-client-notes" aria-labelledby="previous-client-notes-title">
               <div class="notes-list-heading">
                 <h3 id="previous-client-notes-title">Previous improved notes</h3>
@@ -207,7 +217,7 @@
               </div>
               <form id="client-resource-upload" class="client-resource-upload">
                 <label>Sheet title<input id="client-resource-title-input" type="text" placeholder="For example: Healthy and unhealthy beliefs" /></label>
-                <label>File<input id="client-resource-file" type="file" accept="application/pdf,.docx,image/png,image/jpeg,image/webp" /></label>
+                <label>File<input id="client-resource-file" type="file" accept=".pdf,.doc,.docx,.rtf,.txt,.pages,image/png,image/jpeg,image/webp" /></label>
                 <button type="submit">Upload sheet</button>
               </form>
               <p id="client-resource-message" class="field-note" aria-live="polite"></p>
@@ -238,6 +248,6 @@
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="admin-auth.js?v=20260813-ten-hour-session"></script>
-    <script src="notes.js?v=20260825-structured-abc"></script>
+    <script src="notes.js?v=20260827-intake-and-upload-fix"></script>
   </body>
 </html>
