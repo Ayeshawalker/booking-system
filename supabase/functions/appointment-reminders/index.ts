@@ -57,7 +57,7 @@ async function recipients(db:Database, booking:Booking) {
   if(!emails.length) emails=[booking.email];
   return [...new Set(emails.map((email)=>String(email||"").trim().toLowerCase()))].filter((email)=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
 }
-async function adminUser(request:Request,db:Database) { const token=request.headers.get("authorization")?.replace(/^Bearer\s+/i,"")||""; const {data}=await db.auth.getUser(token); if(!data.user)return null; const {data:member}=await db.from("admin_users").select("user_id").eq("user_id",data.user.id).maybeSingle(); return member?data.user:null; }
+async function adminUser(request:Request,db:Database,bodyToken="") { const headerToken=request.headers.get("authorization")?.replace(/^Bearer\s+/i,"")||""; const token=String(bodyToken||headerToken); const {data}=await db.auth.getUser(token); if(!data.user)return null; const {data:member}=await db.from("admin_users").select("user_id").eq("user_id",data.user.id).maybeSingle(); return member?data.user:null; }
 async function sendConfirmation(db:Database,booking:Booking,to:string[]) {
   const message=confirmationMessage(booking); let sent=0;
   for(const email of to){
@@ -77,7 +77,7 @@ Deno.serve(async(request)=>{
     const body=await request.json().catch(()=>({})), url=Deno.env.get("SUPABASE_URL")||"", key=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||""; if(!url||!key)throw new Error("Supabase service configuration is missing.");
     const db=createClient(url,key,{auth:{persistSession:false}}), now=londonParts();
     if(["send_confirmation","test_reminder"].includes(body.action)){
-      const admin=await adminUser(request,db); if(!admin)return respond({error:"Not authorised"},403);
+      const admin=await adminUser(request,db,body.adminAccessToken); if(!admin)return respond({error:"Not authorised"},403);
       const booking=await loadBooking(db,String(body.bookingId||"")); if(booking.status!=="confirmed")return respond({error:"Only confirmed bookings can be emailed."},409);
       const to=await recipients(db,booking); if(!to.length)return respond({error:"No valid client email address is recorded."},400);
       if(body.action==="test_reminder"){const item=occurrences(booking).find((entry)=>entry.date>=now.date)||occurrences(booking)[0],message=reminderMessage(booking,item);await send(admin.email||"",`[TEST] ${message.subject}`,message.text);return respond({sent:1,recipients:[admin.email],test:true});}
