@@ -9,3 +9,6 @@ verify_jwt = true
 
 [functions.zoom-create-meeting]
 verify_jwt = true
+
+[functions.appointment-reminders]
+verify_jwt = true

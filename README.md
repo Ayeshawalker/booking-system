@@ -42,7 +42,10 @@ deployed Edge Functions. Browser storage remains as a local fallback.
 
 Stripe Checkout payment support is implemented. See
 `docs/stripe-setup.md` for the protected account connection and test steps.
-Automated email sending is not connected yet.
+For confirmed bookings entered by Ayesha, the system offers to email the client
+a confirmation and enable a courtesy reminder for the day before the session.
+Linked couple records send separately to both saved email addresses. Delivery
+uses Resend and successful sends are recorded to prevent duplicates.
 
 ## Current prices
 
