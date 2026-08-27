@@ -76,6 +76,24 @@ Deno.serve(async(request)=>{
   try{
     const body=await request.json().catch(()=>({})), url=Deno.env.get("SUPABASE_URL")||"", key=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||""; if(!url||!key)throw new Error("Supabase service configuration is missing.");
     const db=createClient(url,key,{auth:{persistSession:false}}), now=londonParts();
+    if(body.action==="process_job"){
+      const {data:job}=await db.from("appointment_email_jobs").select("*").eq("id",String(body.jobId||"")).maybeSingle();
+      if(!job)return respond({error:"Email job not found."},404);
+      if(job.status==="completed")return respond(job.result||{completed:true});
+      await db.from("appointment_email_jobs").update({status:"processing",updated_at:new Date().toISOString()}).eq("id",job.id);
+      try{
+        const booking=await loadBooking(db,job.booking_id); if(booking.status!=="confirmed")throw new Error("Only confirmed bookings can be emailed.");
+        const to=await recipients(db,booking); if(!to.length)throw new Error("No valid client email address is recorded.");
+        let result:Record<string,unknown>;
+        if(job.action==="test_reminder"){
+          const item=occurrences(booking).find((entry)=>entry.date>=now.date)||occurrences(booking)[0],message=reminderMessage(booking,item);
+          if(!job.requested_email)throw new Error("Your administrator email address is missing.");
+          await send(job.requested_email,`[TEST] ${message.subject}`,message.text); result={sent:1,recipients:[job.requested_email],test:true};
+        }else result={sent:await sendConfirmation(db,booking,to),recipients:to,remindersEnabled:true};
+        await db.from("appointment_email_jobs").update({status:"completed",result,updated_at:new Date().toISOString()}).eq("id",job.id);
+        return respond(result);
+      }catch(error){const detail=error instanceof Error?error.message:String(error);await db.from("appointment_email_jobs").update({status:"failed",last_error:detail.slice(0,1000),updated_at:new Date().toISOString()}).eq("id",job.id);return respond({error:detail},500);}
+    }
     if(["send_confirmation","test_reminder"].includes(body.action)){
       const admin=await adminUser(request,db,body.adminAccessToken); if(!admin)return respond({error:"Not authorised"},403);
       const booking=await loadBooking(db,String(body.bookingId||"")); if(booking.status!=="confirmed")return respond({error:"Only confirmed bookings can be emailed."},409);

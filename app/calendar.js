@@ -366,22 +366,19 @@
   }
 
   async function invokeAppointmentReminder(body) {
-    const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
-    const accessToken = sessionData?.session?.access_token;
-    if (sessionError || !accessToken) throw new Error("Your admin session has expired. Please sign in again.");
-    const config = window.BOOKING_CONFIG || {};
-    const functionName = config.appointmentRemindersFunction || "appointment-reminders";
-    const response = await fetch(`${config.supabaseUrl}/functions/v1/${functionName}`, {
-      method: "POST",
-      headers: {
-        apikey: config.supabaseAnonKey,
-        Authorization: `Bearer ${config.supabaseAnonKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ ...body, adminAccessToken: accessToken }),
+    const { data: jobId, error: queueError } = await supabaseClient.rpc("queue_appointment_email", {
+      p_booking_id: body.bookingId,
+      p_action: body.action,
     });
-    const data = await response.json().catch(() => ({}));
-    return response.ok ? { data, error: null } : { data, error: new Error(data?.error || `Email service returned ${response.status}.`) };
+    if (queueError) return { data: null, error: queueError };
+    for (let attempt = 0; attempt < 24; attempt += 1) {
+      await new Promise((resolve) => window.setTimeout(resolve, 750));
+      const { data: job, error: statusError } = await supabaseClient.rpc("appointment_email_job_status", { p_job_id: jobId });
+      if (statusError) return { data: null, error: statusError };
+      if (job?.status === "completed") return { data: job.result || {}, error: null };
+      if (["failed", "missing"].includes(job?.status)) return { data: job, error: new Error(job?.error || "The email could not be sent.") };
+    }
+    return { data: null, error: new Error("The email is taking longer than expected. Please check again shortly.") };
   }
 
   async function offerEmailConfirmation(client, booking, successText) {
