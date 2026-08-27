@@ -38,6 +38,7 @@
     bookingStatus: document.querySelector("#event-booking-status"),
     bookingNote: document.querySelector("#event-booking-note"),
     bookingDetailsMessage: document.querySelector("#event-booking-details-message"),
+    emailBooking: document.querySelector("#email-event-booking"),
     quickBookDialog: document.querySelector("#calendar-quick-book-dialog"),
     quickBookForm: document.querySelector("#calendar-quick-book-form"),
     closeQuickBook: document.querySelector("#close-quick-book-dialog"),
@@ -381,13 +382,27 @@
       return;
     }
     controls.message.textContent = `${successText} Sending email confirmation…`;
-    const { data, error } = await supabaseClient.functions.invoke(
-      window.BOOKING_CONFIG?.appointmentRemindersFunction || "appointment-reminders",
-      { body: { action: "send_confirmation", bookingId: booking.id } },
-    );
+    let data;
+    let error;
+    try {
+      ({ data, error } = await supabaseClient.functions.invoke(
+        window.BOOKING_CONFIG?.appointmentRemindersFunction || "appointment-reminders",
+        { body: { action: "send_confirmation", bookingId: booking.id } },
+      ));
+    } catch (caughtError) {
+      error = caughtError;
+    }
     if (error || data?.error) {
-      controls.message.textContent = `${successText} The email confirmation was not sent. ${data?.error || error?.message || "Please try again."}`;
-      return;
+      const detail = data?.error || error?.message || "Please try again.";
+      controls.message.textContent = `${successText} The email confirmation was not sent. ${detail} `;
+      const retryButton = document.createElement("button");
+      retryButton.type = "button";
+      retryButton.className = "calendar-whatsapp-confirmation";
+      retryButton.textContent = "Try email again";
+      retryButton.addEventListener("click", () => offerBookingEmailWithoutPrompt(client, booking, successText));
+      controls.message.append(retryButton);
+      window.alert(`The email confirmation was not sent.\n\n${detail}\n\nYou can use “Try email again” on the Calendar page.`);
+      return false;
     }
     const count = Number(data?.recipients?.length || data?.sent || 0);
     controls.message.textContent = `${successText} Email confirmation sent to ${count} ${count === 1 ? "address" : "addresses"}; the day-before reminder is arranged.`;
@@ -411,6 +426,56 @@
       testButton.textContent = "Test reminder sent";
     });
     controls.message.append(document.createTextNode(" "), testButton);
+    return true;
+  }
+
+  async function offerBookingEmailWithoutPrompt(client, booking, successText) {
+    controls.message.textContent = `${successText} Sending email confirmation…`;
+    let data;
+    let error;
+    try {
+      ({ data, error } = await supabaseClient.functions.invoke(
+        window.BOOKING_CONFIG?.appointmentRemindersFunction || "appointment-reminders",
+        { body: { action: "send_confirmation", bookingId: booking.id } },
+      ));
+    } catch (caughtError) {
+      error = caughtError;
+    }
+    if (error || data?.error) {
+      const detail = data?.error || error?.message || "Please try again.";
+      controls.message.textContent = `${successText} The email confirmation was not sent. ${detail} `;
+      const retryButton = document.createElement("button");
+      retryButton.type = "button";
+      retryButton.className = "calendar-whatsapp-confirmation";
+      retryButton.textContent = "Try email again";
+      retryButton.addEventListener("click", () => offerBookingEmailWithoutPrompt(client, booking, successText));
+      controls.message.append(retryButton);
+      window.alert(`The email confirmation was not sent.\n\n${detail}`);
+      return false;
+    }
+    const count = Number(data?.recipients?.length || data?.sent || 0);
+    controls.message.textContent = `${successText} Email confirmation sent to ${count} ${count === 1 ? "address" : "addresses"}; the day-before reminder is arranged. `;
+    const testButton = document.createElement("button");
+    testButton.type = "button";
+    testButton.className = "calendar-whatsapp-confirmation";
+    testButton.textContent = "Send test reminder to me";
+    testButton.addEventListener("click", async () => {
+      testButton.disabled = true;
+      testButton.textContent = "Sending test…";
+      const { data: testData, error: testError } = await supabaseClient.functions.invoke(
+        window.BOOKING_CONFIG?.appointmentRemindersFunction || "appointment-reminders",
+        { body: { action: "test_reminder", bookingId: booking.id } },
+      );
+      if (testError || testData?.error) {
+        testButton.disabled = false;
+        testButton.textContent = "Try test reminder again";
+        window.alert(`The test reminder was not sent.\n\n${testData?.error || testError?.message || "Please try again."}`);
+        return;
+      }
+      testButton.textContent = "Test reminder sent";
+    });
+    controls.message.append(testButton);
+    return true;
   }
 
   function normalisePersonName(value) {
@@ -1076,6 +1141,7 @@
     });
     controls.cancelBooking.hidden = !canReschedule;
     controls.repeatBooking.hidden = !canReschedule;
+    controls.emailBooking.hidden = !canReschedule;
     controls.rescheduleMessage.textContent = "";
     controls.bookingDetailsMessage.textContent = "";
     controls.privateMessage.textContent = "";
@@ -2226,6 +2292,36 @@
         "The repeat booking could not be created.";
     } finally {
       controls.repeatBooking.disabled = false;
+    }
+  });
+
+  controls.emailBooking.addEventListener("click", async () => {
+    const event = state.selectedEvent;
+    if (!event?.bookingRequestId) return;
+    controls.emailBooking.disabled = true;
+    controls.bookingDetailsMessage.textContent = "Preparing email confirmation…";
+    try {
+      const { data: booking, error } = await supabaseClient
+        .from("booking_requests")
+        .select("*")
+        .eq("id", event.bookingRequestId)
+        .single();
+      if (error) throw error;
+      if (booking.status !== "confirmed") throw new Error("Only confirmed bookings can be emailed.");
+      const client = state.bookingClients.find((candidate) => candidate.id === booking.client_id) || {
+        record_type: booking.second_first_name ? "Couple" : "Individual",
+        email: booking.email,
+        first_name: booking.first_name,
+        surname: booking.surname,
+        second_first_name: booking.second_first_name,
+        second_surname: booking.second_surname,
+      };
+      controls.dialog.close();
+      await offerEmailConfirmation(client, booking, `${bookingClientDisplayName(client)}. `);
+    } catch (error) {
+      controls.bookingDetailsMessage.textContent = error?.message || "The email could not be prepared.";
+    } finally {
+      controls.emailBooking.disabled = false;
     }
   });
 
