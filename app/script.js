@@ -2114,6 +2114,52 @@ async function syncBookingToGoogleCalendar(booking) {
   return data;
 }
 
+async function offerBookingEmails(booking) {
+  const approved = window.confirm(
+    `Send an email confirmation for this booking to the recorded client email address${booking.secondFirstName ? "es" : ""}?\n\n` +
+    "This will also arrange a courtesy reminder by email on the day before the session.",
+  );
+  if (!approved) {
+    confirmation.append(document.createElement("br"), document.createTextNode(
+      "No confirmation email was sent and no email reminder was arranged.",
+    ));
+    return;
+  }
+  const supabaseClient = createSupabaseClient();
+  const functionName = bookingConfig().appointmentRemindersFunction || "appointment-reminders";
+  const { data, error } = await supabaseClient.functions.invoke(functionName, {
+    body: { action: "send_confirmation", bookingId: booking.id },
+  });
+  if (error || data?.error) {
+    confirmation.append(document.createElement("br"), document.createTextNode(
+      `The email confirmation was not sent. ${data?.error || error?.message || "Please try again."}`,
+    ));
+    return;
+  }
+  const count = Number(data?.recipients?.length || data?.sent || 0);
+  confirmation.append(document.createElement("br"), document.createTextNode(
+    `Email confirmation sent to ${count} ${count === 1 ? "address" : "addresses"}; the day-before reminder is arranged. `,
+  ));
+  const testButton = document.createElement("button");
+  testButton.type = "button";
+  testButton.className = "secondary-button";
+  testButton.textContent = "Send test reminder to me";
+  testButton.addEventListener("click", async () => {
+    testButton.disabled = true;
+    testButton.textContent = "Sending test…";
+    const { data: testData, error: testError } = await supabaseClient.functions.invoke(functionName, {
+      body: { action: "test_reminder", bookingId: booking.id },
+    });
+    if (testError || testData?.error) {
+      testButton.disabled = false;
+      testButton.textContent = "Try test reminder again";
+      return;
+    }
+    testButton.textContent = "Test reminder sent";
+  });
+  confirmation.append(testButton);
+}
+
 async function calendarSyncErrorDetails(error) {
   const fallback = {
     code: "calendar_create_failed",
@@ -2342,6 +2388,20 @@ async function handleSubmit(event) {
       Number(booking.payNow || 0) > Number(booking.amountReceived || 0);
 
     if (saveMode === "supabase") {
+      if (
+        isAyeshaBookingRequest &&
+        booking.bookingStatus === "confirmed" &&
+        booking.sessionFormat === "Online" &&
+        !historicalEntry
+      ) {
+        const supabaseClient = createSupabaseClient();
+        const { data: zoomData, error: zoomError } = await supabaseClient.functions.invoke(
+          bookingConfig().zoomCreateMeetingFunction || "zoom-create-meeting",
+          { body: { bookingId: booking.id } },
+        );
+        if (zoomData?.joinUrl) booking.zoomJoinUrl = zoomData.joinUrl;
+        if (zoomError) console.error("The booking was saved but its Zoom link needs attention.", zoomError);
+      }
       if (!historicalEntry && (isAyeshaBookingRequest || !paymentStillDue)) {
         try {
           calendarSync = await syncBookingToGoogleCalendar(booking);
@@ -2410,6 +2470,13 @@ async function handleSubmit(event) {
     if (stripeCheckoutUrl && !isAyeshaBookingRequest) {
       window.location.assign(stripeCheckoutUrl);
       return;
+    }
+
+    if (
+      saveMode === "supabase" && isAyeshaBookingRequest &&
+      booking.bookingStatus === "confirmed" && !historicalEntry
+    ) {
+      await offerBookingEmails(booking);
     }
 
     form.reset();

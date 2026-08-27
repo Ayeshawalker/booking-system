@@ -364,6 +364,55 @@
     controls.message.append(document.createTextNode(" "), button);
   }
 
+  async function offerEmailConfirmation(client, booking, successText) {
+    const savedEmails = [...new Set([client?.email, client?.second_email]
+      .map((email) => String(email || "").trim()).filter(Boolean))];
+    const recipientText = savedEmails.length === 2
+      ? `both recorded email addresses (${savedEmails.join(" and ")})`
+      : savedEmails.length === 1
+        ? savedEmails[0]
+        : "the recorded client email address";
+    const approved = window.confirm(
+      `Send an email confirmation to ${recipientText}?\n\n` +
+      "This will also arrange a courtesy reminder by email on the day before the session.",
+    );
+    if (!approved) {
+      controls.message.textContent = `${successText} No confirmation email was sent and no email reminder was arranged.`;
+      return;
+    }
+    controls.message.textContent = `${successText} Sending email confirmation…`;
+    const { data, error } = await supabaseClient.functions.invoke(
+      window.BOOKING_CONFIG?.appointmentRemindersFunction || "appointment-reminders",
+      { body: { action: "send_confirmation", bookingId: booking.id } },
+    );
+    if (error || data?.error) {
+      controls.message.textContent = `${successText} The email confirmation was not sent. ${data?.error || error?.message || "Please try again."}`;
+      return;
+    }
+    const count = Number(data?.recipients?.length || data?.sent || 0);
+    controls.message.textContent = `${successText} Email confirmation sent to ${count} ${count === 1 ? "address" : "addresses"}; the day-before reminder is arranged.`;
+    const testButton = document.createElement("button");
+    testButton.type = "button";
+    testButton.className = "calendar-whatsapp-confirmation";
+    testButton.textContent = "Send test reminder to me";
+    testButton.addEventListener("click", async () => {
+      testButton.disabled = true;
+      testButton.textContent = "Sending test…";
+      const { data: testData, error: testError } = await supabaseClient.functions.invoke(
+        window.BOOKING_CONFIG?.appointmentRemindersFunction || "appointment-reminders",
+        { body: { action: "test_reminder", bookingId: booking.id } },
+      );
+      if (testError || testData?.error) {
+        testButton.disabled = false;
+        testButton.textContent = "Try test reminder again";
+        controls.message.firstChild.textContent = `${successText} Confirmation sent, but the test reminder failed. `;
+        return;
+      }
+      testButton.textContent = "Test reminder sent";
+    });
+    controls.message.append(document.createTextNode(" "), testButton);
+  }
+
   function normalisePersonName(value) {
     return String(value || "")
       .toLowerCase()
@@ -1957,7 +2006,7 @@
       controls.quickBookDialog.close();
       await loadEvents();
       if (pending) controls.message.textContent = `${bookingClientDisplayName(client)} saved as pending.`;
-      else showWhatsAppConfirmation(client, row, `${bookingClientDisplayName(client)} booked successfully${controls.quickBookFormat.value === "Online" && !row.zoom_join_url ? "; Zoom link needs attention" : ""}.`);
+      else await offerEmailConfirmation(client, row, `${bookingClientDisplayName(client)} booked successfully${controls.quickBookFormat.value === "Online" && !row.zoom_join_url ? "; Zoom link needs attention" : ""}.`);
     } catch (error) {
       console.error(error);
       controls.quickBookMessage.textContent =
@@ -2166,7 +2215,7 @@
         second_surname: repeated.second_surname,
         phone: repeated.phone,
       };
-      showWhatsAppConfirmation(
+      await offerEmailConfirmation(
         client,
         repeated,
         `${booking.title} repeated for next week${zoomNeedsAttention ? "; Zoom link needs attention" : ""}.`,
@@ -2274,7 +2323,7 @@
           phone: savedBooking?.phone || "",
         };
         const clientName = bookingClientDisplayName(client) || booking.title;
-        showWhatsAppConfirmation(
+        await offerEmailConfirmation(
           client,
           savedBooking,
           `${clientName} confirmed successfully${zoomNeedsAttention ? "; Zoom link needs attention" : ""}.`,

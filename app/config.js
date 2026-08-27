@@ -10,6 +10,7 @@ window.BOOKING_CONFIG = {
   adminRecoveryUrl: "https://ayeshawalker.github.io/booking-system/admin-login.html",
   clientNoteImproveFunction: "improve-client-note",
   zoomCreateMeetingFunction: "zoom-create-meeting",
+  appointmentRemindersFunction: "appointment-reminders",
   timeZone: "Europe/London",
 };
   
