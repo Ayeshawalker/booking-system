@@ -1,12 +1,17 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const timeZone = "Europe/London";
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "https://ayeshawalker.github.io",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
 type Booking = { id:string; client_id:string|null; status:string; email_notifications_enabled:boolean; booking_type:string; block_session_count:number|null; block_date_pattern:string|null; block_frequency:string|null; exact_block_dates:unknown; session_type:string; session_format:string; preferred_date:string; preferred_time:string; first_name:string|null; second_first_name:string|null; email:string; zoom_join_url:string|null };
 type Occurrence = { date:string; time:string; format:string };
 type Database = ReturnType<typeof createClient>;
 const bookingFields = "id,client_id,status,email_notifications_enabled,booking_type,block_session_count,block_date_pattern,block_frequency,exact_block_dates,session_type,session_format,preferred_date,preferred_time,first_name,second_first_name,email,zoom_join_url";
 
-function respond(body:unknown, status=200) { return new Response(JSON.stringify(body), { status, headers:{"Content-Type":"application/json"} }); }
+function respond(body:unknown, status=200) { return new Response(JSON.stringify(body), { status, headers:{...corsHeaders,"Content-Type":"application/json"} }); }
 function londonParts(date=new Date()) {
   const parts = new Intl.DateTimeFormat("en-CA", { timeZone, year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit", hourCycle:"h23" }).formatToParts(date);
   const part = (type:string) => parts.find((item) => item.type === type)?.value || "";
@@ -66,6 +71,7 @@ async function sendConfirmation(db:Database,booking:Booking,to:string[]) {
 }
 
 Deno.serve(async(request)=>{
+  if(request.method==="OPTIONS")return new Response("ok",{headers:corsHeaders});
   if(request.method!=="POST")return respond({error:"Method not allowed"},405);
   try{
     const body=await request.json().catch(()=>({})), url=Deno.env.get("SUPABASE_URL")||"", key=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||""; if(!url||!key)throw new Error("Supabase service configuration is missing.");
