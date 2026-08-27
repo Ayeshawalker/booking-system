@@ -318,6 +318,39 @@
     return `Due in ${days} day${days === 1 ? "" : "s"}`;
   }
 
+  async function markInvoicePaid(invoice, button) {
+    const outstanding = invoiceOutstanding(invoice);
+    if (!window.confirm(
+      `Mark invoice ${invoice.invoice_number} for ${invoice.client_name} as paid?\n\n` +
+      `${currency(outstanding)} will be recorded as received today and the related session history will be updated.`,
+    )) return;
+    button.disabled = true;
+    button.textContent = "Saving…";
+    const paymentDate = isoDate(new Date());
+    const { error } = await supabaseClient.rpc("mark_invoice_paid", {
+      p_invoice_id: invoice.id,
+      p_payment_date: paymentDate,
+    });
+    if (error) {
+      button.disabled = false;
+      button.textContent = "Paid";
+      controls.message.textContent =
+        "The invoice could not be marked as paid. No payment information was changed.";
+      console.error("Invoice payment update failed.", error);
+      return;
+    }
+    const openHistoryClientId = historyClient?.id || null;
+    await loadData();
+    if (openHistoryClientId) {
+      const refreshedClient = clients.find((item) =>
+        (item._relatedClientIds || [item.id]).includes(openHistoryClientId)
+      );
+      if (refreshedClient) renderHistory(refreshedClient);
+    }
+    controls.message.textContent =
+      `${invoice.invoice_number} has been marked as paid and the payment history has been updated.`;
+  }
+
   function renderSentUnpaidInvoiceRow(invoice) {
     const row = document.createElement("tr");
     const dueStatus = invoiceDueStatus(invoice);
@@ -347,7 +380,12 @@
       );
       window.open(`https://wa.me/?text=${message}`, "_blank", "noopener");
     });
-    actions.append(view, reminder);
+    const paid = document.createElement("button");
+    paid.type = "button";
+    paid.className = "payment-edit-button invoice-paid-button";
+    paid.textContent = "Paid";
+    paid.addEventListener("click", () => markInvoicePaid(invoice, paid));
+    actions.append(view, reminder, paid);
     row.append(actions);
     return row;
   }
@@ -471,6 +509,7 @@
 
   function invoicePaymentPayload(invoice) {
     const description = String(invoice.description || "").toLowerCase();
+    const invoiceTotal = Number(invoice.amount || 0) + Number(invoice.extra_amount || 0);
     return {
       client_id: invoice.client_id || null,
       client_name: invoice.client_name,
@@ -483,12 +522,14 @@
         : description.startsWith("online")
           ? "Online"
           : "Not recorded",
-      fee_due: Number(invoice.amount || 0) + Number(invoice.extra_amount || 0),
-      amount_received: 0,
+      fee_due: invoiceTotal,
+      amount_received: invoice.status === "Paid" ? invoiceTotal : 0,
       invoice_sent_date: invoice.status === "Sent" || invoice.status === "Paid"
         ? invoice.invoice_date
         : null,
-      payment_date: null,
+      payment_date: invoice.status === "Paid"
+        ? String(invoice.updated_at || "").slice(0, 10) || isoDate(new Date())
+        : null,
       notes: `Created automatically from invoice ${invoice.invoice_number}.`,
       source: "Manual",
       source_reference: `invoice:${invoice.id}`,
@@ -584,7 +625,7 @@
   async function loadInvoices() {
     const { data, error } = await supabaseClient
       .from("invoices")
-      .select("id,booking_id,client_id,invoice_number,client_name,invoice_date,due_date,session_date,description,amount,extra_amount,status")
+      .select("id,booking_id,client_id,invoice_number,client_name,invoice_date,due_date,session_date,description,amount,extra_amount,status,updated_at")
       .order("invoice_date", { ascending: false })
       .limit(500);
     if (error) {

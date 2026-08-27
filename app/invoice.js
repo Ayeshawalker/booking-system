@@ -52,6 +52,26 @@
       .trim();
   }
 
+  async function findInvoicesReplacedByDates(dates) {
+    if (!dates.length) return [];
+    let query = client.from("invoices")
+      .select("id,invoice_number,status,session_date,description,client_id,client_name")
+      .eq("status", "Sent")
+      .neq("id", invoice.id);
+    query = invoice.client_id
+      ? query.eq("client_id", invoice.client_id)
+      : query.is("client_id", null).eq("client_name", invoice.client_name);
+    const { data, error } = await query;
+    if (error) {
+      console.error("Could not check for replaced invoices.", error);
+      return [];
+    }
+    const dateSet = new Set(dates);
+    return (data || []).filter((candidate) =>
+      invoiceSessionDates(candidate).some((date) => dateSet.has(date))
+    );
+  }
+
   function invoiceLineItems(invoice) {
     const defaultFormat = /^in person/i.test(cleanInvoiceDescription(invoice.description))
       ? "In person"
@@ -413,6 +433,17 @@
       return;
     }
     const enteredDates = enteredItems.map((item) => item.date);
+    const replacedInvoices = await findInvoicesReplacedByDates(enteredDates);
+    let replaceInvoiceIds = [];
+    if (replacedInvoices.length) {
+      const numbers = replacedInvoices.map((item) => item.invoice_number).join(", ");
+      const accepted = window.confirm(
+        `${numbers} already covers ${replacedInvoices.length === 1 ? "one of these sessions" : "some of these sessions"}.\n\n` +
+        `Choose OK to keep ${numbers} active while this invoice is a draft, then cancel ${replacedInvoices.length === 1 ? "it" : "them"} automatically when invoice ${invoice.invoice_number} is sent.\n\n` +
+        "Choose Cancel to save this invoice without replacing the earlier invoice.",
+      );
+      if (accepted) replaceInvoiceIds = replacedInvoices.map((item) => item.id);
+    }
     const sessionDate = enteredDates[0];
     const sessionCount = enteredItems.length;
     const amount = enteredItems.reduce((sum, item) => sum + item.fee, 0);
@@ -434,6 +465,20 @@
       submit.disabled = false;
       document.querySelector("#invoice-edit-message").textContent =
         "The invoice details could not be saved.";
+      return;
+    }
+    const { data: linkedCount, error: replacementError } = await client.rpc(
+      "set_invoice_replacements",
+      {
+        p_replacement_invoice_id: invoice.id,
+        p_replaced_invoice_ids: replaceInvoiceIds,
+      },
+    );
+    if (replacementError || Number(linkedCount) !== replaceInvoiceIds.length) {
+      console.error("Invoice replacement links could not be saved.", replacementError);
+      submit.disabled = false;
+      document.querySelector("#invoice-edit-message").textContent =
+        "The invoice was updated, but the earlier invoice could not be linked for automatic cancellation. It has not been cancelled.";
       return;
     }
     await client.from("manual_payments").update({
