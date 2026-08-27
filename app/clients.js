@@ -3,6 +3,7 @@
   const supabaseClient = admin.client;
   const controls = {
     addButton: document.querySelector("#add-client"),
+    formerClientsButton: document.querySelector("#former-clients"),
     search: document.querySelector("#client-search"),
     statusFilter: document.querySelector("#client-status-filter"),
     typeFilter: document.querySelector("#client-type-filter"),
@@ -618,6 +619,7 @@
   }
 
   function updateCounts() {
+    const formerCount = clients.filter((client) => client.status === "Former").length;
     counts.all.textContent = String(clients.length);
     counts.active.textContent = String(
       clients.filter((client) => client.status === "Active").length,
@@ -644,6 +646,7 @@
           !["Weekly", "Fortnightly"].includes(client.session_frequency),
       ).length,
     );
+    controls.formerClientsButton.textContent = `Former clients (${formerCount})`;
   }
 
   function renderClients() {
@@ -660,7 +663,7 @@
           !["Weekly", "Fortnightly"].includes(client.session_frequency));
       return (
         (!query || normalisedSearchText(client).includes(query)) &&
-        (!status || client.status === status) &&
+        (status ? client.status === status : client.status !== "Former") &&
         (!type || client.record_type === type) &&
         (!support || (client.specialities || []).includes(support)) &&
         frequencyMatches
@@ -677,6 +680,9 @@
       clients.length === 0
         ? "No client records yet. Use Add client to create the first one."
         : "No clients match these filters.";
+    const showingFormer = status === "Former";
+    controls.formerClientsButton.setAttribute("aria-pressed", String(showingFormer));
+    controls.formerClientsButton.classList.toggle("is-active", showingFormer);
     updateCounts();
   }
 
@@ -936,6 +942,11 @@
   });
 
   controls.addButton.addEventListener("click", () => openClientEditor());
+  controls.formerClientsButton.addEventListener("click", () => {
+    const showingFormer = controls.statusFilter.value === "Former";
+    controls.statusFilter.value = showingFormer ? "" : "Former";
+    renderClients();
+  });
   document.querySelector("#close-client-dialog").addEventListener(
     "click",
     () => controls.dialog.close(),
