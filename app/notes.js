@@ -15,6 +15,8 @@
     needsSupervision: document.querySelector("#client-note-needs-supervision"), supervisionWrap: document.querySelector("#client-note-supervision-wrap"),
     supervisionQuestion: document.querySelector("#client-note-supervision-question"), workOverview: document.querySelector("#client-work-overview"),
     previousNotes: document.querySelector("#client-previous-notes"),
+    intakeStatus: document.querySelector("#notes-intake-status"), intakeButton: document.querySelector("#view-notes-intake"),
+    intakeAnswers: document.querySelector("#notes-intake-answers"),
     imageFields: document.querySelector(".note-image-fields"), imageDropzone: document.querySelector("#note-image-dropzone"),
     imageInput: document.querySelector("#note-image-input"), addImage: document.querySelector("#add-note-image"), imageList: document.querySelector("#note-image-list"),
     abcSuggest: document.querySelector("#suggest-note-abc"), abcReview: document.querySelector("#note-abc-review"),
@@ -39,6 +41,7 @@
   let stagedImages = [];
   let clientResources = [];
   let resourceShares = [];
+  const intakeByClient = new Map();
   const imageBucket = "clinical-note-images";
   const resourceBucket = "client-resources";
 
@@ -48,6 +51,57 @@
   const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"})[c]);
   const lines = (value) => String(value || "").split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
   const joinLines = (value) => Array.isArray(value) ? value.join("\n") : "";
+
+  function intakeQuestion(key) {
+    const importantLabels = {
+      preferred_name: "Preferred name", pronouns: "Pronouns", date_of_birth: "Date of birth",
+      safe_contact: "Safe contact preference", emergency_contact: "Emergency contact",
+      what_happened: "What brought the client to therapy", therapy_hopes: "What the client hopes for from therapy",
+      risk_thoughts: "Recent risk thoughts", risk_details: "Risk details", protective_factors: "Protective factors",
+      important_context: "Other important context", access_needs: "Accessibility, communication or cultural needs",
+    };
+    if (importantLabels[key]) return importantLabels[key];
+    const words = String(key || "").replaceAll("_", " ");
+    return words ? words[0].toUpperCase() + words.slice(1) : "Answer";
+  }
+
+  function showIntakeReference(intake) {
+    ui.intakeAnswers.hidden = true; ui.intakeAnswers.innerHTML = "";
+    if (!ui.client.value) {
+      ui.intakeStatus.textContent = "Choose a client to see their intake form.";
+      ui.intakeButton.hidden = true; return;
+    }
+    if (!intake) {
+      ui.intakeStatus.textContent = "No completed intake form is recorded for this client.";
+      ui.intakeButton.hidden = true; return;
+    }
+    const signed = intake.signed_at
+      ? new Intl.DateTimeFormat("en-GB", { dateStyle: "long" }).format(new Date(intake.signed_at))
+      : "date unavailable";
+    ui.intakeStatus.textContent = `${intake.form_type || "Therapy"} intake completed by ${intake.signer_name || "the client"} on ${signed}.`;
+    ui.intakeButton.hidden = false; ui.intakeButton.textContent = "View intake form";
+    const answers = Object.entries(intake.answers || {}).filter(([, value]) =>
+      value !== "" && value !== null && value !== undefined && (!Array.isArray(value) || value.length)
+    );
+    ui.intakeAnswers.innerHTML = answers.length
+      ? answers.map(([key, value]) => `<article><h4>${escapeHtml(intakeQuestion(key))}</h4><p>${escapeHtml(Array.isArray(value) ? value.join(", ") : value)}</p></article>`).join("")
+      : "<p>No answers were recorded on this intake form.</p>";
+  }
+
+  async function loadIntakeReference() {
+    const clientId = ui.client.value;
+    if (!clientId) { showIntakeReference(null); return; }
+    ui.intakeStatus.textContent = "Loading completed intake form…"; ui.intakeButton.hidden = true;
+    if (intakeByClient.has(clientId)) { showIntakeReference(intakeByClient.get(clientId)); return; }
+    const { data, error } = await db.from("client_intake_forms")
+      .select("id,form_type,status,answers,signer_name,signed_at,created_at")
+      .eq("client_id", clientId).eq("status", "Completed")
+      .order("created_at", { ascending: false }).limit(1).maybeSingle();
+    if (error) {
+      console.error(error); ui.intakeStatus.textContent = "The intake form could not be loaded."; return;
+    }
+    intakeByClient.set(clientId, data || null); showIntakeReference(data || null);
+  }
 
   function clientGreeting(client) {
     return [client?.first_name, client?.second_first_name].filter(Boolean).join(" and ") || "there";
@@ -124,16 +178,31 @@
     const title = ui.resourceTitle.value.trim(); const file = ui.resourceFile.files?.[0];
     if (!title || !file) { ui.resourceMessage.textContent = "Add a title and choose the information-sheet file."; return; }
     if (file.size > 15728640) { ui.resourceMessage.textContent = "Please choose a file smaller than 15 MB."; return; }
+    const extension = String(file.name || "").toLowerCase().match(/\.[a-z0-9]+$/)?.[0] || "";
+    const mimeByExtension = {
+      ".pdf": "application/pdf", ".doc": "application/msword",
+      ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      ".rtf": "application/rtf", ".txt": "text/plain",
+      ".pages": "application/vnd.apple.pages", ".png": "image/png",
+      ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp",
+    };
+    const mimeType = mimeByExtension[extension];
+    if (!mimeType) {
+      ui.resourceMessage.textContent = "That file type is not supported. Please use PDF, Word, Pages, RTF, text, PNG, JPEG or WebP.";
+      return;
+    }
     const submit = ui.resourceUpload.querySelector("button[type='submit']"); submit.disabled = true; ui.resourceMessage.textContent = "Uploading securely…";
     const path = `${admin.user.id}/${crypto.randomUUID()}-${safeFileName(file.name)}`;
     try {
-      const { error: uploadError } = await db.storage.from(resourceBucket).upload(path, file, { contentType: file.type, upsert: false });
+      const { data: uploadedFile, error: uploadError } = await db.storage.from(resourceBucket).upload(path, file, { contentType: mimeType, upsert: false });
       if (uploadError) throw uploadError;
-      const { error: rowError } = await db.from("client_resources").insert({ title, storage_path: path, file_name: file.name, mime_type: file.type || "application/octet-stream", file_size: file.size, created_by: admin.user.id });
+      if (!uploadedFile?.path) throw new Error("The storage service did not confirm the uploaded file.");
+      ui.resourceMessage.textContent = "File uploaded. Adding it to the information-sheet library…";
+      const { error: rowError } = await db.from("client_resources").insert({ title, storage_path: path, file_name: file.name, mime_type: mimeType, file_size: file.size, created_by: admin.user.id });
       if (rowError) { await db.storage.from(resourceBucket).remove([path]); throw rowError; }
       ui.resourceUpload.reset(); ui.resourceMessage.textContent = `${title} is now in your reusable information-sheet library.`; await loadResources();
     } catch (error) {
-      console.error(error); ui.resourceMessage.textContent = `The sheet could not be uploaded. ${String(error?.message || "Please try again.")}`;
+      console.error(error); ui.resourceMessage.textContent = `The sheet could not be uploaded. ${String(error?.message || error?.error || "Please try again.")}`;
     } finally { submit.disabled = false; }
   }
   async function loadResources() {
@@ -477,6 +546,7 @@
     renderWorkOverview();
     renderResourceLibrary();
     renderResourceHistory();
+    loadIntakeReference();
   }
   function renderWorkOverview() {
     const clientId = ui.client.value;
@@ -517,6 +587,11 @@
   ui.improve.addEventListener("click", improve); ui.save.addEventListener("click", () => save("Draft")); ui.finalise.addEventListener("click", () => save("Final"));
   ui.clear.addEventListener("click", clearForm); ui.filter.addEventListener("change", render); ui.showArchived.addEventListener("change", render);
   ui.client.addEventListener("change", renderClientReference);
+  ui.intakeButton.addEventListener("click", () => {
+    const opening = ui.intakeAnswers.hidden;
+    ui.intakeAnswers.hidden = !opening;
+    ui.intakeButton.textContent = opening ? "Hide intake form" : "View intake form";
+  });
   ui.resourceUpload.addEventListener("submit", uploadResource);
   ui.needsSupervision.addEventListener("change", () => { ui.supervisionWrap.hidden = !ui.needsSupervision.checked; supervisionStatus = ui.needsSupervision.checked ? "Outstanding" : "Not required"; supervisionDiscussedAt = null; if (ui.needsSupervision.checked) ui.supervisionQuestion.focus(); });
   ui.addImage.addEventListener("click", () => ui.imageInput.click());

@@ -3663,6 +3663,13 @@ dd {
 .notes-reference-panel { position: static; display: grid; gap: 22px; max-height: none; overflow: visible; padding: 20px; border: 2px solid #f4cfad; border-radius: 20px; background: #fffaf1; }
 .notes-reference-panel .notes-list-heading { align-items: start; flex-direction: column; gap: 5px; margin: 0 0 14px; }
 .notes-reference-panel .notes-list-heading small { color: #78636b; line-height: 1.45; }
+.notes-intake-reference { padding-bottom: 20px; border-bottom: 2px solid #efd9be; }
+.notes-intake-reference > button { width: auto; margin-top: 8px; }
+.notes-intake-answers { display: grid; gap: 12px; max-height: 520px; overflow: auto; margin-top: 14px; padding: 4px; }
+.notes-intake-answers[hidden] { display: none; }
+.notes-intake-answers article { padding: 13px 14px; border: 1px solid #efcad1; border-radius: 12px; background: #fff; }
+.notes-intake-answers h4 { margin: 0 0 6px; color: var(--pink-dark); font-size: .9rem; }
+.notes-intake-answers p { margin: 0; color: #4d3740; line-height: 1.55; white-space: pre-wrap; }
 .previous-client-notes-list { display: grid; gap: 14px; }
 .previous-client-note-card { overflow: hidden; border: 2px solid #efcad1; border-radius: 16px; background: #fff; }
 .previous-client-note-card.is-archived { opacity: .72; }
