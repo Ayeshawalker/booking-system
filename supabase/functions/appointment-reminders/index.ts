@@ -55,8 +55,8 @@ function confirmationMessage(booking:Booking) {
 }
 function cancellationMessage(booking:Booking) {
   const item=occurrences(booking)[0], line=`Just confirming that your session on ${displayDate(item.date)} at ${item.time} has been cancelled.`;
-  const text=[greeting(booking),"",line,"","If you would like to arrange another time, simply reply to this email.","","Warm wishes,","Ayesha"].join("\n");
-  const html=emailShell(line,greeting(booking),`<p style="margin:0 0 16px">${escapeHtml(line)}</p><p style="margin:0">If you would like to arrange another time, simply reply to this email.</p>`);
+  const text=[greeting(booking),"",line,"","If you haven’t already arranged another time and would like to, simply reply to this email.","","Warm wishes,","Ayesha"].join("\n");
+  const html=emailShell(line,greeting(booking),`<p style="margin:0 0 16px">${escapeHtml(line)}</p><p style="margin:0">If you haven’t already arranged another time and would like to, simply reply to this email.</p>`);
   return {subject:"Your session with Ayesha has been cancelled",text,html};
 }
 function rescheduleMessage(booking:Booking) {
