@@ -42,7 +42,7 @@ Deno.serve(async (request) => {
     if (!membership) return json({ error: "Forbidden" }, 403);
 
     const body = await request.json() as {
-      action?: "reschedule" | "cancel" | "create_private" | "resize_event" | "delete_private";
+      action?: "reschedule" | "cancel" | "create_private" | "update_private" | "resize_event" | "delete_private";
       bookingId?: string;
       eventId?: string;
       date?: string;
@@ -104,6 +104,34 @@ Deno.serve(async (request) => {
       );
       if (!response.ok) return json({ error: "Google Calendar rejected the new length" }, 502);
       return json({ status: "resized", message: "Private event length updated." });
+    }
+
+    if (action === "update_private") {
+      const title = String(body.title || "").trim();
+      const durationMinutes = Number(body.durationMinutes || 0);
+      if (!eventId || !title || title.length > 160 || !isDate(date) || !isTime(time) || durationMinutes < 1 || durationMinutes > 525600) {
+        return json({ error: "Invalid private event details" }, 400);
+      }
+      if (!calendarId || !clientEmail || !privateKey) {
+        return json({ error: "Google Calendar is not configured" }, 503);
+      }
+      const start = zonedDateTimeToUtc(date, time, timeZone);
+      const end = new Date(start.getTime() + durationMinutes * 60 * 1000);
+      const accessToken = await createGoogleAccessToken(clientEmail, privateKey);
+      const response = await fetch(
+        `${googleEventsUrl}/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}?sendUpdates=none`,
+        {
+          method: "PATCH",
+          headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            summary: title,
+            start: { dateTime: start.toISOString(), timeZone },
+            end: { dateTime: end.toISOString(), timeZone },
+          }),
+        },
+      );
+      if (!response.ok) return json({ error: "Google Calendar rejected the event changes" }, 502);
+      return json({ status: "updated", message: "Private event updated in Google Calendar." });
     }
 
     if (action === "create_private") {
