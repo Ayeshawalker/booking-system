@@ -288,21 +288,26 @@
     contractButton.textContent = client.contract_status === "Signed" ? "Contract ✓" : "Contract";
     contractButton.addEventListener("click", () => openContractManager(client));
 
-    const intakeButton = document.createElement("button");
-    intakeButton.type = "button";
-    intakeButton.className = "table-action-button";
-    intakeButton.textContent = client.intake_status === "Completed" ? "Intake ✓" : "Intake";
-    intakeButton.addEventListener("click", () => openIntakeManager(client));
-
-    const impactButton = document.createElement("button");
-    impactButton.type = "button";
-    impactButton.className = "table-action-button";
-    impactButton.textContent = "Impact statement";
-    impactButton.addEventListener("click", () => openIntakeManager(client, "Impact statement"));
+    const formsMenu = document.createElement("select");
+    formsMenu.className = "table-action-button table-forms-menu";
+    formsMenu.setAttribute("aria-label", `Choose a form for ${clientNames(client)}`);
+    [
+      ["", "Forms ▾"],
+      ["Individual", "General intake"],
+      ["Betrayal trauma", "Betrayal trauma intake"],
+      ["Impact statement", "Impact Statement"],
+    ].forEach(([value, label]) => {
+      const option = document.createElement("option"); option.value = value; option.textContent = label; formsMenu.append(option);
+    });
+    formsMenu.addEventListener("change", () => {
+      const formType = formsMenu.value;
+      formsMenu.value = "";
+      if (formType) openIntakeManager(client, formType);
+    });
 
     const actionGroup = document.createElement("div");
     actionGroup.className = "table-action-group";
-    actionGroup.append(bookLink, contractButton, intakeButton, impactButton, editButton);
+    actionGroup.append(bookLink, contractButton, formsMenu, editButton);
     actionCell.append(actionGroup);
 
     row.append(
@@ -587,7 +592,8 @@
     intakeManagerType = requestedType;
     const specialities = Array.isArray(client.specialities) ? client.specialities : [];
     controls.intakeFormType.value = requestedType || (specialities.includes("Betrayal trauma") ? "Betrayal trauma" : "Individual");
-    controls.intakeDialogTitle.textContent = requestedType === "Impact statement" ? `Impact Statement · ${clientNames(client)}` : clientNames(client); showIntake(null);
+    const documentLabel = requestedType === "Impact statement" ? "Impact Statement" : requestedType === "Betrayal trauma" ? "Betrayal trauma intake" : requestedType === "Individual" ? "General intake" : "Intake form";
+    controls.intakeDialogTitle.textContent = `${documentLabel} · ${clientNames(client)}`; showIntake(null);
     controls.intakeFormTypeField.hidden = requestedType === "Impact statement";
     controls.intakeDialog.showModal();
     let query = supabaseClient.from("client_intake_forms")
