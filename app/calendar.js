@@ -1132,7 +1132,7 @@
     controls.rescheduleForm.hidden = !canReschedule;
     controls.bookingDetailsForm.hidden = !canReschedule;
     controls.privateDetailsForm.hidden = !canEditPrivate;
-    controls.privateTimeFields.hidden = !isLocalPrivate;
+    controls.privateTimeFields.hidden = !canEditPrivate;
     controls.deletePrivateEvent.hidden = !canEditPrivate;
     [
       controls.privateStartDate,
@@ -1140,8 +1140,8 @@
       controls.privateEndDate,
       controls.privateEndTime,
     ].forEach((input) => {
-      input.disabled = !isLocalPrivate;
-      input.required = isLocalPrivate;
+      input.disabled = !canEditPrivate;
+      input.required = canEditPrivate;
     });
     controls.cancelBooking.hidden = !canReschedule;
     controls.repeatBooking.hidden = !canReschedule;
@@ -1152,7 +1152,7 @@
     if (canEditPrivate) {
       controls.privateTitle.value = event.title;
     }
-    if (isLocalPrivate) {
+    if (canEditPrivate) {
       const start = new Date(event.start);
       const end = new Date(event.end);
       controls.privateStartDate.value = localDateKey(start);
@@ -1192,6 +1192,35 @@
       localStorage.setItem(privateEventStorageKey, JSON.stringify(state.localPrivateEvents));
       await loadEvents();
       controls.message.textContent = "Private event moved.";
+      return;
+    }
+    if (!booking.bookingRequestId && booking.eventType !== "booking") {
+      if (!window.confirm(
+        `Move ${booking.title}?\n\nFrom: ${eventWhen(booking)}\nTo: ${formatLongDate(date)} at ${time}`,
+      )) return;
+      controls.message.textContent = "Moving private event…";
+      try {
+        const durationMinutes = Math.max(1, Math.round((new Date(booking.end) - new Date(booking.start)) / 60000));
+        const { data, error } = await supabaseClient.functions.invoke(
+          window.BOOKING_CONFIG?.calendarRescheduleFunction || "calendar-reschedule-booking",
+          { body: {
+            action: "update_private",
+            eventId: booking.id,
+            title: booking.title,
+            date: localDateKey(date),
+            time,
+            durationMinutes,
+          } },
+        );
+        if (error || data?.error) throw error || new Error(data.error);
+        await loadEvents();
+        controls.message.textContent = data?.message || "Private event moved.";
+      } catch (error) {
+        console.error(error);
+        controls.message.textContent = "The private event could not be moved. No changes were made.";
+      } finally {
+        state.draggedEvent = null;
+      }
       return;
     }
     const newDate = localDateKey(date);
@@ -1311,7 +1340,7 @@
       formatTab.setAttribute("aria-label", "In person");
       button.append(formatTab);
     }
-    if ((event.bookingRequestId || event.id.startsWith("local-private-")) && !event.allDay) {
+    if ((event.bookingRequestId || event.eventType !== "booking") && !event.allDay) {
       button.draggable = true;
       button.title += " — drag to move";
       button.addEventListener("dragstart", (dragEvent) => {
@@ -1389,6 +1418,21 @@
         eventList.append(more);
       }
       cell.append(eventList);
+      cell.addEventListener("dragover", (dragEvent) => {
+        if (!state.draggedEvent || state.draggedEvent.allDay) return;
+        dragEvent.preventDefault();
+        dragEvent.dataTransfer.dropEffect = "move";
+        cell.classList.add("is-drop-target");
+      });
+      cell.addEventListener("dragleave", () => cell.classList.remove("is-drop-target"));
+      cell.addEventListener("drop", (dragEvent) => {
+        dragEvent.preventDefault();
+        cell.classList.remove("is-drop-target");
+        if (!state.draggedEvent) return;
+        const start = new Date(state.draggedEvent.start);
+        const time = `${String(start.getHours()).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")}`;
+        moveBookingByDrag(state.draggedEvent, day, time);
+      });
       grid.append(cell);
     }
 
@@ -1856,15 +1900,6 @@
     if (!privateEvent || privateEvent.eventType === "booking") return;
     const updatedTitle = controls.privateTitle.value.trim();
     if (!updatedTitle) return;
-    state.titleOverrides[privateEvent.id] = updatedTitle;
-    localStorage.setItem(titleStorageKey, JSON.stringify(state.titleOverrides));
-    privateEvent.title = updatedTitle;
-    if (!privateEvent.id.startsWith("local-private-")) {
-      controls.dialog.close();
-      render();
-      controls.message.textContent = `${updatedTitle} updated.`;
-      return;
-    }
     const start = new Date(
       `${controls.privateStartDate.value}T${controls.privateStartTime.value}:00`,
     );
@@ -1874,6 +1909,32 @@
     if (end <= start) {
       controls.privateMessage.textContent =
         "The finish date and time must be after the start date and time.";
+      return;
+    }
+    if (!privateEvent.id.startsWith("local-private-")) {
+      controls.privateMessage.textContent = "Saving private event…";
+      const durationMinutes = Math.round((end - start) / 60000);
+      const { data, error } = await supabaseClient.functions.invoke(
+        window.BOOKING_CONFIG?.calendarRescheduleFunction || "calendar-reschedule-booking",
+        { body: {
+          action: "update_private",
+          eventId: privateEvent.id,
+          title: updatedTitle,
+          date: controls.privateStartDate.value,
+          time: controls.privateStartTime.value,
+          durationMinutes,
+        } },
+      );
+      if (error || data?.error) {
+        controls.privateMessage.textContent = data?.error || error?.message || "The private event could not be updated.";
+        return;
+      }
+      delete state.titleOverrides[privateEvent.id];
+      localStorage.setItem(titleStorageKey, JSON.stringify(state.titleOverrides));
+      controls.dialog.close();
+      state.focusDate = startOfDay(start);
+      await loadEvents();
+      controls.message.textContent = data?.message || `${updatedTitle} updated.`;
       return;
     }
     privateEvent.title = updatedTitle;

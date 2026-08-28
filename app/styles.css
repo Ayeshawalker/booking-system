@@ -3039,6 +3039,11 @@ dd {
   outline-offset: -3px;
 }
 
+.calendar-month-day.is-drop-target {
+  background: #fff0f7;
+  box-shadow: inset 0 0 0 3px #ec1d89;
+}
+
 .calendar-week-timed-event[draggable="true"] { cursor: grab; }
 .calendar-week-timed-event.is-dragging { opacity: 0.42; }
 
