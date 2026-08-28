@@ -381,6 +381,35 @@
     return { data: null, error: new Error("The email is taking longer than expected. Please check again shortly.") };
   }
 
+  async function approveClientEmail(bookingId, heading, description) {
+    let emails = [];
+    try {
+      const { data: booking } = await supabaseClient
+        .from("booking_requests")
+        .select("client_id, email")
+        .eq("id", bookingId)
+        .maybeSingle();
+      if (booking?.client_id) {
+        const { data: client } = await supabaseClient
+          .from("clients")
+          .select("email, second_email")
+          .eq("id", booking.client_id)
+          .maybeSingle();
+        emails = [client?.email, client?.second_email];
+      }
+      if (!emails.some(Boolean)) emails = [booking?.email];
+    } catch (error) {
+      console.error("Client email addresses could not be previewed", error);
+    }
+    const recipients = [...new Set(emails.map((email) => String(email || "").trim()).filter(Boolean))];
+    const recipientText = recipients.length
+      ? recipients.join(" and ")
+      : "the recorded client email address";
+    return window.confirm(
+      `${heading}\n\nTo: ${recipientText}\n\n${description}\n\nSelect OK to send, or Cancel to save the calendar change without sending an email.`,
+    );
+  }
+
   async function offerEmailConfirmation(client, booking, successText) {
     const savedEmails = [...new Set([client?.email, client?.second_email]
       .map((email) => String(email || "").trim()).filter(Boolean))];
@@ -412,7 +441,7 @@
       retryButton.type = "button";
       retryButton.className = "calendar-whatsapp-confirmation";
       retryButton.textContent = "Try email again";
-      retryButton.addEventListener("click", () => offerBookingEmailWithoutPrompt(client, booking, successText));
+      retryButton.addEventListener("click", () => offerEmailConfirmation(client, booking, successText));
       controls.message.append(retryButton);
       window.alert(`The email confirmation was not sent.\n\n${detail}\n\nYou can use “Try email again” on the Calendar page.`);
       return false;
@@ -436,49 +465,6 @@
       testButton.textContent = "Test reminder sent";
     });
     controls.message.append(document.createTextNode(" "), testButton);
-    return true;
-  }
-
-  async function offerBookingEmailWithoutPrompt(client, booking, successText) {
-    controls.message.textContent = `${successText} Sending email confirmation…`;
-    let data;
-    let error;
-    try {
-      ({ data, error } = await invokeAppointmentReminder({ action: "send_confirmation", bookingId: booking.id }));
-    } catch (caughtError) {
-      error = caughtError;
-    }
-    if (error || data?.error) {
-      const detail = data?.error || error?.message || "Please try again.";
-      controls.message.textContent = `${successText} The email confirmation was not sent. ${detail} `;
-      const retryButton = document.createElement("button");
-      retryButton.type = "button";
-      retryButton.className = "calendar-whatsapp-confirmation";
-      retryButton.textContent = "Try email again";
-      retryButton.addEventListener("click", () => offerBookingEmailWithoutPrompt(client, booking, successText));
-      controls.message.append(retryButton);
-      window.alert(`The email confirmation was not sent.\n\n${detail}`);
-      return false;
-    }
-    const count = Number(data?.recipients?.length || data?.sent || 0);
-    controls.message.textContent = `${successText} Email confirmation sent to ${count} ${count === 1 ? "address" : "addresses"}; the day-before reminder is arranged. `;
-    const testButton = document.createElement("button");
-    testButton.type = "button";
-    testButton.className = "calendar-whatsapp-confirmation";
-    testButton.textContent = "Send test reminder to me";
-    testButton.addEventListener("click", async () => {
-      testButton.disabled = true;
-      testButton.textContent = "Sending test…";
-      const { data: testData, error: testError } = await invokeAppointmentReminder({ action: "test_reminder", bookingId: booking.id });
-      if (testError || testData?.error) {
-        testButton.disabled = false;
-        testButton.textContent = "Try test reminder again";
-        window.alert(`The test reminder was not sent.\n\n${testData?.error || testError?.message || "Please try again."}`);
-        return;
-      }
-      testButton.textContent = "Test reminder sent";
-    });
-    controls.message.append(testButton);
     return true;
   }
 
@@ -2196,6 +2182,17 @@
             .in("id", cancellableInvoiceIds);
         }
       }
+      const approved = await approveClientEmail(
+        booking.bookingRequestId,
+        "Send a cancellation email?",
+        `The email will confirm that ${eventWhen(booking)} has been cancelled.`,
+      );
+      if (!approved) {
+        controls.dialog.close();
+        await loadEvents();
+        controls.message.textContent = `${data?.message || "Booking cancelled."} No cancellation email was sent.`;
+        return;
+      }
       const { data: emailData, error: emailError } = await invokeAppointmentReminder({
         action: "send_cancellation",
         bookingId: booking.bookingRequestId,
@@ -2552,6 +2549,17 @@
         if (zoomError || !zoomData?.joinUrl) {
           throw new Error("The appointment was rearranged, but its new Zoom link could not be created, so no email was sent. Please try rearranging it again.");
         }
+      }
+      const approved = await approveClientEmail(
+        booking.bookingRequestId,
+        "Send a rearrangement email?",
+        `The email will show the new appointment: ${newWhen}, ${newFormat}${newFormat === "Online" ? ", with the new Zoom link" : ""}.`,
+      );
+      if (!approved) {
+        controls.dialog.close();
+        await loadEvents();
+        controls.message.textContent = `${data?.message || "Booking rescheduled."} No rearrangement email was sent.`;
+        return;
       }
       const { data: emailData, error: emailError } = await invokeAppointmentReminder({
         action: "send_reschedule",
