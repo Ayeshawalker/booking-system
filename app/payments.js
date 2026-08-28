@@ -48,6 +48,7 @@
   let payments = [];
   let clients = [];
   let bookingRequests = [];
+  let invoices = [];
   let editingId = null;
   let historyClient = null;
   let sentInvoiceOutstandingTotal = 0;
@@ -633,6 +634,7 @@
       return;
     }
     const allInvoices = data || [];
+    invoices = allInvoices;
     const nonInvoiceableBookingIds = new Set(
       bookingRequests
         .filter((booking) => ["contacted", "closed"].includes(booking.status))
@@ -978,6 +980,25 @@
       });
       selectLabel.append(select, document.createTextNode("Include in invoice"));
       actions.append(selectLabel);
+    }
+    const invoiceId = String(payment.source_reference || "").startsWith("invoice:")
+      ? String(payment.source_reference).slice("invoice:".length)
+      : "";
+    const relatedInvoice = invoiceId
+      ? invoices.find((invoice) => invoice.id === invoiceId)
+      : null;
+    if (
+      relatedInvoice?.status === "Sent" &&
+      invoiceOutstanding(relatedInvoice) > 0.009 &&
+      !nonBillable
+    ) {
+      const paid = document.createElement("button");
+      paid.type = "button";
+      paid.className = "payment-edit-button invoice-paid-button";
+      paid.textContent = "Paid";
+      paid.title = `Mark ${relatedInvoice.invoice_number} as paid`;
+      paid.addEventListener("click", () => markInvoicePaid(relatedInvoice, paid));
+      actions.append(paid);
     }
     actions.append(edit, remove);
     row.append(actions);
