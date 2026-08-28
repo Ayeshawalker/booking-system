@@ -2135,9 +2135,18 @@
             .in("id", cancellableInvoiceIds);
         }
       }
+      const { data: emailData, error: emailError } = await invokeAppointmentReminder({
+        action: "send_cancellation",
+        bookingId: booking.bookingRequestId,
+      });
       controls.dialog.close();
       await loadEvents();
-      controls.message.textContent = data?.message || "Booking cancelled.";
+      if (emailError || emailData?.error) {
+        controls.message.textContent = `${data?.message || "Booking cancelled."} The cancellation email could not be sent: ${emailData?.error || emailError?.message || "please try again."}`;
+      } else {
+        const count = Number(emailData?.recipients?.length || emailData?.sent || 0);
+        controls.message.textContent = `${data?.message || "Booking cancelled."} Cancellation email sent to ${count} ${count === 1 ? "address" : "addresses"}.`;
+      }
     } catch (error) {
       console.error(error);
       controls.bookingDetailsMessage.textContent =
@@ -2474,13 +2483,31 @@
         },
       );
       if (error) throw error;
-      controls.rescheduleMessage.textContent =
-        data?.message || "Booking rescheduled.";
+      if (newFormat === "Online") {
+        const { data: zoomData, error: zoomError } = await supabaseClient.functions.invoke(
+          window.BOOKING_CONFIG?.zoomCreateMeetingFunction || "zoom-create-meeting",
+          { body: { bookingId: booking.bookingRequestId, forceNew: true } },
+        );
+        if (zoomError || !zoomData?.joinUrl) {
+          throw new Error("The appointment was rearranged, but its new Zoom link could not be created, so no email was sent. Please try rearranging it again.");
+        }
+      }
+      const { data: emailData, error: emailError } = await invokeAppointmentReminder({
+        action: "send_reschedule",
+        bookingId: booking.bookingRequestId,
+      });
+      const savedMessage = data?.message || "Booking rescheduled.";
+      if (emailError || emailData?.error) {
+        controls.rescheduleMessage.textContent = `${savedMessage} The rearrangement email could not be sent: ${emailData?.error || emailError?.message || "please try again."}`;
+      } else {
+        const count = Number(emailData?.recipients?.length || emailData?.sent || 0);
+        controls.rescheduleMessage.textContent = `${savedMessage} Rearrangement email sent to ${count} ${count === 1 ? "address" : "addresses"}.`;
+      }
       await loadEvents();
       controls.dialog.close();
     } catch (error) {
       console.error(error);
-      let message = "This booking could not be rescheduled. No changes were made.";
+      let message = error?.message || "This booking could not be rescheduled. No changes were made.";
       if (error?.context instanceof Response) {
         if (error.context.status === 404) {
           message =

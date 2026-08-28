@@ -27,13 +27,13 @@ Deno.serve(async (request) => {
     const { data: admin } = await db.from("admin_users").select("user_id").eq("user_id", userData.user.id).maybeSingle();
     if (!admin) return respond({ error: "Forbidden" }, 403);
 
-    const { bookingId } = await request.json();
+    const { bookingId, forceNew = false } = await request.json();
     if (!/^[0-9a-f-]{36}$/i.test(String(bookingId || ""))) return respond({ error: "Invalid booking reference" }, 400);
     const { data: booking, error: bookingError } = await db.from("booking_requests").select("*").eq("id", bookingId).single();
     if (bookingError || !booking) return respond({ error: "Booking not found" }, 404);
     if (String(booking.session_format).toLowerCase() !== "online") return respond({ status: "not_required" });
     if (booking.status !== "confirmed") return respond({ status: "pending_booking" });
-    if (booking.zoom_join_url) return respond({ status: "created", joinUrl: booking.zoom_join_url, meetingId: booking.zoom_meeting_id });
+    if (booking.zoom_join_url && !forceNew) return respond({ status: "created", joinUrl: booking.zoom_join_url, meetingId: booking.zoom_meeting_id });
 
     await db.from("booking_requests").update({ zoom_sync_status: "pending", zoom_sync_error: null }).eq("id", bookingId);
     const credentials = btoa(`${clientId}:${clientSecret}`);
@@ -76,11 +76,18 @@ Deno.serve(async (request) => {
       }).eq("id", bookingId);
       throw new Error(`Zoom said: ${zoomMessage}`);
     }
+    const previousMeetingId = forceNew ? String(booking.zoom_meeting_id || "") : "";
     const { error: updateError } = await db.from("booking_requests").update({
       zoom_meeting_id: String(meeting.id), zoom_join_url: meeting.join_url,
       zoom_sync_status: "created", zoom_sync_error: null, zoom_created_at: new Date().toISOString(),
     }).eq("id", bookingId);
     if (updateError) throw updateError;
+    if (previousMeetingId && previousMeetingId !== String(meeting.id)) {
+      await fetch(`https://api.zoom.us/v2/meetings/${encodeURIComponent(previousMeetingId)}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${tokenBody.access_token}` },
+      }).catch((error) => console.error("The previous Zoom meeting could not be removed", error));
+    }
     return respond({ status: "created", joinUrl: meeting.join_url, meetingId: String(meeting.id) });
   } catch (error) {
     console.error(error);

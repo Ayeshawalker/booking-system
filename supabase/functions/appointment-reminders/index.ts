@@ -53,6 +53,19 @@ function confirmationMessage(booking:Booking) {
   const html=emailShell(intro,greeting(booking),`<p style="margin:0 0 14px">${escapeHtml(intro)}</p>${itemHtml}<p style="margin:22px 0 16px">If you need to get in touch or rearrange your appointment, simply reply to this email. If you do need to make a change, if possible please give me at least 48 hours’ notice to avoid a cancellation charge.</p><p style="margin:0">I look forward to seeing you then.</p>`);
   return {subject:items.length>1?"Your sessions with Ayesha are confirmed":"Your session with Ayesha is confirmed",text,html};
 }
+function cancellationMessage(booking:Booking) {
+  const item=occurrences(booking)[0], line=`Just confirming that your session on ${displayDate(item.date)} at ${item.time} has been cancelled.`;
+  const text=[greeting(booking),"",line,"","If you would like to arrange another time, simply reply to this email.","","Warm wishes,","Ayesha"].join("\n");
+  const html=emailShell(line,greeting(booking),`<p style="margin:0 0 16px">${escapeHtml(line)}</p><p style="margin:0">If you would like to arrange another time, simply reply to this email.</p>`);
+  return {subject:"Your session with Ayesha has been cancelled",text,html};
+}
+function rescheduleMessage(booking:Booking) {
+  const item=occurrences(booking)[0], line=`Just confirming your rearranged session with me:`, detail=`${displayDate(item.date)} at ${item.time}, ${formatLabel(item.format)}.`;
+  const zoom=booking.zoom_join_url&&["Online","Zoom call"].includes(item.format)?booking.zoom_join_url:"";
+  const text=[greeting(booking),"",line,`• ${detail}`,zoom?`Your new joining link is: ${zoom}`:"","If you need to get in touch about your appointment, simply reply to this email.","","I look forward to seeing you then.","","Warm wishes,","Ayesha"].filter(Boolean).join("\n");
+  const html=emailShell(line,greeting(booking),`<p style="margin:0 0 14px">${escapeHtml(line)}</p><div style="margin:12px 0;padding:16px;border-left:5px solid #f9a22c;border-radius:10px;background:#fff8ee"><strong>${escapeHtml(detail)}</strong>${zoom?`<p style="margin:10px 0 0">Your new joining link is:</p>${zoomButton(zoom)}`:""}</div><p style="margin:22px 0 16px">If you need to get in touch about your appointment, simply reply to this email.</p><p style="margin:0">I look forward to seeing you then.</p>`);
+  return {subject:"Your session with Ayesha has been rearranged",text,html};
+}
 async function send(to:string, subject:string, text:string, html="") {
   const apiKey=Deno.env.get("RESEND_API_KEY")||""; if(!apiKey) throw new Error("RESEND_API_KEY is not configured.");
   const result=await fetch("https://api.resend.com/emails",{method:"POST",signal:AbortSignal.timeout(10000),headers:{Authorization:`Bearer ${apiKey}`,"Content-Type":"application/json"},body:JSON.stringify({from:Deno.env.get("APPOINTMENT_REMINDER_FROM")||"Ayesha Jane <info@ayeshajane.com>",reply_to:Deno.env.get("APPOINTMENT_REMINDER_REPLY_TO")||"info@ayeshajane.com",to:[to],subject,text,...(html?{html}:{})})});
@@ -77,6 +90,11 @@ async function sendConfirmation(db:Database,booking:Booking,to:string[]) {
   }
   await db.from("booking_requests").update({email_notifications_enabled:true}).eq("id",booking.id); return sent;
 }
+async function sendChangeNotice(booking:Booking,to:string[],kind:"cancel"|"reschedule") {
+  const message=kind==="cancel"?cancellationMessage(booking):rescheduleMessage(booking);
+  for(const email of to) await send(email,message.subject,message.text,message.html);
+  return to.length;
+}
 
 Deno.serve(async(request)=>{
   if(request.method==="OPTIONS")return new Response("ok",{headers:corsHeaders});
@@ -90,23 +108,29 @@ Deno.serve(async(request)=>{
       if(job.status==="completed")return respond(job.result||{completed:true});
       await db.from("appointment_email_jobs").update({status:"processing",updated_at:new Date().toISOString()}).eq("id",job.id);
       try{
-        const booking=await loadBooking(db,job.booking_id); if(booking.status!=="confirmed")throw new Error("Only confirmed bookings can be emailed.");
+        const booking=await loadBooking(db,job.booking_id);
+        if(job.action==="send_cancellation"?booking.status!=="closed":booking.status!=="confirmed")throw new Error("The booking status does not match this email.");
         const to=await recipients(db,booking); if(!to.length)throw new Error("No valid client email address is recorded.");
         let result:Record<string,unknown>;
         if(job.action==="test_reminder"){
           const item=occurrences(booking).find((entry)=>entry.date>=now.date)||occurrences(booking)[0],message=reminderMessage(booking,item);
           if(!job.requested_email)throw new Error("Your administrator email address is missing.");
           await send(job.requested_email,`[TEST] ${message.subject}`,message.text,message.html); result={sent:1,recipients:[job.requested_email],test:true};
-        }else result={sent:await sendConfirmation(db,booking,to),recipients:to,remindersEnabled:true};
+        }else if(job.action==="send_cancellation") result={sent:await sendChangeNotice(booking,to,"cancel"),recipients:to};
+        else if(job.action==="send_reschedule") result={sent:await sendChangeNotice(booking,to,"reschedule"),recipients:to};
+        else result={sent:await sendConfirmation(db,booking,to),recipients:to,remindersEnabled:true};
         await db.from("appointment_email_jobs").update({status:"completed",result,updated_at:new Date().toISOString()}).eq("id",job.id);
         return respond(result);
       }catch(error){const detail=error instanceof Error?error.message:String(error);await db.from("appointment_email_jobs").update({status:"failed",last_error:detail.slice(0,1000),updated_at:new Date().toISOString()}).eq("id",job.id);return respond({error:detail},500);}
     }
-    if(["send_confirmation","test_reminder"].includes(body.action)){
+    if(["send_confirmation","test_reminder","send_cancellation","send_reschedule"].includes(body.action)){
       const admin=await adminUser(request,db,body.adminAccessToken); if(!admin)return respond({error:"Not authorised"},403);
-      const booking=await loadBooking(db,String(body.bookingId||"")); if(booking.status!=="confirmed")return respond({error:"Only confirmed bookings can be emailed."},409);
+      const booking=await loadBooking(db,String(body.bookingId||""));
+      if(body.action==="send_cancellation"?booking.status!=="closed":booking.status!=="confirmed")return respond({error:"The booking status does not match this email."},409);
       const to=await recipients(db,booking); if(!to.length)return respond({error:"No valid client email address is recorded."},400);
       if(body.action==="test_reminder"){const item=occurrences(booking).find((entry)=>entry.date>=now.date)||occurrences(booking)[0],message=reminderMessage(booking,item);await send(admin.email||"",`[TEST] ${message.subject}`,message.text,message.html);return respond({sent:1,recipients:[admin.email],test:true});}
+      if(body.action==="send_cancellation")return respond({sent:await sendChangeNotice(booking,to,"cancel"),recipients:to});
+      if(body.action==="send_reschedule")return respond({sent:await sendChangeNotice(booking,to,"reschedule"),recipients:to});
       return respond({sent:await sendConfirmation(db,booking,to),recipients:to,remindersEnabled:true});
     }
     if(body.scheduled===true&&!(now.hour===8&&now.minute<=10))return respond({skipped:true,reason:"Outside the 08:00 Europe/London delivery window"});
