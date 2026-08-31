@@ -195,6 +195,22 @@
                 Telephone <span class="optional">(optional)</span>
                 <input name="phone" type="tel" autocomplete="tel" />
               </label>
+              <label>
+                Client time zone
+                <select name="clientTimeZone">
+                  <option value="Europe/London">UK</option>
+                  <option value="Europe/Paris">France / Central Europe</option>
+                  <option value="Europe/Dublin">Ireland / Portugal</option>
+                  <option value="America/New_York">Eastern US / Canada</option>
+                  <option value="America/Chicago">Central US / Canada</option>
+                  <option value="America/Denver">Mountain US / Canada</option>
+                  <option value="America/Los_Angeles">Pacific US / Canada</option>
+                  <option value="Asia/Dubai">Dubai / UAE</option>
+                  <option value="Asia/Kolkata">India</option>
+                  <option value="Australia/Sydney">Sydney / Eastern Australia</option>
+                  <option value="Pacific/Auckland">New Zealand</option>
+                </select>
+              </label>
               <label class="bank-payment-name-field">
                 Name shown on bank payment <span class="optional">(optional)</span>
                 <input name="bankPaymentName" autocomplete="off" placeholder="For example: J Smith" />
@@ -448,6 +464,6 @@
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="admin-auth.js?v=20260813-ten-hour-session"></script>
-    <script src="clients.js?v=20260828-forms-menu"></script>
+    <script src="clients.js?v=20260831-client-time-zone"></script>
   </body>
 </html>

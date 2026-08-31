@@ -85,6 +85,7 @@
     "session_frequency",
     "frequency_notes",
     "preferred_format",
+    "client_time_zone",
     "agreed_session_fee_gbp",
     "agreed_online_fee_gbp",
     "agreed_in_person_fee_gbp",
@@ -800,6 +801,7 @@
       setFormValue("specialityOther", client.speciality_other);
       setFormValue("sessionFrequency", client.session_frequency);
       setFormValue("preferredFormat", client.preferred_format);
+      setFormValue("clientTimeZone", client.client_time_zone || "Europe/London");
       setFormValue("frequencyNotes", client.frequency_notes);
       setFormValue(
         "agreedOnlineFee",
@@ -865,6 +867,7 @@
       frequency_notes:
         String(formData.get("frequencyNotes") || "").trim() || null,
       preferred_format: formData.get("preferredFormat"),
+      client_time_zone: formData.get("clientTimeZone") || "Europe/London",
       agreed_online_fee_gbp:
         feeArrangement === "Complimentary"
           ? 0
