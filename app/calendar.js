@@ -272,6 +272,40 @@
     return [first, second].filter(Boolean).join(" and ") || "there";
   }
 
+  const clientTimeZoneLabels = {
+    "Europe/Paris": "France time",
+    "Europe/Dublin": "Ireland/Portugal time",
+    "America/New_York": "Eastern time",
+    "America/Chicago": "Central time",
+    "America/Denver": "Mountain time",
+    "America/Los_Angeles": "Pacific time",
+    "Asia/Dubai": "Dubai time",
+    "Asia/Kolkata": "India time",
+    "Australia/Sydney": "Sydney time",
+    "Pacific/Auckland": "New Zealand time",
+  };
+
+  function clientLocalTime(date, time, clientTimeZone) {
+    if (!clientTimeZone || clientTimeZone === "Europe/London") return "";
+    const [year, month, day] = date.split("-").map(Number);
+    const [hour, minute] = time.split(":").map(Number);
+    const estimate = new Date(Date.UTC(year, month - 1, day, hour, minute));
+    const londonParts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/London", year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+    }).formatToParts(estimate);
+    const part = (type) => Number(londonParts.find((item) => item.type === type)?.value || 0);
+    const londonAsUtc = Date.UTC(part("year"), part("month") - 1, part("day"), part("hour"), part("minute"));
+    const instant = new Date(estimate.getTime() - (londonAsUtc - estimate.getTime()));
+    const localDate = new Intl.DateTimeFormat("en-GB", {
+      timeZone: clientTimeZone, weekday: "long", day: "numeric", month: "long",
+    }).format(instant);
+    const localTime = new Intl.DateTimeFormat("en-GB", {
+      timeZone: clientTimeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+    }).format(instant);
+    return `${localDate} at ${localTime} ${clientTimeZoneLabels[clientTimeZone] || "local time"}`;
+  }
+
   function whatsappPhone(value) {
     let digits = String(value || "").replace(/[^0-9]/g, "");
     if (digits.startsWith("00")) digits = digits.slice(2);
@@ -293,7 +327,9 @@
     const noticeReminder = format === "online"
       ? " Just a gentle reminder that I need at least 48 hours’ notice if you wish to change or cancel this appointment; otherwise, the agreed session fee will still be charged."
       : "";
-    return `Hi ${clientGreetingName(client)}, confirming your appointment with me on ${date} at ${time.format(start)}–${time.format(end)}, ${format}.${formatDetails} Please let me know if anything needs changing.${noticeReminder}`;
+    const localTime = clientLocalTime(booking.preferred_date, String(booking.preferred_time).slice(0, 5), client.client_time_zone);
+    const timeDetails = localTime ? `${time.format(start)} UK time (${localTime})` : `${time.format(start)}–${time.format(end)}`;
+    return `Hi ${clientGreetingName(client)}, confirming your appointment with me on ${date} at ${timeDetails}, ${format}.${formatDetails} Please let me know if anything needs changing.${noticeReminder}`;
   }
 
   async function zoomErrorMessage(error, data) {
@@ -485,7 +521,7 @@
     const { data, error } = await supabaseClient
       .from("clients")
       .select(
-        "id, record_type, status, first_name, surname, second_first_name, second_surname, email, second_email, phone, preferred_format, session_frequency, frequency_notes, agreed_session_fee_gbp, agreed_online_fee_gbp, agreed_in_person_fee_gbp",
+        "id, record_type, status, first_name, surname, second_first_name, second_surname, email, second_email, phone, preferred_format, client_time_zone, session_frequency, frequency_notes, agreed_session_fee_gbp, agreed_online_fee_gbp, agreed_in_person_fee_gbp",
       );
 
     if (error) {
