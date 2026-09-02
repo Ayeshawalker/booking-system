@@ -221,7 +221,19 @@
     submit.disabled = true; submit.textContent = "Uploading…"; ui.resourceMessage.textContent = `Uploading ${file.name} securely…`;
     const path = `${admin.user.id}/${crypto.randomUUID()}-${safeFileName(file.name)}`;
     try {
-      const { data: uploadedFile, error: uploadError } = await db.storage.from(resourceBucket).upload(path, file, { contentType: mimeType, upsert: false });
+      // Safari sometimes reports Word, Pages and RTF files as an unknown MIME
+      // type. Rebuilding the upload body with the verified extension's type
+      // keeps the storage request consistent across browsers.
+      const uploadBody = new Blob([await file.arrayBuffer()], { type: mimeType });
+      let { data: uploadedFile, error: uploadError } = await db.storage
+        .from(resourceBucket)
+        .upload(path, uploadBody, { contentType: mimeType, upsert: false });
+      if (uploadError && ["401", "403"].includes(String(uploadError.statusCode || uploadError.status || ""))) {
+        await db.auth.refreshSession();
+        ({ data: uploadedFile, error: uploadError } = await db.storage
+          .from(resourceBucket)
+          .upload(path, uploadBody, { contentType: mimeType, upsert: false }));
+      }
       if (uploadError) throw uploadError;
       if (!uploadedFile?.path) throw new Error("The storage service did not confirm the uploaded file.");
       submit.textContent = "Adding to library…";
@@ -630,6 +642,7 @@
   ui.resourceFile.addEventListener("change", () => {
     const file = ui.resourceFile.files?.[0];
     if (!file) return;
+    ui.resourceMessage.textContent = `${file.name} is ready. Select “Upload sheet” to add it securely.`;
     if (!ui.resourceTitle.value.trim()) {
       ui.resourceTitle.value = String(file.name || "Information sheet").replace(/\.[^.]+$/, "");
     }
