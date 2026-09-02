@@ -130,13 +130,25 @@
         );
         // Older versions stored a separate note for every week. Keep the most
         // recent one for each client and carry it forward until it is cleared.
-        Object.entries(savedNotes)
+        const legacyNotes = Object.entries(savedNotes)
           .filter(([key, value]) => /^\d{4}-\d{2}-\d{2}:/.test(key) && String(value).trim())
-          .sort(([firstKey], [secondKey]) => firstKey.localeCompare(secondKey))
-          .forEach(([key, value]) => {
+          .sort(([firstKey], [secondKey]) => firstKey.localeCompare(secondKey));
+        const latestLegacyByClient = {};
+        legacyNotes.forEach(([key, value]) => {
             const clientId = key.slice(11);
-            savedNotes[`client:${clientId}`] = value;
-          });
+            latestLegacyByClient[`client:${clientId}`] = value;
+        });
+        Object.entries(latestLegacyByClient).forEach(([currentKey, value]) => {
+          if (!Object.prototype.hasOwnProperty.call(savedNotes, currentKey)) {
+            savedNotes[currentKey] = value;
+          }
+        });
+        // Once converted, remove the old week-specific entries. Leaving them
+        // behind caused stale weekly notes to overwrite the ongoing note each
+        // time the Calendar page was reopened.
+        Object.keys(savedNotes)
+          .filter((key) => /^\d{4}-\d{2}-\d{2}:/.test(key))
+          .forEach((key) => delete savedNotes[key]);
         localStorage.setItem(clientCheckNotesStorageKey, JSON.stringify(savedNotes));
         return savedNotes;
       }
@@ -1702,13 +1714,7 @@
       const saveNote = async () => {
         const value = note.value.trim();
         if (value === lastSavedValue) {
-          delete state.clientCheckNotes[noteKey];
-          localStorage.setItem(
-            clientCheckNotesStorageKey,
-            JSON.stringify(state.clientCheckNotes),
-          );
           save.textContent = "Saved";
-          window.setTimeout(() => { save.textContent = "Save"; }, 1600);
           return;
         }
         save.disabled = true;
@@ -1741,17 +1747,13 @@
         if (currentClient) currentClient.frequency_notes = value || null;
         lastSavedValue = value;
         save.textContent = "Saved";
-        window.setTimeout(() => { save.textContent = "Save"; }, 1600);
-        // Keep the confirmed value briefly so a simultaneous week reload
-        // cannot replace it with an older database response.
-        window.setTimeout(() => {
-          if (state.clientCheckNotes[noteKey] !== value) return;
-          delete state.clientCheckNotes[noteKey];
-          localStorage.setItem(
-            clientCheckNotesStorageKey,
-            JSON.stringify(state.clientCheckNotes),
-          );
-        }, 5000);
+        // Keep the verified value as this browser's display copy. The same
+        // value is also stored in Supabase for other devices and future visits.
+        state.clientCheckNotes[noteKey] = value;
+        localStorage.setItem(
+          clientCheckNotesStorageKey,
+          JSON.stringify(state.clientCheckNotes),
+        );
       };
       note.addEventListener("input", () => {
         const value = note.value.trim();
