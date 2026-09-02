@@ -1693,6 +1693,55 @@
       note.placeholder = "Brief note — carries forward until cleared…";
       note.setAttribute("aria-label", `Ongoing calendar note for ${bookingClientDisplayName(client)}`);
       let lastSavedValue = String(client.frequency_notes || "").trim();
+      let automaticSaveTimer = null;
+      const save = document.createElement("button");
+      save.type = "button";
+      save.className = "calendar-client-note-save";
+      save.textContent = "Save";
+      const saveNote = async () => {
+        const value = note.value.trim();
+        if (value === lastSavedValue) {
+          delete state.clientCheckNotes[noteKey];
+          localStorage.setItem(
+            clientCheckNotesStorageKey,
+            JSON.stringify(state.clientCheckNotes),
+          );
+          save.textContent = "Saved";
+          window.setTimeout(() => { save.textContent = "Save"; }, 1600);
+          return;
+        }
+        save.disabled = true;
+        save.textContent = "Saving…";
+        const { data: savedClient, error } = await supabaseClient
+          .from("clients")
+          .update({ frequency_notes: value || null })
+          .eq("id", client.id)
+          .select("id")
+          .maybeSingle();
+        save.disabled = false;
+        if (error || !savedClient) {
+          console.error("Calendar client note could not be saved", error);
+          save.textContent = "Try again";
+          controls.message.textContent = `The note for ${bookingClientDisplayName(client)} could not be saved.`;
+          return;
+        }
+        client.frequency_notes = value || null;
+        const currentClient = state.bookingClients.find((item) => item.id === client.id);
+        if (currentClient) currentClient.frequency_notes = value || null;
+        lastSavedValue = value;
+        save.textContent = "Saved";
+        window.setTimeout(() => { save.textContent = "Save"; }, 1600);
+        // Keep the confirmed value briefly so a simultaneous week reload
+        // cannot replace it with an older database response.
+        window.setTimeout(() => {
+          if (state.clientCheckNotes[noteKey] !== value) return;
+          delete state.clientCheckNotes[noteKey];
+          localStorage.setItem(
+            clientCheckNotesStorageKey,
+            JSON.stringify(state.clientCheckNotes),
+          );
+        }, 5000);
+      };
       note.addEventListener("input", () => {
         const value = note.value.trim();
         // Keep even an empty draft until the database confirms the save. This
@@ -1702,39 +1751,18 @@
           clientCheckNotesStorageKey,
           JSON.stringify(state.clientCheckNotes),
         );
+        window.clearTimeout(automaticSaveTimer);
+        save.textContent = "Saving soon…";
+        automaticSaveTimer = window.setTimeout(saveNote, 600);
       });
-      const save = document.createElement("button");
-      save.type = "button";
-      save.className = "calendar-client-note-save";
-      save.textContent = "Save";
-      const saveNote = async () => {
-        const value = note.value.trim();
-        if (value === lastSavedValue) return;
-        save.disabled = true;
-        save.textContent = "Saving…";
-        const { error } = await supabaseClient
-          .from("clients")
-          .update({ frequency_notes: value || null })
-          .eq("id", client.id);
-        save.disabled = false;
-        if (error) {
-          console.error("Calendar client note could not be saved", error);
-          save.textContent = "Try again";
-          controls.message.textContent = `The note for ${bookingClientDisplayName(client)} could not be saved.`;
-          return;
-        }
-        client.frequency_notes = value || null;
-        lastSavedValue = value;
-        delete state.clientCheckNotes[noteKey];
-        localStorage.setItem(
-          clientCheckNotesStorageKey,
-          JSON.stringify(state.clientCheckNotes),
-        );
-        save.textContent = "Saved";
-        window.setTimeout(() => { save.textContent = "Save"; }, 1600);
-      };
-      save.addEventListener("click", saveNote);
-      note.addEventListener("change", saveNote);
+      save.addEventListener("click", () => {
+        window.clearTimeout(automaticSaveTimer);
+        saveNote();
+      });
+      note.addEventListener("change", () => {
+        window.clearTimeout(automaticSaveTimer);
+        saveNote();
+      });
       const noteControls = document.createElement("div");
       noteControls.className = "calendar-client-note-controls";
       noteControls.append(note, save);
