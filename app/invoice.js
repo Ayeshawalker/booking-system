@@ -18,6 +18,19 @@
     return new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(Number(value));
   }
 
+  function localIsoDate(date = new Date()) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
+  function addDays(value, days) {
+    const date = new Date(`${value}T12:00:00`);
+    date.setDate(date.getDate() + Number(days || 0));
+    return localIsoDate(date);
+  }
+
   function confirmInvoiceWasSent() {
     const dialog = document.querySelector("#invoice-sent-confirmation");
     return new Promise((resolve) => {
@@ -152,8 +165,12 @@
   setText("#invoice-client", invoice.client_name);
   setText("#invoice-client-contact", invoice.client_email || "");
   setText("#invoice-number", invoice.invoice_number);
-  setText("#invoice-date", formatDate(invoice.invoice_date));
-  setText("#invoice-due", formatDate(invoice.due_date));
+  const displayedInvoiceDate = invoice.status === "Draft" ? localIsoDate() : invoice.invoice_date;
+  const displayedDueDate = invoice.status === "Draft"
+    ? addDays(displayedInvoiceDate, profile.payment_terms_days ?? 2)
+    : invoice.due_date;
+  setText("#invoice-date", formatDate(displayedInvoiceDate));
+  setText("#invoice-due", formatDate(displayedDueDate));
   const sessionDates = invoiceSessionDates(invoice);
   const lineItems = invoiceLineItems(invoice);
   const durationText = invoice.session_duration
@@ -276,8 +293,12 @@
 
   async function recordInvoiceAsSent(successMessage = "Invoice marked as sent.") {
     if (invoice.status === "Sent" || invoice.status === "Paid") return true;
-    const sentDate = new Date().toISOString().slice(0, 10);
-    const { error } = await client.from("invoices").update({ status: "Sent" }).eq("id", invoice.id);
+    const sentDate = localIsoDate();
+    const { data: sentInvoice, error } = await client.from("invoices")
+      .update({ status: "Sent", invoice_date: sentDate })
+      .eq("id", invoice.id)
+      .select("invoice_date,due_date")
+      .single();
     if (error) {
       markSent.disabled = false;
       document.querySelector("#invoice-page-message").textContent =
@@ -285,6 +306,10 @@
       return false;
     }
     invoice.status = "Sent";
+    invoice.invoice_date = sentInvoice.invoice_date;
+    invoice.due_date = sentInvoice.due_date;
+    setText("#invoice-date", formatDate(invoice.invoice_date));
+    setText("#invoice-due", formatDate(invoice.due_date));
     await client.from("manual_payments")
       .update({ invoice_sent_date: sentDate })
       .eq("source_reference", `invoice:${invoice.id}`);
