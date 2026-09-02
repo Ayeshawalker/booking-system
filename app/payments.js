@@ -466,7 +466,7 @@
         const sentDate = isoDate(new Date());
         const { error } = await supabaseClient
           .from("invoices")
-          .update({ status: "Sent" })
+          .update({ status: "Sent", invoice_date: sentDate })
           .eq("id", invoice.id);
         if (error) {
           markSent.disabled = false;
