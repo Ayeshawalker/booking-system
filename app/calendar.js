@@ -94,6 +94,7 @@
     summaryBookings: [],
     summaryPayments: [],
     bookingClients: [],
+    pendingClientNoteSaves: new Set(),
     diaryImportAttempted: false,
     draggedEvent: null,
     localPrivateEvents: (() => {
@@ -1712,12 +1713,22 @@
         }
         save.disabled = true;
         save.textContent = "Saving…";
-        const { data: savedClient, error } = await supabaseClient
+        const saveRequest = supabaseClient
           .from("clients")
           .update({ frequency_notes: value || null })
           .eq("id", client.id)
           .select("id")
           .maybeSingle();
+        state.pendingClientNoteSaves.add(saveRequest);
+        let savedClient;
+        let error;
+        try {
+          ({ data: savedClient, error } = await saveRequest);
+        } catch (caughtError) {
+          error = caughtError;
+        } finally {
+          state.pendingClientNoteSaves.delete(saveRequest);
+        }
         save.disabled = false;
         if (error || !savedClient) {
           console.error("Calendar client note could not be saved", error);
@@ -1915,19 +1926,27 @@
     loadEvents();
   }
 
-  controls.previous.addEventListener("click", () => movePeriod(-1));
-  controls.next.addEventListener("click", () => movePeriod(1));
-  controls.today.addEventListener("click", () => {
+  async function afterClientNotesSaved(action) {
+    if (state.pendingClientNoteSaves.size) {
+      controls.message.textContent = "Finishing note save…";
+      await Promise.allSettled([...state.pendingClientNoteSaves]);
+    }
+    action();
+  }
+
+  controls.previous.addEventListener("click", () => afterClientNotesSaved(() => movePeriod(-1)));
+  controls.next.addEventListener("click", () => afterClientNotesSaved(() => movePeriod(1)));
+  controls.today.addEventListener("click", () => afterClientNotesSaved(() => {
     state.focusDate = defaultCalendarFocusDate();
     loadEvents();
-  });
-  controls.refresh.addEventListener("click", loadEvents);
+  }));
+  controls.refresh.addEventListener("click", () => afterClientNotesSaved(loadEvents));
   controls.viewButtons.forEach((button) => {
-    button.addEventListener("click", () => {
+    button.addEventListener("click", () => afterClientNotesSaved(() => {
       state.view = button.dataset.calendarView;
       localStorage.setItem(viewStorageKey, state.view);
       loadEvents();
-    });
+    }));
   });
   controls.closeDialog.addEventListener("click", () => controls.dialog.close());
   controls.dialog.addEventListener("click", (event) => {
