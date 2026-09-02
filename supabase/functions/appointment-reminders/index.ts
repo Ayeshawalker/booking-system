@@ -71,7 +71,9 @@ function rescheduleMessage(booking:Booking,clientZone=timeZone) {
 }
 async function send(to:string, subject:string, text:string, html="") {
   const apiKey=Deno.env.get("RESEND_API_KEY")||""; if(!apiKey) throw new Error("RESEND_API_KEY is not configured.");
-  const result=await fetch("https://api.resend.com/emails",{method:"POST",signal:AbortSignal.timeout(10000),headers:{Authorization:`Bearer ${apiKey}`,"Content-Type":"application/json"},body:JSON.stringify({from:Deno.env.get("APPOINTMENT_REMINDER_FROM")||"Ayesha Jane <info@ayeshajane.com>",reply_to:Deno.env.get("APPOINTMENT_REMINDER_REPLY_TO")||"info@ayeshajane.com",to:[to],subject,text,...(html?{html}:{})})});
+  const ccEmail=(Deno.env.get("APPOINTMENT_EMAIL_CC")||"ayeshajane67@gmail.com").trim().toLowerCase();
+  const cc=ccEmail&&ccEmail!==to.trim().toLowerCase()?[ccEmail]:[];
+  const result=await fetch("https://api.resend.com/emails",{method:"POST",signal:AbortSignal.timeout(10000),headers:{Authorization:`Bearer ${apiKey}`,"Content-Type":"application/json"},body:JSON.stringify({from:Deno.env.get("APPOINTMENT_REMINDER_FROM")||"Ayesha Jane <info@ayeshajane.com>",reply_to:Deno.env.get("APPOINTMENT_REMINDER_REPLY_TO")||"info@ayeshajane.com",to:[to],...(cc.length?{cc}:{}),subject,text,...(html?{html}:{})})});
   const body=await result.json().catch(()=>({})); if(!result.ok) throw new Error(`Resend returned ${result.status}: ${JSON.stringify(body).slice(0,300)}`); return String(body.id||"");
 }
 async function loadBooking(db:Database,id:string) { const {data,error}=await db.from("booking_requests").select(bookingFields).eq("id",id).maybeSingle(); if(error||!data) throw new Error("Booking not found."); return data as Booking; }
