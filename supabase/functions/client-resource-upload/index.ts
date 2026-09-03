@@ -36,26 +36,43 @@ Deno.serve(async (request) => {
     const { data: admin } = await db.from("admin_users").select("user_id").eq("user_id", userData.user.id).maybeSingle();
     if (!admin) return json({ error: "This upload is restricted to the approved administrator." }, 403);
 
-    const form = await request.formData();
-    const file = form.get("file");
-    const requestedTitle = String(form.get("title") || "").trim();
-    if (!(file instanceof File) || !file.name) return json({ error: "Choose a document to upload." }, 400);
-    if (file.size < 1 || file.size > maximumSize) return json({ error: "Please choose a file smaller than 15 MB." }, 400);
-    const extension = file.name.toLowerCase().match(/\.[a-z0-9]+$/)?.[0] || "";
+    const contentType = (request.headers.get("Content-Type") || "").split(";", 1)[0].trim().toLowerCase();
+    let fileName = "";
+    let requestedTitle = "";
+    let fileSize = 0;
+    let fileBytes: ArrayBuffer;
+    if (contentType === "multipart/form-data") {
+      const form = await request.formData();
+      const file = form.get("file");
+      requestedTitle = String(form.get("title") || "").trim();
+      if (!(file instanceof File) || !file.name) return json({ error: "Choose a document to upload." }, 400);
+      fileName = file.name;
+      fileSize = file.size;
+      fileBytes = await file.arrayBuffer();
+    } else {
+      const url = new URL(request.url);
+      fileName = String(url.searchParams.get("filename") || "").trim();
+      requestedTitle = String(url.searchParams.get("title") || "").trim();
+      fileBytes = await request.arrayBuffer();
+      fileSize = fileBytes.byteLength;
+    }
+    if (!fileName) return json({ error: "Choose a document to upload." }, 400);
+    if (fileSize < 1 || fileSize > maximumSize) return json({ error: "Please choose a file smaller than 15 MB." }, 400);
+    const extension = fileName.toLowerCase().match(/\.[a-z0-9]+$/)?.[0] || "";
     const mimeType = mimeByExtension[extension];
     if (!mimeType) return json({ error: "Please use PDF, Word, Pages, RTF, text, PNG, JPEG or WebP." }, 400);
-    const title = requestedTitle || file.name.replace(/\.[^.]+$/, "");
+    const title = requestedTitle || fileName.replace(/\.[^.]+$/, "");
     if (!title || title.length > 200) return json({ error: "Please use a shorter sheet title." }, 400);
 
-    storagePath = `${userData.user.id}/${crypto.randomUUID()}-${safeFileName(file.name)}`;
-    const uploadBody = new Blob([await file.arrayBuffer()], { type: mimeType });
+    storagePath = `${userData.user.id}/${crypto.randomUUID()}-${safeFileName(fileName)}`;
+    const uploadBody = new Blob([fileBytes], { type: mimeType });
     const { data: uploaded, error: uploadError } = await db.storage.from(bucket).upload(
       storagePath, uploadBody, { contentType: mimeType, upsert: false },
     );
     if (uploadError || !uploaded?.path) throw uploadError || new Error("Storage did not confirm the uploaded file.");
     const { data: resource, error: rowError } = await db.from("client_resources").insert({
-      title, storage_path: storagePath, file_name: file.name, mime_type: mimeType,
-      file_size: file.size, created_by: userData.user.id,
+      title, storage_path: storagePath, file_name: fileName, mime_type: mimeType,
+      file_size: fileSize, created_by: userData.user.id,
     }).select("*").single();
     if (rowError) throw rowError;
     return json({ uploaded: true, resource });
