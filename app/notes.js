@@ -220,17 +220,23 @@
     const submit = ui.resourceUpload.querySelector("button[type='submit']");
     submit.disabled = true; submit.textContent = "Uploading…"; ui.resourceMessage.textContent = `Uploading ${file.name} securely…`;
     try {
-      const body = new FormData();
-      body.append("title", title);
-      body.append("file", file, file.name);
-      const { data, error } = await db.functions.invoke("client-resource-upload", { body });
-      if (error || data?.error || !data?.uploaded) {
-        let detail = data?.error || error?.message || "The secure upload service did not confirm the document.";
-        try {
-          const responseBody = await error?.context?.clone?.().json();
-          detail = responseBody?.error || detail;
-        } catch (_) {}
-        throw new Error(detail);
+      const { data: sessionData, error: sessionError } = await db.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
+      if (sessionError || !accessToken) throw new Error("Your sign-in has expired. Please sign in again.");
+      const config = window.BOOKING_CONFIG || {};
+      const query = new URLSearchParams({ title, filename: file.name });
+      const response = await fetch(`${config.supabaseUrl}/functions/v1/client-resource-upload?${query}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          apikey: config.supabaseAnonKey,
+          "Content-Type": mimeType,
+        },
+        body: file,
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data?.error || !data?.uploaded) {
+        throw new Error(data?.error || `The secure upload service returned ${response.status}.`);
       }
       ui.resourceUpload.reset(); ui.resourceMessage.textContent = `${title} is now in your reusable information-sheet library.`; await loadResources();
     } catch (error) {
