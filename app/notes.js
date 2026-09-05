@@ -455,23 +455,40 @@
     const problem = validate(); if (problem) { ui.message.textContent = problem; return; }
     if (status === "Final" && !ui.final.value.trim()) ui.final.value = ui.rough.value.trim();
     if (status === "Final" && !confirm("Save this as the completed note? The original working notes and any earlier wording will remain safely available in its history.")) return;
-    ui.save.disabled = true; ui.finalise.disabled = true; ui.message.textContent = "Saving securely…";
+    ui.message.classList.remove("note-save-error");
+    ui.save.disabled = true; ui.finalise.disabled = true; ui.message.textContent = "Saving note securely…";
     const payload = currentPayload(status);
+    let savedNote = null;
     try {
       const query = activeId ? db.from("clinical_notes").update(payload).eq("id", activeId) : db.from("clinical_notes").insert({ ...payload, created_by: admin.user.id });
       const { data, error } = await query.select("*").single();
       if (error) throw error;
+      savedNote = data;
       activeId = data.id;
-      await uploadStagedImages(data.id);
-      await loadNotes();
-      await loadIntoForm(data);
-      ui.message.textContent = status === "Final" ? "Completed note saved securely." : "Unfinished draft saved securely.";
     } catch (error) {
       console.error(error);
-      const technicalReason = String(error.message || error.details || "Unknown database error");
+      const technicalReason = String(error?.message || error?.details || "Unknown database error");
       ui.message.textContent = `The note was not saved. Your text remains above. Technical reason: ${technicalReason}`;
       ui.message.classList.add("note-save-error");
-    } finally { ui.save.disabled = false; ui.finalise.disabled = false; }
+    }
+
+    if (savedNote) {
+      let imageError = null;
+      if (stagedImages.length) {
+        ui.message.textContent = "Note saved securely. Saving its images…";
+        try { await uploadStagedImages(savedNote.id); }
+        catch (error) { console.error(error); imageError = error; }
+      }
+      await loadNotes();
+      if (!imageError) {
+        await loadIntoForm(savedNote);
+        ui.message.textContent = status === "Final" ? "Completed note saved securely." : "Unfinished draft saved securely.";
+      } else {
+        ui.message.textContent = `The note was saved securely, but its images were not. They remain above so you can try again. Technical reason: ${String(imageError?.message || imageError?.details || "Unknown image upload error")}`;
+        ui.message.classList.add("note-save-error");
+      }
+    }
+    ui.save.disabled = false; ui.finalise.disabled = false;
   }
   async function improve() {
     if (!ui.rough.value.trim()) { ui.message.textContent = "Add a rough note first."; return; }

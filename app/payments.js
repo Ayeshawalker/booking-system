@@ -944,6 +944,11 @@
       status,
       `payment-status payment-status-${status.toLowerCase().replaceAll(" ", "-")}`,
     );
+    appendCell(
+      row,
+      payment.invoice_sent_date ? `Sent ${displayDate(payment.invoice_sent_date)}` : "Not sent",
+      payment.invoice_sent_date ? "invoice-status invoice-status-sent" : "invoice-status invoice-status-draft",
+    );
     appendCell(row, displayDate(payment.payment_date));
     const actions = document.createElement("td");
     const edit = document.createElement("button");
@@ -1197,6 +1202,7 @@
     appendCell(row, String(records.length));
     appendCell(row, displayDate(mostRecentDate(records, "session_date")));
     appendCell(row, displayDate(mostRecentDate(records, "payment_date")));
+    appendCell(row, displayDate(mostRecentDate(records, "invoice_sent_date")));
     appendCell(row, currency(outstanding));
     appendCell(row, currency(credit), credit > 0 ? "payment-credit" : "");
     appendCell(
