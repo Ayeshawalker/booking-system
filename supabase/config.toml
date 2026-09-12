@@ -12,3 +12,6 @@ verify_jwt = true
 
 [functions.appointment-reminders]
 verify_jwt = true
+
+[functions.notes-clients]
+verify_jwt = true

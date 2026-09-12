@@ -639,10 +639,15 @@
   async function initialise() {
     // Populate the essential client selector first. Optional feature checks must
     // never prevent a clinician from choosing a client and writing a note.
-    const { data, error } = await db.from("clients")
+    let { data, error } = await db.from("clients")
       .select("id,first_name,surname,second_first_name,second_surname,status")
       .order("first_name")
       .order("surname");
+    if (!error && !data?.length) {
+      const fallback = await db.functions.invoke("notes-clients");
+      if (fallback.error) error = fallback.error;
+      else data = fallback.data?.clients || [];
+    }
     if (error) {
       console.error("Clients could not be loaded in Notes", error);
       ui.message.textContent = `Clients could not be loaded. Technical reason: ${String(error.message || error.details || "Unknown database error")}`;
