@@ -1976,6 +1976,20 @@ function updateStoredBooking(booking) {
   saveBookings(bookings);
 }
 
+async function findOpenLinkedBooking(supabaseClient, booking) {
+  if (!booking.clientId) return null;
+  const { data, error } = await supabaseClient
+    .from("booking_requests")
+    .select("id")
+    .eq("client_id", booking.clientId)
+    .eq("preferred_date", booking.date)
+    .eq("preferred_time", booking.time)
+    .neq("status", "closed")
+    .limit(1);
+  if (error) throw error;
+  return data?.[0] || null;
+}
+
 async function saveBookingRequest(booking) {
   const supabaseClient = createSupabaseClient();
 
@@ -1983,6 +1997,11 @@ async function saveBookingRequest(booking) {
     const bookings = [booking, ...getBookings()];
     saveBookings(bookings);
     return "local";
+  }
+
+  const existingBooking = await findOpenLinkedBooking(supabaseClient, booking);
+  if (existingBooking) {
+    throw new Error("This client already has a booking at this date and time.");
   }
 
   const bookingRow = {
@@ -2381,9 +2400,12 @@ async function handleSubmit(event) {
     }
 
     const saveMode = await saveBookingRequest(booking);
+    confirmation.hidden = false;
+    confirmation.textContent = "Booking saved. Finishing calendar and payment setup…";
     let calendarSync = null;
     let calendarFailure = null;
     let stripeCheckoutUrl = null;
+    let stripeCheckoutError = null;
     const paymentStillDue =
       Number(booking.payNow || 0) > Number(booking.amountReceived || 0);
 
@@ -2418,7 +2440,12 @@ async function handleSubmit(event) {
       }
 
       if (paymentStillDue && !historicalEntry) {
-        stripeCheckoutUrl = await createStripeCheckout(booking);
+        try {
+          stripeCheckoutUrl = await createStripeCheckout(booking);
+        } catch (stripeError) {
+          stripeCheckoutError = stripeError;
+          console.error("The booking was saved but its Stripe payment link could not be created.", stripeError);
+        }
       }
 
       updateStoredBooking(booking);
@@ -2453,7 +2480,11 @@ async function handleSubmit(event) {
     const invoiceMessage = booking.invoiceCreationError
       ? `The booking was saved, but its invoice could not be created: ${booking.invoiceCreationError}`
       : "";
+    const paymentLinkMessage = stripeCheckoutError
+      ? "The booking was saved, but its payment link could not be created. You can try again from Payments."
+      : "";
     confirmation.textContent = [savedMessage, invoiceMessage, calendarMessage]
+      .concat(paymentLinkMessage)
       .filter(Boolean)
       .join(" ");
 

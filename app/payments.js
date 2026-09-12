@@ -1014,30 +1014,6 @@
     return records.map((record) => record[field]).filter(Boolean).sort().at(-1) || "";
   }
 
-  function weekStartDate() {
-    const today = new Date();
-    today.setDate(today.getDate() - ((today.getDay() + 6) % 7));
-    return isoDate(today);
-  }
-
-  async function markClientReviewed(client, button) {
-    button.disabled = true;
-    const today = isoDate(new Date());
-    const { error } = await supabaseClient
-      .from("clients")
-      .update({ payment_reviewed_at: today })
-      .eq("id", client.id);
-    if (error) {
-      button.disabled = false;
-      controls.message.textContent = "The weekly check could not be saved.";
-      console.error(error);
-      return;
-    }
-    client.payment_reviewed_at = today;
-    controls.message.textContent = `${clientName(client)} marked as checked this week.`;
-    render();
-  }
-
   async function saveBankPaymentName(client, input, button) {
     const bankPaymentName = input.value.trim();
     button.disabled = true;
@@ -1187,7 +1163,6 @@
 
   function renderClientRow(client, periodPayments) {
     const { records, outstanding, credit, position } = clientFinancials(client, periodPayments);
-    const checked = client.payment_reviewed_at >= weekStartDate();
     const row = document.createElement("tr");
     const nameCell = appendCell(row, clientName(client));
     appendBankPaymentEditor(nameCell, client);
@@ -1210,8 +1185,6 @@
       position,
       `payment-status payment-position-${position.toLowerCase().replaceAll(" ", "-")}`,
     );
-    const reviewCell = appendCell(row, checked ? "Checked this week" : "Not checked");
-    reviewCell.classList.add(checked ? "payment-reviewed" : "payment-not-reviewed");
     const actions = document.createElement("td");
     const history = document.createElement("button");
     history.type = "button";
@@ -1223,13 +1196,7 @@
     add.className = "payment-edit-button";
     add.textContent = "Add";
     add.addEventListener("click", () => openEditor(null, client.id));
-    const review = document.createElement("button");
-    review.type = "button";
-    review.className = "payment-review-button";
-    review.textContent = "Checked";
-    review.disabled = checked;
-    review.addEventListener("click", () => markClientReviewed(client, review));
-    actions.append(history, add, review);
+    actions.append(history, add);
     row.append(actions);
     return row;
   }
@@ -1239,8 +1206,8 @@
     const periodPayments = paymentsForPeriod();
     const query = controls.search.value.trim().toLowerCase();
     const positionFilter = controls.statusFilter.value;
-    const activeClients = clients
-      .filter((client) => client.status === "Active")
+    const visibleClients = clients
+      .filter((client) => ["Active", "Paused"].includes(client.status))
       .filter((client) => !query || clientName(client).toLowerCase().includes(query))
       .filter((client) =>
         !positionFilter || clientPosition(client, periodPayments) === positionFilter,
@@ -1249,11 +1216,11 @@
         sensitivity: "base",
       }));
     controls.clientTableBody.replaceChildren(
-      ...activeClients.map((client) => renderClientRow(client, periodPayments)),
+      ...visibleClients.map((client) => renderClientRow(client, periodPayments)),
     );
     controls.loading.hidden = true;
-    controls.empty.hidden = activeClients.length > 0;
-    controls.clientTableWrap.hidden = activeClients.length === 0;
+    controls.empty.hidden = visibleClients.length > 0;
+    controls.clientTableWrap.hidden = visibleClients.length === 0;
     const totals = periodPayments.reduce((result, payment) => {
       if (isNonBillablePayment(payment)) return result;
       const due = Number(payment.fee_due || 0);
@@ -1263,7 +1230,7 @@
       return result;
     }, { fees: 0, received: 0 });
     const clientTotals = clients
-      .filter((client) => client.status === "Active")
+      .filter((client) => ["Active", "Paused"].includes(client.status))
       .map((client) => clientFinancials(client, periodPayments))
       .reduce((result, financials) => {
         result.outstanding += financials.outstanding;

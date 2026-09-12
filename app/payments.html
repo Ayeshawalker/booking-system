@@ -130,14 +130,13 @@
         </div>
 
         <div id="payments-loading" class="admin-state">Loading payments...</div>
-        <div id="payments-empty" class="admin-state" hidden>No active clients match these filters.</div>
+        <div id="payments-empty" class="admin-state" hidden>No active or paused clients match these filters.</div>
         <div id="payment-client-table-wrap" class="client-table-wrap" hidden>
           <table class="client-table payment-client-table">
             <thead>
               <tr>
-                <th>Active client</th><th>Current fee</th><th>Sessions</th><th>Latest session</th>
-                <th>Latest payment</th><th>Latest invoice sent</th><th>Outstanding</th><th>Credit</th><th>Payment position</th>
-                <th>Weekly check</th><th></th>
+                <th>Client</th><th>Current fee</th><th>Sessions</th><th>Latest session</th>
+                <th>Latest payment</th><th>Latest invoice sent</th><th>Outstanding</th><th>Credit</th><th>Payment position</th><th></th>
               </tr>
             </thead>
             <tbody id="payment-client-table-body"></tbody>
@@ -202,6 +201,6 @@
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="admin-auth.js?v=20260813-ten-hour-session"></script>
-    <script src="payments.js?v=20260905-show-invoice-sent-date"></script>
+    <script src="payments.js?v=20260905-remove-weekly-check"></script>
   </body>
 </html>

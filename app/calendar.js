@@ -94,6 +94,7 @@
     summaryBookings: [],
     summaryPayments: [],
     bookingClients: [],
+    calendarNotes: {},
     pendingClientNoteSaves: new Set(),
     diaryImportAttempted: false,
     draggedEvent: null,
@@ -571,6 +572,22 @@
     });
   }
 
+  async function loadCalendarNotes(weekStart) {
+    const weekKey = localDateKey(weekStart);
+    const { data, error } = await supabaseClient
+      .from("client_calendar_notes")
+      .select("client_id, note")
+      .eq("week_start", weekKey);
+    if (error) {
+      console.error("Could not load weekly calendar notes", error);
+      state.calendarNotes = {};
+      return;
+    }
+    state.calendarNotes = Object.fromEntries(
+      (data || []).map((item) => [`${weekKey}:${item.client_id}`, item.note || ""]),
+    );
+  }
+
   function bookingClientDisplayName(client) {
     const first = [client.first_name, client.surname].filter(Boolean).join(" ").trim();
     const second = [client.second_first_name, client.second_surname]
@@ -870,20 +887,23 @@
         .map(clientEventOccurrenceKey),
     );
     const seenLinkedBookingIds = new Set();
-    const seenUnlinkedOccurrences = new Set();
+    const seenClientOccurrences = new Set();
 
     return events.filter((event) => {
       if (!isClientEvent(event)) return true;
       if (event.bookingRequestId) {
         if (seenLinkedBookingIds.has(event.bookingRequestId)) return false;
         seenLinkedBookingIds.add(event.bookingRequestId);
+        const occurrence = clientEventOccurrenceKey(event);
+        if (seenClientOccurrences.has(occurrence)) return false;
+        seenClientOccurrences.add(occurrence);
         return true;
       }
       const occurrence = clientEventOccurrenceKey(event);
-      if (linkedOccurrences.has(occurrence) || seenUnlinkedOccurrences.has(occurrence)) {
+      if (linkedOccurrences.has(occurrence) || seenClientOccurrences.has(occurrence)) {
         return false;
       }
-      seenUnlinkedOccurrences.add(occurrence);
+      seenClientOccurrences.add(occurrence);
       return true;
     });
   }
@@ -1679,7 +1699,7 @@
       ));
 
     const rows = currentClients.map((client) => {
-      const noteKey = `client:${client.id}`;
+      const noteKey = `${localDateKey(weekStart)}:${client.id}`;
       const row = document.createElement("div");
       row.className = "calendar-client-check-row";
       const heading = document.createElement("div");
@@ -1702,10 +1722,10 @@
       );
       note.value = hasLocalDraft
         ? state.clientCheckNotes[noteKey]
-        : client.frequency_notes || "";
+        : state.calendarNotes[noteKey] ?? client.frequency_notes ?? "";
       note.placeholder = "Brief note — carries forward until cleared…";
       note.setAttribute("aria-label", `Ongoing calendar note for ${bookingClientDisplayName(client)}`);
-      let lastSavedValue = String(client.frequency_notes || "").trim();
+      let lastSavedValue = String(note.value || "").trim();
       let automaticSaveTimer = null;
       const save = document.createElement("button");
       save.type = "button";
@@ -1720,10 +1740,14 @@
         save.disabled = true;
         save.textContent = "Saving…";
         const saveRequest = supabaseClient
-          .from("clients")
-          .update({ frequency_notes: value || null })
-          .eq("id", client.id)
-          .select("id")
+          .from("client_calendar_notes")
+          .upsert({
+            client_id: client.id,
+            week_start: localDateKey(weekStart),
+            note: value || null,
+            updated_by: admin.user.id,
+          }, { onConflict: "client_id,week_start" })
+          .select("client_id")
           .maybeSingle();
         state.pendingClientNoteSaves.add(saveRequest);
         let savedClient;
@@ -1742,9 +1766,7 @@
           controls.message.textContent = `The note for ${bookingClientDisplayName(client)} could not be saved.`;
           return;
         }
-        client.frequency_notes = value || null;
-        const currentClient = state.bookingClients.find((item) => item.id === client.id);
-        if (currentClient) currentClient.frequency_notes = value || null;
+        state.calendarNotes[noteKey] = value;
         lastSavedValue = value;
         save.textContent = "Saved";
         // Keep the verified value as this browser's display copy. The same
@@ -1841,6 +1863,7 @@
         loadClientNames(),
         loadBookingFees(),
       ]);
+      await loadCalendarNotes(range.start);
       const { data, error } = calendarResult;
       if (requestId !== state.requestId) return;
 
@@ -2178,6 +2201,18 @@
     saveButton.disabled = true;
     controls.quickBookMessage.textContent = "Saving booking…";
     try {
+      const { data: existingBooking, error: existingBookingError } = await supabaseClient
+        .from("booking_requests")
+        .select("id")
+        .eq("client_id", client.id)
+        .eq("preferred_date", row.preferred_date)
+        .eq("preferred_time", row.preferred_time)
+        .neq("status", "closed")
+        .limit(1);
+      if (existingBookingError) throw existingBookingError;
+      if (existingBooking?.[0]) {
+        throw new Error("This client already has a booking at this date and time.");
+      }
       const { error } = await supabaseClient.from("booking_requests").insert(row);
       if (error) throw error;
 
@@ -2266,6 +2301,12 @@
             .update({ status: "Cancelled" })
             .in("id", cancellableInvoiceIds);
         }
+      }
+      if (isPendingEvent(booking)) {
+        controls.dialog.close();
+        await loadEvents();
+        controls.message.textContent = `${data?.message || "Pending booking cancelled."} No client email was sent because this booking was pending.`;
+        return;
       }
       const approved = await approveClientEmail(
         booking.bookingRequestId,
@@ -2629,23 +2670,13 @@
       if (newFormat === "Online") {
         const { data: zoomData, error: zoomError } = await supabaseClient.functions.invoke(
           window.BOOKING_CONFIG?.zoomCreateMeetingFunction || "zoom-create-meeting",
-          { body: { bookingId: booking.bookingRequestId, forceNew: true } },
+          { body: { bookingId: booking.bookingRequestId } },
         );
         if (zoomError || !zoomData?.joinUrl) {
-          throw new Error("The appointment was rearranged, but its new Zoom link could not be created, so no email was sent. Please try rearranging it again.");
+          throw new Error("The appointment was rearranged, but its Zoom meeting could not be updated, so no email was sent. Please try rearranging it again.");
         }
       }
-      const approved = await approveClientEmail(
-        booking.bookingRequestId,
-        "Send a rearrangement email?",
-        `The email will show the new appointment: ${newWhen}, ${newFormat}${newFormat === "Online" ? ", with the new Zoom link" : ""}.`,
-      );
-      if (!approved) {
-        controls.dialog.close();
-        await loadEvents();
-        controls.message.textContent = `${data?.message || "Booking rescheduled."} No rearrangement email was sent.`;
-        return;
-      }
+      controls.rescheduleMessage.textContent = "Booking updated. Sending rearrangement email…";
       const { data: emailData, error: emailError } = await invokeAppointmentReminder({
         action: "send_reschedule",
         bookingId: booking.bookingRequestId,

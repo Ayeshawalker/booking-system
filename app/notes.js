@@ -96,14 +96,27 @@
     if (!clientId) { showIntakeReference(null); return; }
     ui.intakeStatus.textContent = "Loading completed intake form…"; ui.intakeButton.hidden = true;
     if (intakeByClient.has(clientId)) { showIntakeReference(intakeByClient.get(clientId)); return; }
-    const { data, error } = await db.from("client_intake_forms")
+    const intakeQuery = () => db.from("client_intake_forms")
       .select("id,form_type,status,answers,signer_name,signed_at,created_at")
-      .eq("client_id", clientId).eq("status", "Completed").neq("form_type", "Impact statement")
-      .order("created_at", { ascending: false }).limit(1).maybeSingle();
+      .eq("status", "Completed").neq("form_type", "Impact statement")
+      .order("created_at", { ascending: false }).limit(1);
+    let { data: rows, error } = await intakeQuery().eq("client_id", clientId);
+    if (!error && !rows?.length) {
+      const selectedClient = clients.find((client) => client.id === clientId);
+      const selectedName = name(selectedClient).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+      const relatedIds = clients
+        .filter((client) => name(client).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim() === selectedName)
+        .map((client) => client.id);
+      if (relatedIds.length > 1) {
+        ({ data: rows, error } = await intakeQuery().in("client_id", relatedIds));
+      }
+    }
+    const data = rows?.[0] || null;
     if (error) {
       console.error(error); ui.intakeStatus.textContent = "The intake form could not be loaded."; return;
     }
-    intakeByClient.set(clientId, data || null); showIntakeReference(data || null);
+    if (data) intakeByClient.set(clientId, data);
+    showIntakeReference(data || null);
   }
 
   function showImpactReference(statement) {
@@ -460,18 +473,15 @@
     const payload = currentPayload(status);
     let savedNote = null;
     try {
+      const { data: sessionData, error: sessionError } = await db.auth.getSession();
+      if (sessionError || !sessionData?.session) {
+        throw new Error("Your sign-in has expired. Please sign in again.");
+      }
       const query = activeId ? db.from("clinical_notes").update(payload).eq("id", activeId) : db.from("clinical_notes").insert({ ...payload, created_by: admin.user.id });
       const { data, error } = await query.select("*").single();
       if (error) throw error;
       savedNote = data;
       activeId = data.id;
-    } catch (error) {
-      console.error(error);
-      const technicalReason = String(error?.message || error?.details || "Unknown database error");
-      ui.message.textContent = `The note was not saved. Your text remains above. Technical reason: ${technicalReason}`;
-      ui.message.classList.add("note-save-error");
-    }
-
     if (savedNote) {
       let imageError = null;
       if (stagedImages.length) {
@@ -487,8 +497,14 @@
         ui.message.textContent = `The note was saved securely, but its images were not. They remain above so you can try again. Technical reason: ${String(imageError?.message || imageError?.details || "Unknown image upload error")}`;
         ui.message.classList.add("note-save-error");
       }
+    } catch (error) {
+      console.error(error);
+      const technicalReason = String(error?.message || error?.details || "Unknown database error");
+      ui.message.textContent = `The note was not saved. Your text remains above. Technical reason: ${technicalReason}`;
+      ui.message.classList.add("note-save-error");
+    } finally {
+      ui.save.disabled = false; ui.finalise.disabled = false;
     }
-    ui.save.disabled = false; ui.finalise.disabled = false;
   }
   async function improve() {
     if (!ui.rough.value.trim()) { ui.message.textContent = "Add a rough note first."; return; }
@@ -642,7 +658,11 @@
   }
   ui.improve.addEventListener("click", improve); ui.save.addEventListener("click", () => save("Draft")); ui.finalise.addEventListener("click", () => save("Final"));
   ui.clear.addEventListener("click", clearForm); ui.filter.addEventListener("change", render); ui.showArchived.addEventListener("change", render);
-  ui.client.addEventListener("change", renderClientReference);
+  ui.client.addEventListener("change", () => {
+    intakeByClient.delete(ui.client.value);
+    impactByClient.delete(ui.client.value);
+    renderClientReference();
+  });
   ui.intakeButton.addEventListener("click", () => {
     const opening = ui.intakeAnswers.hidden;
     ui.intakeAnswers.hidden = !opening;
