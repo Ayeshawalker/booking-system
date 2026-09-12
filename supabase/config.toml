@@ -14,4 +14,4 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.notes-clients]
-verify_jwt = true
+verify_jwt = false

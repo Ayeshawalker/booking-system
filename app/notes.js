@@ -644,7 +644,11 @@
       .order("first_name")
       .order("surname");
     if (!error && !data?.length) {
-      const fallback = await db.functions.invoke("notes-clients");
+      const { data: sessionData } = await db.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
+      const fallback = await db.functions.invoke("notes-clients", {
+        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+      });
       if (fallback.error) error = fallback.error;
       else data = fallback.data?.clients || [];
     }
