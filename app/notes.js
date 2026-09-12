@@ -770,5 +770,12 @@
     if (unchanged) return;
     event.preventDefault(); event.returnValue = "";
   });
-  await initialise();
+  try {
+    await initialise();
+  } catch (error) {
+    console.error("Notes could not be initialised", error);
+    const reason = String(error?.message || error || "Unknown page error");
+    if (ui.clientStatus) ui.clientStatus.textContent = `Notes stopped loading: ${reason}`;
+    if (ui.message) ui.message.textContent = `Notes could not be started. Technical reason: ${reason}`;
+  }
 })();
