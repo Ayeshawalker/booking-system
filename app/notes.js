@@ -2,7 +2,7 @@
   const admin = await window.ADMIN_READY;
   const db = admin.client;
   const ui = {
-    client: document.querySelector("#client-note-client"), date: document.querySelector("#client-note-date"),
+    client: document.querySelector("#client-note-client"), clientStatus: document.querySelector("#client-note-client-status"), date: document.querySelector("#client-note-date"),
     type: document.querySelector("#client-note-type"), review: document.querySelector("#client-note-retention-date"),
     rough: document.querySelector("#client-note-rough"), final: document.querySelector("#client-note-improved"),
     aiMode: document.querySelector("#client-note-ai-mode"), improve: document.querySelector("#improve-client-note"),
@@ -646,21 +646,37 @@
     if (!error && !data?.length) {
       const { data: sessionData } = await db.auth.getSession();
       const accessToken = sessionData?.session?.access_token;
-      const fallback = await db.functions.invoke("notes-clients", {
-        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
-      });
-      if (fallback.error) error = fallback.error;
-      else data = fallback.data?.clients || [];
+      try {
+        const response = await fetch(`${window.BOOKING_CONFIG.supabaseUrl}/functions/v1/notes-clients`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken || ""}`,
+            apikey: window.BOOKING_CONFIG.supabaseAnonKey,
+            "Content-Type": "application/json",
+          },
+          body: "{}",
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || `Client request failed (${response.status})`);
+        data = result.clients || [];
+      } catch (fallbackError) {
+        error = fallbackError;
+      }
     }
     if (error) {
       console.error("Clients could not be loaded in Notes", error);
-      ui.message.textContent = `Clients could not be loaded. Technical reason: ${String(error.message || error.details || "Unknown database error")}`;
+      const reason = String(error.message || error.details || "Unknown database error");
+      ui.clientStatus.textContent = `Clients could not be loaded: ${reason}`;
+      ui.message.textContent = `Clients could not be loaded. Technical reason: ${reason}`;
       return;
     }
     clients = data || [];
     setOptions(ui.client, false);
     setOptions(ui.filter, true);
     clearForm();
+    ui.clientStatus.textContent = clients.length
+      ? `${clients.length} client${clients.length === 1 ? "" : "s"} available.`
+      : "No client records were returned.";
 
     const [capability, imageCapability, resourceCapability] = await Promise.all([
       db.from("clinical_notes").select("interventions,resources_shared,supervision_required,supervision_status").limit(1),
