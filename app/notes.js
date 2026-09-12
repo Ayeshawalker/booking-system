@@ -637,18 +637,34 @@
     render();
   }
   async function initialise() {
-    const capability = await db.from("clinical_notes").select("interventions,resources_shared,supervision_required,supervision_status").limit(1);
+    // Populate the essential client selector first. Optional feature checks must
+    // never prevent a clinician from choosing a client and writing a note.
+    const { data, error } = await db.from("clients")
+      .select("id,first_name,surname,second_first_name,second_surname,status")
+      .order("first_name")
+      .order("surname");
+    if (error) {
+      console.error("Clients could not be loaded in Notes", error);
+      ui.message.textContent = `Clients could not be loaded. Technical reason: ${String(error.message || error.details || "Unknown database error")}`;
+      return;
+    }
+    clients = data || [];
+    setOptions(ui.client, false);
+    setOptions(ui.filter, true);
+    clearForm();
+
+    const [capability, imageCapability, resourceCapability] = await Promise.all([
+      db.from("clinical_notes").select("interventions,resources_shared,supervision_required,supervision_status").limit(1),
+      db.from("clinical_note_attachments").select("id").limit(1),
+      db.from("client_resources").select("id").limit(1),
+    ]);
     structuredFieldsReady = !capability.error;
-    const imageCapability = await db.from("clinical_note_attachments").select("id").limit(1);
     imageFieldsReady = !imageCapability.error;
-    const resourceCapability = await db.from("client_resources").select("id").limit(1);
     resourceLibraryReady = !resourceCapability.error;
     document.querySelector(".note-structured-fields").hidden = !structuredFieldsReady;
     document.querySelector(".note-supervision-fields").hidden = !structuredFieldsReady;
     ui.imageFields.hidden = !imageFieldsReady;
-    const { data, error } = await db.from("clients").select("id,first_name,surname,second_first_name,second_surname,status").order("first_name");
-    if (error) { ui.message.textContent = "Clients could not be loaded."; return; }
-    clients = data || []; setOptions(ui.client, false); setOptions(ui.filter, true); clearForm(); await Promise.all([loadNotes(), loadResources(), loadResourceShares()]);
+    await Promise.all([loadNotes(), loadResources(), loadResourceShares()]);
     if (!structuredFieldsReady) ui.message.textContent = "Your existing notes are working. The new interventions and supervision fields still need the one-time Supabase update.";
     else if (!imageFieldsReady) ui.message.textContent = "Your notes are working. Images and diagrams need the one-time Supabase attachment update before they appear.";
     if (!resourceLibraryReady) ui.resourcePanel.hidden = true;
