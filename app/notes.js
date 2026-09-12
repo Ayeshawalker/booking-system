@@ -639,23 +639,30 @@
   async function initialise() {
     // Populate the essential client selector first. Optional feature checks must
     // never prevent a clinician from choosing a client and writing a note.
+    const directController = new AbortController();
     const directClientRequest = db.from("clients")
       .select("id,first_name,surname,second_first_name,second_surname,status")
       .order("first_name")
-      .order("surname");
+      .order("surname")
+      .abortSignal(directController.signal);
     let { data, error } = await Promise.race([
       directClientRequest,
       new Promise((resolve) => window.setTimeout(
-        () => resolve({ data: [], error: null, timedOut: true }),
+        () => {
+          directController.abort();
+          resolve({ data: [], error: null, timedOut: true });
+        },
         4000,
       )),
     ]);
     if (!error && !data?.length) {
-      const { data: sessionData } = await db.auth.getSession();
-      const accessToken = sessionData?.session?.access_token;
+      const accessToken = admin.session?.access_token;
       try {
+        const fallbackController = new AbortController();
+        const fallbackTimeout = window.setTimeout(() => fallbackController.abort(), 8000);
         const response = await fetch(`${window.BOOKING_CONFIG.supabaseUrl}/functions/v1/notes-clients`, {
           method: "POST",
+          signal: fallbackController.signal,
           headers: {
             Authorization: `Bearer ${accessToken || ""}`,
             apikey: window.BOOKING_CONFIG.supabaseAnonKey,
@@ -663,11 +670,14 @@
           },
           body: "{}",
         });
+        window.clearTimeout(fallbackTimeout);
         const result = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(result.error || `Client request failed (${response.status})`);
         data = result.clients || [];
       } catch (fallbackError) {
-        error = fallbackError;
+        error = fallbackError?.name === "AbortError"
+          ? new Error("The secure database request timed out")
+          : fallbackError;
       }
     }
     if (error) {
