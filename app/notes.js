@@ -639,10 +639,17 @@
   async function initialise() {
     // Populate the essential client selector first. Optional feature checks must
     // never prevent a clinician from choosing a client and writing a note.
-    let { data, error } = await db.from("clients")
+    const directClientRequest = db.from("clients")
       .select("id,first_name,surname,second_first_name,second_surname,status")
       .order("first_name")
       .order("surname");
+    let { data, error } = await Promise.race([
+      directClientRequest,
+      new Promise((resolve) => window.setTimeout(
+        () => resolve({ data: [], error: null, timedOut: true }),
+        4000,
+      )),
+    ]);
     if (!error && !data?.length) {
       const { data: sessionData } = await db.auth.getSession();
       const accessToken = sessionData?.session?.access_token;
@@ -674,14 +681,23 @@
     setOptions(ui.client, false);
     setOptions(ui.filter, true);
     clearForm();
+    render();
     ui.clientStatus.textContent = clients.length
       ? `${clients.length} client${clients.length === 1 ? "" : "s"} available.`
       : "No client records were returned.";
 
-    const [capability, imageCapability, resourceCapability] = await Promise.all([
+    const optionalChecks = Promise.all([
       db.from("clinical_notes").select("interventions,resources_shared,supervision_required,supervision_status").limit(1),
       db.from("clinical_note_attachments").select("id").limit(1),
       db.from("client_resources").select("id").limit(1),
+    ]);
+    const [capability, imageCapability, resourceCapability] = await Promise.race([
+      optionalChecks,
+      new Promise((resolve) => window.setTimeout(() => resolve([
+        { error: new Error("Timed out") },
+        { error: new Error("Timed out") },
+        { error: new Error("Timed out") },
+      ]), 4000)),
     ]);
     structuredFieldsReady = !capability.error;
     imageFieldsReady = !imageCapability.error;
@@ -689,7 +705,9 @@
     document.querySelector(".note-structured-fields").hidden = !structuredFieldsReady;
     document.querySelector(".note-supervision-fields").hidden = !structuredFieldsReady;
     ui.imageFields.hidden = !imageFieldsReady;
-    await Promise.all([loadNotes(), loadResources(), loadResourceShares()]);
+    Promise.all([loadNotes(), loadResources(), loadResourceShares()]).catch((secondaryError) => {
+      console.error("A secondary Notes section could not be loaded", secondaryError);
+    });
     if (!structuredFieldsReady) ui.message.textContent = "Your existing notes are working. The new interventions and supervision fields still need the one-time Supabase update.";
     else if (!imageFieldsReady) ui.message.textContent = "Your notes are working. Images and diagrams need the one-time Supabase attachment update before they appear.";
     if (!resourceLibraryReady) ui.resourcePanel.hidden = true;
