@@ -636,6 +636,29 @@
     else notes = data || [];
     render();
   }
+  async function loadSelectedClientNotes() {
+    const clientId = ui.client.value;
+    if (!clientId) return;
+    try {
+      const response = await fetch(`${window.BOOKING_CONFIG.supabaseUrl}/functions/v1/notes-clients`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${admin.session.access_token}`,
+          apikey: window.BOOKING_CONFIG.supabaseAnonKey,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ clientId }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || `Previous notes request failed (${response.status})`);
+      notes = notes.filter((note) => note.client_id !== clientId).concat(result.notes || []);
+      render();
+
+    } catch (error) {
+      console.error(error);
+      ui.message.textContent = `Previous notes could not be loaded. Technical reason: ${String(error?.message || error)}`;
+    }
+  }
   async function initialise() {
     // Populate the essential client selector first. Optional feature checks must
     // never prevent a clinician from choosing a client and writing a note.
@@ -739,10 +762,11 @@
   }
   ui.improve.addEventListener("click", improve); ui.save.addEventListener("click", () => save("Draft")); ui.finalise.addEventListener("click", () => save("Final"));
   ui.clear.addEventListener("click", clearForm); ui.filter.addEventListener("change", render); ui.showArchived.addEventListener("change", render);
-  ui.client.addEventListener("change", () => {
+  ui.client.addEventListener("change", async () => {
     intakeByClient.delete(ui.client.value);
     impactByClient.delete(ui.client.value);
     renderClientReference();
+    await loadSelectedClientNotes();
   });
   ui.intakeButton.addEventListener("click", () => {
     const opening = ui.intakeAnswers.hidden;
@@ -791,4 +815,3 @@
     if (ui.message) ui.message.textContent = `Notes could not be started. Technical reason: ${reason}`;
   }
 })();
-

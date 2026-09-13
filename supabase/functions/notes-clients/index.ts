@@ -21,6 +21,7 @@ Deno.serve(async (request) => {
     const url = Deno.env.get("SUPABASE_URL") || "";
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
     const authorization = request.headers.get("Authorization") || "";
+    const body = await request.json().catch(() => ({}));
     if (!url || !serviceKey || !authorization.startsWith("Bearer ")) {
       return json({ error: "Authorisation is required" }, 401);
     }
@@ -37,8 +38,21 @@ Deno.serve(async (request) => {
       .maybeSingle();
     if (membershipError || !membership) return json({ error: "Administrator access is required" }, 403);
 
-    const { data: clients, error } = await db
-      .from("clients")
+    const clientId = String(body.clientId || "").trim();
+    if (clientId) {
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(clientId)) {
+        return json({ error: "A valid client is required" }, 400);
+      }
+      const { data: notes, error: notesError } = await db.from("clinical_notes")
+        .select("*")
+        .eq("client_id", clientId)
+        .order("note_date", { ascending: false })
+        .order("updated_at", { ascending: false });
+      if (notesError) throw notesError;
+      return json({ notes: notes || [] });
+    }
+
+    const { data: clients, error } = await db.from("clients")
       .select("id,first_name,surname,second_first_name,second_surname,status")
       .order("first_name")
       .order("surname");
