@@ -639,6 +639,18 @@
   async function initialise() {
     // Populate the essential client selector first. Optional feature checks must
     // never prevent a clinician from choosing a client and writing a note.
+    try {
+      const carriedClients = JSON.parse(window.sessionStorage.getItem("admin-client-chooser") || "[]");
+      if (Array.isArray(carriedClients) && carriedClients.length) {
+        clients = carriedClients;
+        setOptions(ui.client, false);
+        setOptions(ui.filter, true);
+        clearForm();
+        ui.clientStatus.textContent = `${clients.length} client${clients.length === 1 ? "" : "s"} available.`;
+      }
+    } catch (storageError) {
+      console.warn("The carried client chooser could not be read", storageError);
+    }
     const directController = new AbortController();
     const directClientRequest = db.from("clients")
       .select("id,first_name,surname,second_first_name,second_surname,status")
@@ -655,7 +667,7 @@
         4000,
       )),
     ]);
-    if (!error && !data?.length) {
+    if (!error && !data?.length && !clients.length) {
       const accessToken = admin.session?.access_token;
       try {
         const fallbackController = new AbortController();
@@ -687,7 +699,7 @@
       ui.message.textContent = `Clients could not be loaded. Technical reason: ${reason}`;
       return;
     }
-    clients = data || [];
+    clients = data?.length ? data : clients;
     setOptions(ui.client, false);
     setOptions(ui.filter, true);
     clearForm();

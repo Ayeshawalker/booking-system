@@ -731,6 +731,13 @@
     }
 
     clients = data || [];
+    // Share only the chooser fields with other authenticated admin pages in
+    // this browser tab. The browser clears sessionStorage when the tab closes.
+    window.sessionStorage.setItem("admin-client-chooser", JSON.stringify(
+      clients.map(({ id, first_name, surname, second_first_name, second_surname, status }) => ({
+        id, first_name, surname, second_first_name, second_surname, status,
+      })),
+    ));
     sortClientsAlphabetically();
     renderClients();
   }
