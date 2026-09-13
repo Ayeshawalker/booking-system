@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en" class="admin-auth-checking">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ayesha Jane Client Notes</title>
+    <link rel="stylesheet" href="styles.css?v=20260826-information-sheet-scroll" />
+  </head>
+  <body class="notes-page">
+    <header class="site-header">
+      <a class="brand" href="https://ayeshajane.com/">Ayesha Jane</a>
+      <nav class="admin-nav" aria-label="Private admin links">
+        <a href="clients.html">Clients</a>
+        <a href="calendar.html">Calendar</a>
+        <a href="ayesha.html">Bookings</a>
+        <a href="payments.html">Payments</a>
+        <a href="settings.html">Settings</a>
+        <a href="notes.html" aria-current="page">Notes</a>
+        <a href="supervision.html">Supervision</a>
+        <a href="reminders.html">Reminders</a>
+        <a href="index.html">Public page</a>
+        <span class="admin-user-email" data-admin-email></span>
+        <button class="nav-signout" type="button" data-admin-sign-out>
+          Sign out
+        </button>
+      </nav>
+    </header>
+
+    <main class="settings-shell">
+      <section class="booking-panel" aria-labelledby="page-title">
+        <div class="intro">
+          <p class="eyebrow">Private client notes</p>
+          <h1 id="page-title">Notes</h1>
+          <p>
+            Keep client notes separately from booking settings and tidy rough
+            notes into a clearer version before saving.
+          </p>
+        </div>
+
+        <section
+          id="client-notes-panel"
+          class="admin-control-panel client-notes-panel"
+          aria-labelledby="client-notes-title"
+        >
+          <div>
+            <h2 id="client-notes-title">Client note</h2>
+            <p>
+              This page is available only inside Ayesha's authenticated admin area.
+            </p>
+          </div>
+
+          <div class="notes-editor-main">
+
+          <p class="privacy-note">
+            Notes are stored in the authenticated clinical-notes database. AI suggestions
+            are drafts only: compare them with your original and approve the final wording yourself.
+          </p>
+
+          <div class="form-grid">
+            <label>
+              Client
+              <select id="client-note-client" required><option value="">Choose client</option></select>
+              <small id="client-note-client-status" class="field-note" aria-live="polite">Loading clients… · recovery build 13 Sept</small>
+            </label>
+
+            <label>
+              Note date
+              <input id="client-note-date" type="date" />
+            </label>
+          </div>
+
+          <div class="form-grid">
+            <label>
+              Note type
+              <select id="client-note-type">
+                <option value="Session note">Session note</option>
+                <option value="Admin note">Admin note</option>
+                <option value="Follow-up note">Follow-up note</option>
+                <option value="Risk/admin flag">Risk/admin flag</option>
+              </select>
+            </label>
+
+            <label>
+              Review by <span class="optional">(optional)</span>
+              <input id="client-note-retention-date" type="date" />
+            </label>
+          </div>
+
+          <label>
+            Working notes <span class="optional">(original wording is retained)</span>
+            <textarea
+              id="client-note-rough"
+              rows="8"
+              placeholder="Write quick bullet points, reminders or rough wording here."
+            ></textarea>
+          </label>
+
+          <section class="note-image-fields" aria-labelledby="note-images-title">
+            <div>
+              <h3 id="note-images-title">Images and diagrams within this note</h3>
+              <p>Paste a screenshot with Command + V, or choose an image. Images remain private and are not sent to the AI note-improvement service.</p>
+            </div>
+            <div id="note-image-dropzone" class="note-image-dropzone" tabindex="0">
+              <strong>Paste or add a screenshot</strong>
+              <span>Click here and press Command + V, drag an image here, or use the button.</span>
+              <button id="add-note-image" class="secondary-button" type="button">Add image</button>
+              <input id="note-image-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden />
+            </div>
+            <div id="note-image-list" class="note-image-list"><p>No images added to this note.</p></div>
+          </section>
+
+          <section class="note-structured-fields" aria-labelledby="note-work-title">
+            <div>
+              <h3 id="note-work-title">Tools, interventions and resources</h3>
+              <p>Record each item on a separate line. These will also appear in the client's overview below.</p>
+            </div>
+            <div class="form-grid">
+              <label>
+                Interventions or strategies used <span class="optional">(optional)</span>
+                <textarea id="client-note-interventions" rows="5" placeholder="For example: Introduced NVC&#10;Explored the drama triangle"></textarea>
+              </label>
+              <label>
+                Documents, diagrams or resources sent <span class="optional">(optional)</span>
+                <textarea id="client-note-resources" rows="5" placeholder="For example: NVC needs and feelings sheet&#10;Drama triangle diagram"></textarea>
+              </label>
+            </div>
+          </section>
+
+          <fieldset class="note-supervision-fields">
+            <legend>Supervision reminder</legend>
+            <label class="agreement-choice"><input id="client-note-needs-supervision" type="checkbox" /> Add something from this session to my supervision list</label>
+            <label id="client-note-supervision-wrap" hidden>
+              What would I like help thinking through?
+              <textarea id="client-note-supervision-question" rows="4" placeholder="Keep this concise and include only what you need for supervision."></textarea>
+            </label>
+            <p><a href="supervision.html">Open my supervision preparation list</a></p>
+          </fieldset>
+
+          <div class="note-ai-options" aria-labelledby="note-ai-title">
+            <strong id="note-ai-title">AI assistance</strong>
+            <label>How should it help?
+              <select id="client-note-ai-mode">
+                <option value="structure">Structure as a concise professional session note</option>
+                <option value="clarity">Improve clarity while keeping the existing structure</option>
+                <option value="neutral-language">Check for ambiguous or judgemental wording</option>
+                <option value="concise">Make it shorter without losing material facts</option>
+              </select>
+            </label>
+            <p>Names are not deliberately sent by the system, but remove unnecessary identifying details from the rough note before using AI.</p>
+          </div>
+
+          <section class="note-abc-builder" aria-labelledby="note-abc-title">
+            <div>
+              <h3 id="note-abc-title">Create an ABC diagram</h3>
+              <p>AI can suggest an ABC from the note. Review and edit every box before creating the diagram; missing information will be marked rather than invented.</p>
+            </div>
+            <button id="suggest-note-abc" class="secondary-button" type="button">Suggest ABC from note</button>
+            <div id="note-abc-review" class="note-abc-review" hidden>
+              <p class="privacy-note"><strong>Clinician review required.</strong> Check that each statement is supported by the session before saving it.</p>
+              <label>A — Activating event<textarea id="note-abc-a" rows="4" placeholder="What happened or triggered the response?"></textarea></label>
+              <label>B — Beliefs and interpretations<textarea id="note-abc-b" rows="8" placeholder="1. Demand: …&#10;2. Catastrophising: …&#10;3. I can’t cope / low frustration tolerance: …&#10;4. Self, life or other rating: …"></textarea></label>
+              <label>C — Consequences<textarea id="note-abc-c" rows="6" placeholder="Emotions: …&#10;Behaviours: …"></textarea></label>
+              <label>Diagram title <span class="optional">(optional)</span><input id="note-abc-diagram-title" type="text" value="ABC explored in session" /></label>
+              <div class="settings-button-row">
+                <button id="create-note-abc" type="button">Create reviewed diagram</button>
+                <button id="cancel-note-abc" class="secondary-button" type="button">Cancel</button>
+              </div>
+            </div>
+          </section>
+
+          <div class="settings-button-row">
+            <button id="improve-client-note" type="button">Improve with AI</button>
+            <button id="finalise-client-note" type="button">Save completed note</button>
+            <button id="save-client-note" class="secondary-button" type="button">Save unfinished draft</button>
+            <button id="clear-client-note" class="secondary-button" type="button">Clear form</button>
+          </div>
+          <p id="client-note-message" class="field-note note-save-message" aria-live="polite"></p>
+
+          <label>
+            Improved note <span class="optional">(main reading version)</span>
+            <textarea
+              id="client-note-improved"
+              rows="10"
+              placeholder="The clearer version will appear here."
+            ></textarea>
+          </label>
+
+          </div>
+
+          <aside class="notes-reference-panel" aria-label="Earlier notes and client overview">
+            <section class="notes-intake-reference" aria-labelledby="notes-intake-title">
+              <div class="notes-list-heading">
+                <h3 id="notes-intake-title">Intake form</h3>
+                <small>Review the selected client’s completed intake while writing your note.</small>
+              </div>
+              <p id="notes-intake-status">Choose a client to see their intake form.</p>
+              <button id="view-notes-intake" class="secondary-button" type="button" hidden>View intake form</button>
+              <div id="notes-intake-answers" class="notes-intake-answers" hidden></div>
+              <hr />
+              <div class="notes-list-heading"><h3>Impact Statement</h3><small>Review the client’s submitted reflections alongside your notes.</small></div>
+              <p id="notes-impact-status">Choose a client to see their Impact Statement.</p>
+              <button id="view-notes-impact" class="secondary-button" type="button" hidden>View Impact Statement</button>
+              <div id="notes-impact-answers" class="notes-intake-answers" hidden></div>
+            </section>
+
+            <section class="previous-client-notes" aria-labelledby="previous-client-notes-title">
+              <div class="notes-list-heading">
+                <h3 id="previous-client-notes-title">Previous improved notes</h3>
+                <small>Earlier notes for the selected client remain visible while you write.</small>
+              </div>
+              <div id="client-previous-notes" class="previous-client-notes-list"><p>Choose a client to see their earlier notes.</p></div>
+            </section>
+
+            <section class="client-work-overview" aria-labelledby="client-work-overview-title">
+              <div class="notes-list-heading"><h3 id="client-work-overview-title">Strategies and things sent</h3><small>A quick view of everything recorded for this client.</small></div>
+              <div id="client-work-overview" class="client-work-overview-grid"><p>No client selected.</p></div>
+            </section>
+
+            <section id="client-resource-panel" class="client-resource-panel" aria-labelledby="client-resource-title">
+              <div class="notes-list-heading">
+                <h3 id="client-resource-title">Information sheets</h3>
+                <small>Upload a sheet once, then securely share it with any selected client.</small>
+              </div>
+              <form id="client-resource-upload" class="client-resource-upload">
+                <label>Sheet title<input id="client-resource-title-input" type="text" placeholder="For example: Healthy and unhealthy beliefs" /></label>
+                <label>File<input id="client-resource-file" type="file" accept=".pdf,.doc,.docx,.rtf,.txt,.pages,image/png,image/jpeg,image/webp" /></label>
+                <button type="submit">Upload sheet</button>
+              </form>
+              <p id="client-resource-message" class="field-note" aria-live="polite"></p>
+              <div id="client-resource-library" class="client-resource-library"><p>No information sheets uploaded yet.</p></div>
+              <div class="client-resource-history-heading">
+                <h4>Resources sent to this client</h4>
+                <small>A dated history is kept here automatically.</small>
+              </div>
+              <div id="client-resource-history" class="client-resource-history"><p>Choose a client to see their history.</p></div>
+            </section>
+          </aside>
+
+          <div class="notes-list-heading">
+            <h3>Saved notes</h3>
+            <label>Show client<select id="client-note-list-filter"><option value="">All clients</option></select></label>
+            <label><input id="show-archived-notes" type="checkbox" /> Show archived notes</label>
+          </div>
+          <ul id="client-notes-list" class="settings-list client-notes-list"></ul>
+        </section>
+      </section>
+    </main>
+
+    <dialog id="note-history-dialog" class="client-dialog">
+      <header class="dialog-header"><div><p class="admin-kicker">Audit history</p><h2>Earlier versions</h2></div><button id="close-note-history" class="dialog-close" type="button">×</button></header>
+      <div id="note-history-list" class="client-form-body"></div>
+    </dialog>
+
+    <script src="config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="admin-auth.js?v=20260813-ten-hour-session"></script>
+    <script src="notes-recovery.js?v=20260913"></script>
+    <script>
+      // Independent recovery loader: keep the essential client chooser working
+      // even if another part of the full Notes application stops during startup.
+      window.setTimeout(function () {
+        var chooser = document.getElementById("client-note-client");
+        var status = document.getElementById("client-note-client-status");
+        if (!chooser || chooser.options.length > 1 || !window.ADMIN_READY) return;
+        status.textContent = "Recovering client list… · build 13 Sept";
+        window.ADMIN_READY.then(function (admin) {
+          return fetch(window.BOOKING_CONFIG.supabaseUrl + "/functions/v1/notes-clients", {
+            method: "POST",
+            headers: {
+              "Authorization": "Bearer " + admin.session.access_token,
+              "apikey": window.BOOKING_CONFIG.supabaseAnonKey,
+              "Content-Type": "application/json"
+            },
+            body: "{}"
+          });
+        }).then(function (response) {
+          return response.json().then(function (body) {
+            if (!response.ok) throw new Error(body.error || "Request failed (" + response.status + ")");
+            return body.clients || [];
+          });
+        }).then(function (clients) {
+          clients.forEach(function (client) {
+            var first = [client.first_name, client.surname].filter(Boolean).join(" ");
+            var second = [client.second_first_name, client.second_surname].filter(Boolean).join(" ");
+            var option = document.createElement("option");
+            option.value = client.id;
+            option.textContent = [first, second].filter(Boolean).join(" and ") +
+              (client.status && client.status !== "Active" ? " — " + client.status : "");
+            chooser.appendChild(option);
+          });
+          status.textContent = clients.length + " clients available · recovery build 13 Sept";
+        }).catch(function (error) {
+          status.textContent = "Recovery failed: " + String(error && error.message || error);
+        });
+      }, 1500);
+    </script>
+  </body>
+</html>
+
