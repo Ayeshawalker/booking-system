@@ -497,6 +497,7 @@
         ui.message.textContent = `The note was saved securely, but its images were not. They remain above so you can try again. Technical reason: ${String(imageError?.message || imageError?.details || "Unknown image upload error")}`;
         ui.message.classList.add("note-save-error");
       }
+    }
     } catch (error) {
       console.error(error);
       const technicalReason = String(error?.message || error?.details || "Unknown database error");
