@@ -60,7 +60,7 @@
             <label>
               Client
               <select id="client-note-client" required><option value="">Choose client</option></select>
-              <small id="client-note-client-status" class="field-note" aria-live="polite">Loading clients…</small>
+              <small id="client-note-client-status" class="field-note" aria-live="polite">Loading clients… · recovery build 13 Sept</small>
             </label>
 
             <label>
@@ -255,5 +255,44 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="admin-auth.js?v=20260813-ten-hour-session"></script>
     <script src="notes.js?v=20260913-client-bridge"></script>
+    <script>
+      // Independent recovery loader: keep the essential client chooser working
+      // even if another part of the full Notes application stops during startup.
+      window.setTimeout(function () {
+        var chooser = document.getElementById("client-note-client");
+        var status = document.getElementById("client-note-client-status");
+        if (!chooser || chooser.options.length > 1 || !window.ADMIN_READY) return;
+        status.textContent = "Recovering client list… · build 13 Sept";
+        window.ADMIN_READY.then(function (admin) {
+          return fetch(window.BOOKING_CONFIG.supabaseUrl + "/functions/v1/notes-clients", {
+            method: "POST",
+            headers: {
+              "Authorization": "Bearer " + admin.session.access_token,
+              "apikey": window.BOOKING_CONFIG.supabaseAnonKey,
+              "Content-Type": "application/json"
+            },
+            body: "{}"
+          });
+        }).then(function (response) {
+          return response.json().then(function (body) {
+            if (!response.ok) throw new Error(body.error || "Request failed (" + response.status + ")");
+            return body.clients || [];
+          });
+        }).then(function (clients) {
+          clients.forEach(function (client) {
+            var first = [client.first_name, client.surname].filter(Boolean).join(" ");
+            var second = [client.second_first_name, client.second_surname].filter(Boolean).join(" ");
+            var option = document.createElement("option");
+            option.value = client.id;
+            option.textContent = [first, second].filter(Boolean).join(" and ") +
+              (client.status && client.status !== "Active" ? " — " + client.status : "");
+            chooser.appendChild(option);
+          });
+          status.textContent = clients.length + " clients available · recovery build 13 Sept";
+        }).catch(function (error) {
+          status.textContent = "Recovery failed: " + String(error && error.message || error);
+        });
+      }, 1500);
+    </script>
   </body>
 </html>
