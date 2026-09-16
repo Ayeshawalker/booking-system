@@ -48,6 +48,30 @@
     table.replaceWith(choices);
   });
 
+  // Convert confirmation checkbox glyphs inherited from the source document
+  // into accessible, consistently spaced form controls.
+  [...source.querySelectorAll("p")].forEach((item) => {
+    const wording = text(item).replace(/^☐\s*/, "");
+    if (wording === text(item)) return;
+    const label = document.createElement("label");
+    label.className = "agreement-choice partner-intake-confirmation";
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    if (wording.startsWith("I have shared what I feel able")) input.name = "confirmAccurate";
+    else if (wording.startsWith("I understand that submitting this form")) input.name = "confirmNotEmergency";
+    else if (wording.startsWith("I understand that this form supports assessment")) input.name = "confirmAssessment";
+    else input.name = nextName();
+    input.value = wording;
+    input.required = true;
+    label.append(input, document.createTextNode(wording));
+    item.replaceWith(label);
+  });
+
+  // Remove blank spacer paragraphs inherited from the word-processing source.
+  [...source.querySelectorAll("p")].forEach((item) => {
+    if (!text(item)) item.remove();
+  });
+
   async function call(action, extra) {
     const response = await fetch(`${config.supabaseUrl}/functions/v1/intake-form`, {
       method: "POST", headers: { "Content-Type": "application/json", apikey: config.supabaseAnonKey, Authorization: `Bearer ${config.supabaseAnonKey}` },

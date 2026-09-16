@@ -3617,6 +3617,53 @@ dd {
 }
 .intake-risk-section { border-color: #d12a3d !important; }
 .intake-public-form button[type="submit"] { margin-top: 24px; width: 100%; }
+#partner-intake-source {
+  padding: clamp(24px, 5vw, 54px);
+  border: 2px solid #ffc8b2;
+  border-top: 0;
+  background: #fff;
+  box-shadow: 0 20px 55px rgb(87 21 47 / 10%);
+}
+#partner-intake-source > h2 {
+  margin: 46px 0 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f4cfad;
+  color: #bd1267;
+  font-size: 1.25rem;
+}
+#partner-intake-source > h2:first-child { margin-top: 0; }
+#partner-intake-source > p { margin: 0 0 18px; color: #4d3740; line-height: 1.7; }
+#partner-intake-source > label { margin: 24px 0 0; }
+#partner-intake-source > label textarea,
+#partner-intake-source > label input { margin-top: 2px; }
+#partner-intake-source > .form-grid { gap: 12px 16px; margin: 12px 0 28px; }
+#partner-intake-source > .form-grid .agreement-choice {
+  min-width: 0;
+  margin: 0;
+  padding: 13px 14px;
+  border: 1px solid #efd9be;
+  border-radius: 14px;
+  background: #fffaf3;
+  color: #4d3740;
+  line-height: 1.45;
+}
+#partner-intake-source > .partner-intake-confirmation {
+  margin-top: 12px;
+  padding: 15px 16px;
+  border: 2px solid #efd9be;
+  border-radius: 14px;
+  background: #fffaf3;
+  color: #4d3740;
+  line-height: 1.5;
+}
+@media (max-width: 680px) {
+  .agreement-signing-brand { align-items: flex-start; flex-direction: column; padding: 22px; }
+  .agreement-signing-brand img { width: min(250px, 100%); height: auto; }
+  .agreement-signing-brand h1 { font-size: clamp(1.8rem, 10vw, 2.45rem); line-height: 1.08; }
+  #partner-intake-source { padding: 24px 18px 32px; }
+  #partner-intake-source > h2 { margin-top: 38px; }
+  #partner-intake-source > .form-grid { grid-template-columns: 1fr; }
+}
 .intake-response-panel { border: 2px solid #efd9be; border-radius: 20px; padding: 20px; background: #fffaf3; }
 .intake-answers { display: grid; gap: 16px; }
 .intake-answer-item { padding: 14px 0; border-top: 1px solid #edc6b2; }
