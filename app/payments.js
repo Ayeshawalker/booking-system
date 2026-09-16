@@ -457,10 +457,16 @@
     view.textContent = "View invoice";
     actions.append(view);
     if (invoice.status === "Draft") {
+      const sourceIssue = invoiceSourceIssue(invoice);
       const markSent = document.createElement("button");
       markSent.type = "button";
       markSent.className = "payment-edit-button invoice-mark-sent-button";
       markSent.textContent = "Mark sent";
+      markSent.disabled = Boolean(sourceIssue);
+      if (sourceIssue) {
+        markSent.title = sourceIssue;
+        row.classList.add("invoice-row-warning");
+      }
       markSent.addEventListener("click", async () => {
         markSent.disabled = true;
         const sentDate = isoDate(new Date());
@@ -490,6 +496,12 @@
         controls.message.textContent = `${invoice.invoice_number} has been marked as sent.`;
       });
       actions.append(markSent);
+      if (sourceIssue) {
+        const warning = document.createElement("small");
+        warning.className = "invoice-source-warning";
+        warning.textContent = `Check booking: ${sourceIssue}`;
+        actions.append(warning);
+      }
     } else if (invoice.status === "Sent") {
       const sentNote = document.createElement("span");
       sentNote.className = "invoice-sent-note";
@@ -537,6 +549,22 @@
     };
   }
 
+  function sourceBookingForInvoice(invoice) {
+    return bookingRequests.find((booking) => booking.id === invoice.booking_id) || null;
+  }
+
+  function invoiceSourceIssue(invoice) {
+    const booking = sourceBookingForInvoice(invoice);
+    if (!booking) return "The source booking could not be found.";
+    if (booking.status !== "confirmed") {
+      return `The source booking is ${booking.status || "not confirmed"}.`;
+    }
+    if (booking.preferred_date !== invoice.session_date) {
+      return `Invoice date ${displayDate(invoice.session_date)} does not match the booking date ${displayDate(booking.preferred_date)}.`;
+    }
+    return "";
+  }
+
   async function syncInvoicesToPaymentHistory(invoices) {
     let changed = false;
     for (const invoice of invoices.filter((item) => item.status !== "Cancelled")) {
@@ -546,19 +574,19 @@
       );
       if (linkedRecord) {
         if (linkedRecord.session_date !== invoice.session_date) {
-          const correctedDate = linkedRecord.session_date;
-          const { error: invoiceDateError } = await supabaseClient
-            .from("invoices")
-            .update({
-              session_date: correctedDate,
-              payment_reference: invoiceReferenceForDate(correctedDate),
-            })
-            .eq("id", invoice.id);
-          if (!invoiceDateError) {
-            invoice.session_date = correctedDate;
-            invoice.payment_reference = invoiceReferenceForDate(correctedDate);
+          // Invoices derive from bookings. Payment history must never silently
+          // rewrite an invoice date when this page is opened.
+          const { data, error } = await supabaseClient
+            .from("manual_payments")
+            .update({ session_date: invoice.session_date })
+            .eq("id", linkedRecord.id)
+            .select("*")
+            .single();
+          if (!error && data) {
+            payments = payments.map((payment) => payment.id === data.id ? data : payment);
+            changed = true;
           } else {
-            console.error("The linked invoice date could not be corrected.", invoiceDateError);
+            console.error("The linked payment-history date could not be corrected.", error);
           }
         }
         if (Number(linkedRecord.fee_due) !== payload.fee_due) {
