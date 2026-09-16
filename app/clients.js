@@ -296,7 +296,7 @@
       ["", "Forms ▾"],
       ["Individual", "General intake"],
       ["Betrayal trauma", "Betrayal trauma intake"],
-      ["Partner betrayal trauma", "Partner who caused the betrayal intake"],
+      ["Partner betrayal trauma", "Relationship Betrayal – Partner Assessment & Reflection Form"],
       ["Impact statement", "Impact Statement"],
     ].forEach(([value, label]) => {
       const option = document.createElement("option"); option.value = value; option.textContent = label; formsMenu.append(option);
@@ -579,10 +579,13 @@
     controls.intakeSigningLink.value = url;
     document.querySelector("#open-intake-link").href = url;
     const firstName = intakeClient.first_name || "there";
-    const formLabel = intake.form_type === "Impact statement" ? "Impact Statement" : intake.form_type === "Partner betrayal trauma" ? "partner betrayal trauma therapy intake form" : intake.form_type === "Betrayal trauma" ? "betrayal trauma therapy intake form" : "therapy intake form";
+    const formLabel = intake.form_type === "Impact statement" ? "Impact Statement" : intake.form_type === "Partner betrayal trauma" ? "Relationship Betrayal – Partner Assessment & Reflection Form" : intake.form_type === "Betrayal trauma" ? "betrayal trauma therapy intake form" : "therapy intake form";
     const text = `Hi ${firstName}, here is your private ${formLabel} to complete: ${url}`;
     document.querySelector("#whatsapp-intake-link").href = `https://wa.me/?text=${encodeURIComponent(text)}`;
-    controls.intakeStatus.textContent = `${intake.form_type}${intake.form_type === "Impact statement" ? "" : " intake"} · ${intake.status}`;
+    const statusLabel = intake.form_type === "Partner betrayal trauma"
+      ? "Relationship Betrayal – Partner Assessment & Reflection Form"
+      : `${intake.form_type}${intake.form_type === "Impact statement" ? "" : " intake"}`;
+    controls.intakeStatus.textContent = `${statusLabel} · ${intake.status}`;
     if (intake.status === "Completed") {
       const signedDate = intake.signed_at ? new Intl.DateTimeFormat("en-GB", { dateStyle: "long" }).format(new Date(intake.signed_at)) : "date unavailable";
       controls.intakeSignedBy.textContent = `Electronically signed by ${intake.signer_name || "client"} on ${signedDate}.`;
@@ -595,7 +598,7 @@
     intakeManagerType = requestedType;
     const specialities = Array.isArray(client.specialities) ? client.specialities : [];
     controls.intakeFormType.value = requestedType || (specialities.includes("Betrayal trauma") ? "Betrayal trauma" : "Individual");
-    const documentLabel = requestedType === "Impact statement" ? "Impact Statement" : requestedType === "Partner betrayal trauma" ? "Partner betrayal trauma intake" : requestedType === "Betrayal trauma" ? "Betrayal trauma intake" : requestedType === "Individual" ? "General intake" : "Intake form";
+    const documentLabel = requestedType === "Impact statement" ? "Impact Statement" : requestedType === "Partner betrayal trauma" ? "Relationship Betrayal – Partner Assessment & Reflection Form" : requestedType === "Betrayal trauma" ? "Betrayal trauma intake" : requestedType === "Individual" ? "General intake" : "Intake form";
     controls.intakeDialogTitle.textContent = `${documentLabel} · ${clientNames(client)}`; showIntake(null);
     controls.intakeFormTypeField.hidden = requestedType === "Impact statement";
     controls.intakeDialog.showModal();
