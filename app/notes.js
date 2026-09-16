@@ -472,20 +472,16 @@
     ui.save.disabled = true; ui.finalise.disabled = true; ui.message.textContent = "Saving note securely…";
     const payload = currentPayload(status);
     try {
-      const { data: sessionData, error: sessionError } = await db.auth.getSession();
-      if (sessionError || !sessionData?.session) {
-        throw new Error("Your sign-in has expired. Please sign in again.");
-      }
-      const saveController = new AbortController();
-      const saveTimeout = window.setTimeout(() => saveController.abort(), 15000);
       const query = activeId
         ? db.from("clinical_notes").update(payload).eq("id", activeId)
         : db.from("clinical_notes").insert({ ...payload, created_by: admin.user.id });
-      const { data, error } = await query
-        .select("*")
-        .abortSignal(saveController.signal)
-        .single();
-      window.clearTimeout(saveTimeout);
+      const { data, error } = await Promise.race([
+        query.select("*").single(),
+        new Promise((_, reject) => window.setTimeout(
+          () => reject(new Error("The secure database took too long to respond.")),
+          15000,
+        )),
+      ]);
       if (error) throw error;
       activeId = data.id;
       let imageError = null;
@@ -519,9 +515,7 @@
       }
     } catch (error) {
       console.error(error);
-      const technicalReason = error?.name === "AbortError"
-        ? "The secure database took too long to respond. Please try once more; your text has been kept."
-        : String(error?.message || error?.details || "Unknown database error");
+      const technicalReason = String(error?.message || error?.details || "Unknown database error");
       ui.message.textContent = `The note was not saved. Your text remains above. Technical reason: ${technicalReason}`;
       ui.message.classList.add("note-save-error");
     } finally {
