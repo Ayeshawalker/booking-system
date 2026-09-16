@@ -39,7 +39,7 @@ function cleanAnswers(input: unknown) {
   if (!input || typeof input !== "object" || Array.isArray(input)) return {};
   const output: Record<string, string | string[]> = {};
   for (const [key, value] of Object.entries(input as Record<string, unknown>)) {
-    if (!allowedFields.has(key) && !/^partner_q_\d{3}$/.test(key)) continue;
+    if (!allowedFields.has(key) && !/^partner_q_\d{3}$/.test(key) && !/^partner_initial_[a-z_]+$/.test(key) && key !== "no_secrets_policy") continue;
     output[key] = Array.isArray(value)
       ? value.slice(0, key === "impact_reflections" ? 50 : 30).map((item) => clean(item, key === "impact_reflections" ? 6000 : 300)).filter(Boolean)
       : clean(value, 6000);
@@ -89,8 +89,13 @@ Deno.serve(async (request) => {
     const signerName = clean(body.signerName, 160);
     if (signerName.length < 2) return json({ error: "Please type your full name to sign the form." }, 400);
     const answers = cleanAnswers(body.answers);
+    if (intake.form_type === "Partner initial intake" && answers.no_secrets_policy !== "Read and agreed") {
+      return json({ error: "Please confirm that you have read and agree to the no-secrets policy." }, 400);
+    }
     if (intake.form_type === "Partner betrayal trauma") {
       if (!Object.keys(answers).some((key) => key.startsWith("partner_q_"))) return json({ error: "Please complete at least one question before submitting." }, 400);
+    } else if (intake.form_type === "Partner initial intake") {
+      if (!answers.what_happened && !answers.therapy_hopes) return json({ error: "Please briefly tell me what brings you to therapy or what you hope for." }, 400);
     } else if (!answers.what_happened && !answers.therapy_hopes) return json({ error: "Please briefly tell me what brings you to therapy or what you hope for." }, 400);
     const now = new Date().toISOString();
     const { error: saveError } = await db.from("client_intake_forms").update({

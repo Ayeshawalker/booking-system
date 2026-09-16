@@ -296,6 +296,7 @@
       ["", "Forms ▾"],
       ["Individual", "General intake"],
       ["Betrayal trauma", "Betrayal trauma intake"],
+      ["Partner initial intake", "Relationship Betrayal – Partner Intake Form"],
       ["Partner betrayal trauma", "Relationship Betrayal – Partner Assessment & Reflection Form"],
       ["Impact statement", "Impact Statement"],
     ].forEach(([value, label]) => {
@@ -493,7 +494,13 @@
 
   function intakeSigningUrl(token, formType) {
     const baseUrl = window.BOOKING_CONFIG?.publicClientBaseUrl || window.location.href;
-    const page = formType === "Impact statement" ? "impact-statement.html" : formType === "Partner betrayal trauma" ? "partner-intake.html" : "sign-intake.html";
+    const page = formType === "Impact statement"
+      ? "impact-statement.html"
+      : formType === "Partner betrayal trauma"
+        ? "partner-intake.html"
+        : formType === "Partner initial intake"
+          ? "relationship-betrayal-partner-intake.html"
+          : "sign-intake.html";
     const url = new URL(page, baseUrl);
     url.searchParams.set("token", token);
     return url.href;
@@ -550,6 +557,14 @@
     therapy_early_sign: "What might be the first small sign that things were beginning to improve?",
     important_context: "Is there anything else that feels important for me to know before we begin?",
     access_needs: "Are there any accessibility, communication or cultural needs you would like me to know about?",
+    no_secrets_policy: "No-secrets policy agreement",
+    partner_initial_duration: "Approximately how long did the affair or behaviour continue?",
+    partner_initial_over: "Is the affair, relationship or behaviour now over?",
+    partner_initial_contact_details: "If there is continuing contact, what are the circumstances?",
+    partner_initial_main_facts: "Does your partner know the main facts?",
+    partner_initial_feelings: "What are you experiencing at present?",
+    partner_initial_current_support: "Are you receiving other counselling, couples therapy or specialist support?",
+    partner_initial_goals: "Which areas would you like help with?",
   };
 
   function renderIntakeAnswers(answers) {
@@ -579,11 +594,13 @@
     controls.intakeSigningLink.value = url;
     document.querySelector("#open-intake-link").href = url;
     const firstName = intakeClient.first_name || "there";
-    const formLabel = intake.form_type === "Impact statement" ? "Impact Statement" : intake.form_type === "Partner betrayal trauma" ? "Relationship Betrayal – Partner Assessment & Reflection Form" : intake.form_type === "Betrayal trauma" ? "betrayal trauma therapy intake form" : "therapy intake form";
+    const formLabel = intake.form_type === "Impact statement" ? "Impact Statement" : intake.form_type === "Partner initial intake" ? "Relationship Betrayal – Partner Intake Form" : intake.form_type === "Partner betrayal trauma" ? "Relationship Betrayal – Partner Assessment & Reflection Form" : intake.form_type === "Betrayal trauma" ? "betrayal trauma therapy intake form" : "therapy intake form";
     const text = `Hi ${firstName}, here is your private ${formLabel} to complete: ${url}`;
     document.querySelector("#whatsapp-intake-link").href = `https://wa.me/?text=${encodeURIComponent(text)}`;
-    const statusLabel = intake.form_type === "Partner betrayal trauma"
-      ? "Relationship Betrayal – Partner Assessment & Reflection Form"
+    const statusLabel = intake.form_type === "Partner initial intake"
+      ? "Relationship Betrayal – Partner Intake Form"
+      : intake.form_type === "Partner betrayal trauma"
+        ? "Relationship Betrayal – Partner Assessment & Reflection Form"
       : `${intake.form_type}${intake.form_type === "Impact statement" ? "" : " intake"}`;
     controls.intakeStatus.textContent = `${statusLabel} · ${intake.status}`;
     if (intake.status === "Completed") {
@@ -598,7 +615,7 @@
     intakeManagerType = requestedType;
     const specialities = Array.isArray(client.specialities) ? client.specialities : [];
     controls.intakeFormType.value = requestedType || (specialities.includes("Betrayal trauma") ? "Betrayal trauma" : "Individual");
-    const documentLabel = requestedType === "Impact statement" ? "Impact Statement" : requestedType === "Partner betrayal trauma" ? "Relationship Betrayal – Partner Assessment & Reflection Form" : requestedType === "Betrayal trauma" ? "Betrayal trauma intake" : requestedType === "Individual" ? "General intake" : "Intake form";
+    const documentLabel = requestedType === "Impact statement" ? "Impact Statement" : requestedType === "Partner initial intake" ? "Relationship Betrayal – Partner Intake Form" : requestedType === "Partner betrayal trauma" ? "Relationship Betrayal – Partner Assessment & Reflection Form" : requestedType === "Betrayal trauma" ? "Betrayal trauma intake" : requestedType === "Individual" ? "General intake" : "Intake form";
     controls.intakeDialogTitle.textContent = `${documentLabel} · ${clientNames(client)}`; showIntake(null);
     controls.intakeFormTypeField.hidden = requestedType === "Impact statement";
     controls.intakeDialog.showModal();
@@ -622,7 +639,7 @@
     if (!intakeClient) return;
     controls.createIntakeButton.disabled = true; controls.intakeMessage.textContent = "Creating the private form link…";
     const { data, error } = await supabaseClient.from("client_intake_forms").insert({
-      client_id: intakeClient.id, form_type: intakeManagerType || controls.intakeFormType.value, form_version: "2026-08-27", created_by: admin.user.id,
+      client_id: intakeClient.id, form_type: intakeManagerType || controls.intakeFormType.value, form_version: "2026-09-16", created_by: admin.user.id,
     }).select("id,form_type,form_version,access_token,status,answers,signer_name,signed_at,created_at").single();
     if (error) controls.intakeMessage.textContent = "The link could not be created. " + error.message;
     else {
