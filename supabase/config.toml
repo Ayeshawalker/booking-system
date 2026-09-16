@@ -15,3 +15,6 @@ verify_jwt = true
 
 [functions.notes-clients]
 verify_jwt = false
+
+[functions.notes-save]
+verify_jwt = false

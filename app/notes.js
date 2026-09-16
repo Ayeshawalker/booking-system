@@ -472,17 +472,24 @@
     ui.save.disabled = true; ui.finalise.disabled = true; ui.message.textContent = "Saving note securely…";
     const payload = currentPayload(status);
     try {
-      const query = activeId
-        ? db.from("clinical_notes").update(payload).eq("id", activeId)
-        : db.from("clinical_notes").insert({ ...payload, created_by: admin.user.id });
-      const { data, error } = await Promise.race([
-        query.select("*").single(),
-        new Promise((_, reject) => window.setTimeout(
-          () => reject(new Error("The secure database took too long to respond.")),
-          15000,
-        )),
-      ]);
-      if (error) throw error;
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), 20000);
+      const response = await fetch(`${window.BOOKING_CONFIG.supabaseUrl}/functions/v1/notes-save`, {
+        method: "POST",
+        signal: controller.signal,
+        headers: {
+          Authorization: `Bearer ${admin.session.access_token}`,
+          apikey: window.BOOKING_CONFIG.supabaseAnonKey,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ noteId: activeId, note: payload }),
+      });
+      window.clearTimeout(timeout);
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.saved || !result.note) {
+        throw new Error(result.error || `The secure save service returned ${response.status}.`);
+      }
+      const data = result.note;
       activeId = data.id;
       let imageError = null;
       if (stagedImages.length) {
@@ -515,7 +522,9 @@
       }
     } catch (error) {
       console.error(error);
-      const technicalReason = String(error?.message || error?.details || "Unknown database error");
+      const technicalReason = error?.name === "AbortError"
+        ? "The secure save service took too long to respond. Your text remains above."
+        : String(error?.message || error?.details || "Unknown database error");
       ui.message.textContent = `The note was not saved. Your text remains above. Technical reason: ${technicalReason}`;
       ui.message.classList.add("note-save-error");
     } finally {
