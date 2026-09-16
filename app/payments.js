@@ -574,6 +574,13 @@
       );
       if (linkedRecord) {
         if (linkedRecord.session_date !== invoice.session_date) {
+          const sourceIssue = invoiceSourceIssue(invoice);
+          if (sourceIssue) {
+            console.warn(
+              `Payment history for ${invoice.invoice_number} was not changed: ${sourceIssue}`,
+            );
+            continue;
+          }
           // Invoices derive from bookings. Payment history must never silently
           // rewrite an invoice date when this page is opened.
           const { data, error } = await supabaseClient
