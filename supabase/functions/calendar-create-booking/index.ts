@@ -41,6 +41,7 @@ type BookingRow = {
   second_surname: string | null;
   email: string;
   phone: string | null;
+  message?: string | null;
   calendar_sync_status?: string;
   calendar_event_ids?: unknown;
   zoom_join_url?: string | null;
@@ -671,6 +672,9 @@ async function insertGoogleEvent(
 
 function calendarEventSummary(booking: BookingRow) {
   const clientName = formatClientNames(booking) || booking.email || "Client";
+  if (String(booking.message || "").startsWith("Solo session within couples work.")) {
+    return `Solo session (couples work): ${clientName}`;
+  }
   return `${booking.session_type}: ${clientName}`;
 }
 

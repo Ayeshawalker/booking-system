@@ -264,6 +264,15 @@
           </fieldset>
           <div id="quick-book-client-fields" class="calendar-quick-book-grid">
             <label>Client<select id="quick-book-client" required><option value="">Choose client</option></select></label>
+            <label id="quick-book-arrangement-field" class="calendar-quick-book-wide" hidden>
+              Session arrangement
+              <select id="quick-book-arrangement">
+                <option value="joint">Joint couple session</option>
+                <option value="first-solo">First partner — solo session (60 minutes)</option>
+                <option value="second-solo">Second partner — solo session (60 minutes)</option>
+              </select>
+              <small>Solo sessions remain linked to the couple’s client record. Check the editable fee below.</small>
+            </label>
             <label>Date<input id="quick-book-date" type="date" required /></label>
             <label>Time<input id="quick-book-time" type="time" step="900" required /></label>
             <label>Format<select id="quick-book-format"><option>Online</option><option>In person</option></select></label>
@@ -298,6 +307,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
     <script src="admin-auth.js?v=20260813-ten-hour-session"></script>
-    <script src="calendar.js?v=20260911-dedupe-client-occurrences"></script>
+    <script src="calendar.js?v=20260916-couple-solo-session"></script>
   </body>
 </html>

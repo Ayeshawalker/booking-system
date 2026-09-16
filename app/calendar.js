@@ -44,6 +44,8 @@
     closeQuickBook: document.querySelector("#close-quick-book-dialog"),
     cancelQuickBook: document.querySelector("#cancel-quick-book"),
     quickBookClient: document.querySelector("#quick-book-client"),
+    quickBookArrangementField: document.querySelector("#quick-book-arrangement-field"),
+    quickBookArrangement: document.querySelector("#quick-book-arrangement"),
     quickBookDate: document.querySelector("#quick-book-date"),
     quickBookTime: document.querySelector("#quick-book-time"),
     quickBookFormat: document.querySelector("#quick-book-format"),
@@ -620,7 +622,20 @@
 
   function applyQuickBookClientDefaults() {
     const client = selectedQuickBookClient();
-    if (!client) return;
+    if (!client) {
+      controls.quickBookArrangementField.hidden = true;
+      controls.quickBookArrangement.value = "joint";
+      return;
+    }
+    const couple = client.record_type === "Couple";
+    controls.quickBookArrangementField.hidden = !couple;
+    controls.quickBookArrangement.value = couple ? "joint" : "first-solo";
+    if (couple) {
+      const firstName = [client.first_name, client.surname].filter(Boolean).join(" ").trim();
+      const secondName = [client.second_first_name, client.second_surname].filter(Boolean).join(" ").trim();
+      controls.quickBookArrangement.options[1].textContent = `${firstName || "First partner"} — solo session (60 minutes)`;
+      controls.quickBookArrangement.options[2].textContent = `${secondName || "Second partner"} — solo session (60 minutes)`;
+    }
     const format = client.preferred_format === "In person" ? "In person" : "Online";
     controls.quickBookFormat.value = format;
     const fee = format === "In person"
@@ -646,6 +661,7 @@
       String(defaultEnd.getMinutes()).padStart(2, "0"),
     ].join(":");
     controls.quickBookStatus.value = "confirmed";
+    controls.quickBookArrangementField.hidden = true;
     controls.quickBookDialog.showModal();
     window.lucide?.createIcons();
   }
@@ -1060,7 +1076,9 @@
 
     return {
       id: `booking-request-${booking.id}`,
-      title: bookingClientName(booking),
+      title: String(booking.message || "").startsWith("Solo session within couples work.")
+        ? `${bookingClientName(booking)} — solo session`
+        : bookingClientName(booking),
       start: start.toISOString(),
       end: end.toISOString(),
       allDay: false,
@@ -2167,12 +2185,15 @@
     if (!client) return;
     const pending = controls.quickBookStatus.value === "pending";
     const couple = client.record_type === "Couple";
+    const arrangement = couple ? controls.quickBookArrangement.value : "individual";
+    const soloPartner = arrangement === "first-solo" || arrangement === "second-solo";
+    const secondPartnerSolo = arrangement === "second-solo";
     const fee = Number(controls.quickBookFee.value || 0);
     const bookingId = crypto.randomUUID();
     const row = {
       id: bookingId,
       client_id: client.id,
-      session_type: couple ? "Joint session" : "Individual session",
+      session_type: couple && !soloPartner ? "Joint session" : "Individual session",
       session_format: controls.quickBookFormat.value,
       booking_source: "Ayesha booking for client",
       client_type: "Existing client",
@@ -2184,16 +2205,19 @@
       invoice_required: !pending && fee > 0,
       invoice_amount: !pending && fee > 0 ? fee : null,
       invoice_note: !pending && fee > 0 ? "Create one invoice for this appointment." : null,
-      duration: couple ? "80 minutes" : "50 minutes",
+      duration: soloPartner ? "60 minutes" : couple ? "80 minutes" : "50 minutes",
       preferred_date: controls.quickBookDate.value,
       preferred_time: controls.quickBookTime.value,
-      first_name: client.first_name || "",
-      surname: client.surname || "",
-      second_first_name: client.second_first_name || "",
-      second_surname: client.second_surname || "",
-      email: client.email || client.second_email || "",
+      first_name: secondPartnerSolo ? client.second_first_name || "" : client.first_name || "",
+      surname: secondPartnerSolo ? client.second_surname || "" : client.surname || "",
+      second_first_name: soloPartner ? "" : client.second_first_name || "",
+      second_surname: soloPartner ? "" : client.second_surname || "",
+      email: secondPartnerSolo ? client.second_email || client.email || "" : client.email || client.second_email || "",
       phone: client.phone || "",
-      message: controls.quickBookNote.value.trim() || null,
+      message: [
+        soloPartner ? "Solo session within couples work." : "",
+        controls.quickBookNote.value.trim(),
+      ].filter(Boolean).join(" ") || null,
       consent_to_contact: true,
       status: pending ? "contacted" : "confirmed",
       calendar_sync_status: "pending",
@@ -2243,7 +2267,15 @@
       controls.quickBookDialog.close();
       await loadEvents();
       if (pending) controls.message.textContent = `${bookingClientDisplayName(client)} saved as pending.`;
-      else await offerEmailConfirmation(client, row, `${bookingClientDisplayName(client)} booked successfully${controls.quickBookFormat.value === "Online" && !row.zoom_join_url ? "; Zoom link needs attention" : ""}.`);
+      else {
+        const bookedName = soloPartner
+          ? [row.first_name, row.surname].filter(Boolean).join(" ")
+          : bookingClientDisplayName(client);
+        const confirmationClient = soloPartner
+          ? { email: row.email, second_email: null }
+          : client;
+        await offerEmailConfirmation(confirmationClient, row, `${bookedName} booked successfully${soloPartner ? " for a 60-minute solo session" : ""}${controls.quickBookFormat.value === "Online" && !row.zoom_join_url ? "; Zoom link needs attention" : ""}.`);
+      }
     } catch (error) {
       console.error(error);
       controls.quickBookMessage.textContent =

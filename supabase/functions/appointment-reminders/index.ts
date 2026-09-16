@@ -6,10 +6,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
-type Booking = { id:string; client_id:string|null; status:string; email_notifications_enabled:boolean; booking_type:string; block_session_count:number|null; block_date_pattern:string|null; block_frequency:string|null; exact_block_dates:unknown; session_type:string; session_format:string; preferred_date:string; preferred_time:string; first_name:string|null; second_first_name:string|null; email:string; zoom_join_url:string|null };
+type Booking = { id:string; client_id:string|null; status:string; email_notifications_enabled:boolean; booking_type:string; block_session_count:number|null; block_date_pattern:string|null; block_frequency:string|null; exact_block_dates:unknown; session_type:string; session_format:string; preferred_date:string; preferred_time:string; first_name:string|null; second_first_name:string|null; email:string; zoom_join_url:string|null; message:string|null };
 type Occurrence = { date:string; time:string; format:string };
 type Database = ReturnType<typeof createClient>;
-const bookingFields = "id,client_id,status,email_notifications_enabled,booking_type,block_session_count,block_date_pattern,block_frequency,exact_block_dates,session_type,session_format,preferred_date,preferred_time,first_name,second_first_name,email,zoom_join_url";
+const bookingFields = "id,client_id,status,email_notifications_enabled,booking_type,block_session_count,block_date_pattern,block_frequency,exact_block_dates,session_type,session_format,preferred_date,preferred_time,first_name,second_first_name,email,zoom_join_url,message";
 
 function respond(body:unknown, status=200) { return new Response(JSON.stringify(body), { status, headers:{...corsHeaders,"Content-Type":"application/json"} }); }
 function londonParts(date=new Date()) {
@@ -78,6 +78,9 @@ async function send(to:string, subject:string, text:string, html="") {
 }
 async function loadBooking(db:Database,id:string) { const {data,error}=await db.from("booking_requests").select(bookingFields).eq("id",id).maybeSingle(); if(error||!data) throw new Error("Booking not found."); return data as Booking; }
 async function recipients(db:Database, booking:Booking) {
+  if(String(booking.message||"").startsWith("Solo session within couples work.")){
+    return [String(booking.email||"").trim().toLowerCase()].filter((email)=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
+  }
   let emails:string[]=[];
   if(booking.client_id){const {data}=await db.from("clients").select("email,second_email").eq("id",booking.client_id).maybeSingle(); emails=[data?.email,data?.second_email].filter(Boolean) as string[];}
   if(!emails.length) emails=[booking.email];
