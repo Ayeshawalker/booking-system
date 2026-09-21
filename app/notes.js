@@ -295,16 +295,21 @@
       return `\\u${code > 32767 ? code - 65536 : code}?`;
     }).join("");
   }
-  function downloadAbcForPages() {
-    if (![ui.abcA, ui.abcB, ui.abcC].every((field) => field.value.trim())) {
+  function downloadAbcForPages(source = null) {
+    const abc = source || {
+      title: ui.abcTitle.value.trim(),
+      a: ui.abcA.value.trim(), b: ui.abcB.value.trim(), c: ui.abcC.value.trim(),
+      date: ui.date.value,
+    };
+    if (![abc.a, abc.b, abc.c].every((value) => String(value || "").trim())) {
       ui.message.textContent = "Review and complete all three ABC boxes first.";
       return;
     }
-    const title = ui.abcTitle.value.trim() || "ABC explored in session";
+    const title = String(abc.title || "").trim() || "ABC explored in session";
     const sections = [
-      ["A — Activating event", ui.abcA.value.trim()],
-      ["B — Beliefs and interpretations", ui.abcB.value.trim()],
-      ["C — Consequences", ui.abcC.value.trim()],
+      ["A — Activating event", abc.a],
+      ["B — Beliefs and interpretations", abc.b],
+      ["C — Consequences", abc.c],
     ];
     const body = sections.map(([heading, text]) =>
       `\\pard\\sb240\\sa100\\b\\fs28 ${rtfText(heading)}\\b0\\fs24\\par\n` +
@@ -318,7 +323,7 @@
     const url = URL.createObjectURL(new Blob([rtf], { type: "application/rtf" }));
     const link = document.createElement("a");
     link.href = url;
-    link.download = `abc-editable-${ui.date.value || "session"}.rtf`;
+    link.download = `abc-editable-${abc.date || ui.date.value || "session"}.rtf`;
     document.body.append(link); link.click(); link.remove(); URL.revokeObjectURL(url);
     ui.message.textContent = "Editable ABC downloaded. Open the RTF file in Pages to change the wording or layout.";
   }
@@ -370,7 +375,15 @@
       const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png", 0.95));
       if (!blob) throw new Error("The diagram image could not be prepared.");
       const file = new File([blob], `abc-diagram-${ui.date.value || "session"}.png`, { type: "image/png" });
-      stagedImages.push({ file, file_name: file.name, caption: ui.abcTitle.value.trim() || "ABC explored in session", previewUrl: URL.createObjectURL(file) });
+      stagedImages.push({
+        file, file_name: file.name,
+        caption: ui.abcTitle.value.trim() || "ABC explored in session",
+        previewUrl: URL.createObjectURL(file),
+        abc_source: {
+          title: ui.abcTitle.value.trim(), a: ui.abcA.value.trim(),
+          b: ui.abcB.value.trim(), c: ui.abcC.value.trim(), date: ui.date.value,
+        },
+      });
     } catch (error) { console.error(error); ui.message.textContent = "The reviewed wording is safe, but the diagram image could not be created. Please try again."; return; }
     finally { ui.abcCreate.disabled = false; ui.abcCreate.textContent = "Create reviewed diagram"; }
     ui.abcReview.hidden = true; renderImages(); ui.imageFields.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -407,10 +420,11 @@
     const saved = await Promise.all(noteImages.map(async (item) => ({ ...item, previewUrl: await signedImageUrl(item.storage_path) })));
     const all = [...saved.map((item) => ({ ...item, saved: true })), ...stagedImages.map((item) => ({ ...item, saved: false }))];
     if (!all.length) { ui.imageList.innerHTML = "<p>No images added to this note.</p>"; return; }
-    ui.imageList.innerHTML = all.map((item, index) => `<figure class="note-image-card" data-image-index="${index}" data-image-saved="${item.saved}"><img src="${escapeHtml(item.previewUrl)}" alt="${escapeHtml(item.caption || item.file_name || "Note image")}" /><figcaption><input class="note-image-caption" type="text" value="${escapeHtml(item.caption || "")}" placeholder="Caption, for example: ABC explored in session" /><button class="secondary-button note-image-download" type="button">Download image</button><button class="secondary-button note-image-remove" type="button">Remove</button></figcaption></figure>`).join("");
+    ui.imageList.innerHTML = all.map((item, index) => `<figure class="note-image-card" data-image-index="${index}" data-image-saved="${item.saved}"><img src="${escapeHtml(item.previewUrl)}" alt="${escapeHtml(item.caption || item.file_name || "Note image")}" /><figcaption><input class="note-image-caption" type="text" value="${escapeHtml(item.caption || "")}" placeholder="Caption, for example: ABC explored in session" /><button class="secondary-button note-image-download" type="button">Download image</button>${item.abc_source ? '<button class="secondary-button note-abc-pages-download" type="button">Download editable for Pages</button>' : ''}<button class="secondary-button note-image-remove" type="button">Remove</button></figcaption></figure>`).join("");
     ui.imageList.querySelectorAll(".note-image-card").forEach((card) => {
       const index = Number(card.dataset.imageIndex); const savedItem = card.dataset.imageSaved === "true";
       card.querySelector(".note-image-download").addEventListener("click", () => downloadNoteImage(all[index]));
+      card.querySelector(".note-abc-pages-download")?.addEventListener("click", () => downloadAbcForPages(all[index].abc_source));
       card.querySelector(".note-image-caption").addEventListener("change", async (event) => {
         if (!savedItem) { stagedImages[index - saved.length].caption = event.target.value.trim(); return; }
         noteImages[index].caption = event.target.value.trim();
@@ -449,7 +463,7 @@
       const path = `${admin.user.id}/${noteId}/${crypto.randomUUID()}-${safeFileName(item.file_name)}`;
       const { error: uploadError } = await db.storage.from(imageBucket).upload(path, item.file, { contentType: item.file.type, upsert: false });
       if (uploadError) throw uploadError;
-      const { error: rowError } = await db.from("clinical_note_attachments").insert({ note_id: noteId, storage_path: path, file_name: item.file_name, mime_type: item.file.type, file_size: item.file.size, caption: item.caption, display_order: noteImages.length + index, created_by: admin.user.id });
+      const { error: rowError } = await db.from("clinical_note_attachments").insert({ note_id: noteId, storage_path: path, file_name: item.file_name, mime_type: item.file.type, file_size: item.file.size, caption: item.caption, display_order: noteImages.length + index, created_by: admin.user.id, abc_source: item.abc_source || null });
       if (rowError) { await db.storage.from(imageBucket).remove([path]); throw rowError; }
     }
     revokeStagedUrls(); stagedImages = []; await loadImages(noteId);
@@ -852,7 +866,7 @@
   ui.addImage.addEventListener("click", () => ui.imageInput.click());
   ui.abcSuggest.addEventListener("click", suggestAbc);
   ui.abcCreate.addEventListener("click", createAbcDiagram);
-  ui.abcPages.addEventListener("click", downloadAbcForPages);
+  ui.abcPages.addEventListener("click", () => downloadAbcForPages());
   ui.abcCancel.addEventListener("click", () => { ui.abcReview.hidden = true; });
   ui.imageInput.addEventListener("change", () => { stageFiles(ui.imageInput.files); ui.imageInput.value = ""; });
   ui.imageDropzone.addEventListener("paste", (event) => { const files = [...event.clipboardData.items].filter((item) => item.kind === "file").map((item) => item.getAsFile()).filter(Boolean); if (files.length) { event.preventDefault(); stageFiles(files); } });
