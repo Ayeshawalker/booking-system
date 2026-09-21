@@ -23,7 +23,7 @@
     imageInput: document.querySelector("#note-image-input"), addImage: document.querySelector("#add-note-image"), imageList: document.querySelector("#note-image-list"),
     abcSuggest: document.querySelector("#suggest-note-abc"), abcReview: document.querySelector("#note-abc-review"),
     abcA: document.querySelector("#note-abc-a"), abcB: document.querySelector("#note-abc-b"), abcC: document.querySelector("#note-abc-c"),
-    abcTitle: document.querySelector("#note-abc-diagram-title"), abcCreate: document.querySelector("#create-note-abc"), abcCancel: document.querySelector("#cancel-note-abc"),
+    abcTitle: document.querySelector("#note-abc-diagram-title"), abcCreate: document.querySelector("#create-note-abc"), abcPages: document.querySelector("#download-note-abc-pages"), abcCancel: document.querySelector("#cancel-note-abc"),
     resourcePanel: document.querySelector("#client-resource-panel"), resourceUpload: document.querySelector("#client-resource-upload"),
     resourceTitle: document.querySelector("#client-resource-title-input"), resourceFile: document.querySelector("#client-resource-file"),
     resourceMessage: document.querySelector("#client-resource-message"), resourceLibrary: document.querySelector("#client-resource-library"),
@@ -285,6 +285,42 @@
       return `<rect x="${x}" y="190" width="338" height="420" rx="28" fill="${section.fill}" stroke="${section.stroke}" stroke-width="4"/><circle cx="${x + 48}" cy="242" r="27" fill="${section.stroke}"/><text x="${x + 48}" y="252" text-anchor="middle" font-family="Arial, sans-serif" font-size="29" font-weight="700" fill="white">${section.letter}</text><text x="${x + 88}" y="250" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#4f1531">${escapeXml(section.heading)}</text>${lines.map((line, lineIndex) => `<text x="${x + 28}" y="${310 + lineIndex * 27}" font-family="Arial, sans-serif" font-size="19" fill="#5f4550">${escapeXml(line)}</text>`).join("")}`;
     }).join("");
     return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720"><defs><linearGradient id="accent" x1="0" x2="1"><stop stop-color="#ed168c"/><stop offset="1" stop-color="#f6a623"/></linearGradient></defs><rect width="1200" height="720" rx="38" fill="#fffaf1"/><rect x="0" y="0" width="1200" height="18" rx="9" fill="url(#accent)"/><text x="600" y="88" text-anchor="middle" font-family="Georgia, serif" font-size="42" font-weight="700" fill="#8a5808">${escapeXml(title || "ABC explored in session")}</text><text x="600" y="132" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#806873">Clinician-reviewed therapeutic working diagram</text>${cards}<text x="600" y="672" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" letter-spacing="3" fill="#8a5808">AYESHA JANE · THERAPY · COUNSELLING · COACHING</text></svg>`;
+  }
+  function rtfText(value) {
+    return String(value || "").split("").map((character) => {
+      if (character === "\\" || character === "{" || character === "}") return `\\${character}`;
+      if (character === "\n") return "\\line ";
+      const code = character.charCodeAt(0);
+      if (code >= 32 && code <= 126) return character;
+      return `\\u${code > 32767 ? code - 65536 : code}?`;
+    }).join("");
+  }
+  function downloadAbcForPages() {
+    if (![ui.abcA, ui.abcB, ui.abcC].every((field) => field.value.trim())) {
+      ui.message.textContent = "Review and complete all three ABC boxes first.";
+      return;
+    }
+    const title = ui.abcTitle.value.trim() || "ABC explored in session";
+    const sections = [
+      ["A — Activating event", ui.abcA.value.trim()],
+      ["B — Beliefs and interpretations", ui.abcB.value.trim()],
+      ["C — Consequences", ui.abcC.value.trim()],
+    ];
+    const body = sections.map(([heading, text]) =>
+      `\\pard\\sb240\\sa100\\b\\fs28 ${rtfText(heading)}\\b0\\fs24\\par\n` +
+      `\\pard\\li360\\sa180 ${rtfText(text)}\\par\n`
+    ).join("");
+    const rtf = `{\\rtf1\\ansi\\deff0{\\fonttbl{\\f0 Arial;}{\\f1 Georgia;}}` +
+      `\\paperw11907\\paperh16840\\margl1134\\margr1134\\margt1134\\margb1134` +
+      `\\pard\\qc\\f1\\b\\fs40 ${rtfText(title)}\\b0\\par\n` +
+      `\\pard\\qc\\f0\\i\\fs20 Clinician-reviewed therapeutic working document\\i0\\par\n` +
+      body + `}`;
+    const url = URL.createObjectURL(new Blob([rtf], { type: "application/rtf" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `abc-editable-${ui.date.value || "session"}.rtf`;
+    document.body.append(link); link.click(); link.remove(); URL.revokeObjectURL(url);
+    ui.message.textContent = "Editable ABC downloaded. Open the RTF file in Pages to change the wording or layout.";
   }
   async function suggestAbc() {
     const source = (ui.final.value || ui.rough.value).trim();
@@ -793,6 +829,7 @@
   ui.addImage.addEventListener("click", () => ui.imageInput.click());
   ui.abcSuggest.addEventListener("click", suggestAbc);
   ui.abcCreate.addEventListener("click", createAbcDiagram);
+  ui.abcPages.addEventListener("click", downloadAbcForPages);
   ui.abcCancel.addEventListener("click", () => { ui.abcReview.hidden = true; });
   ui.imageInput.addEventListener("change", () => { stageFiles(ui.imageInput.files); ui.imageInput.value = ""; });
   ui.imageDropzone.addEventListener("paste", (event) => { const files = [...event.clipboardData.items].filter((item) => item.kind === "file").map((item) => item.getAsFile()).filter(Boolean); if (files.length) { event.preventDefault(); stageFiles(files); } });
