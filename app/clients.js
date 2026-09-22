@@ -510,7 +510,7 @@
     preferred_name: "What name would you prefer me to use?", pronouns: "What pronouns do you use?",
     date_of_birth: "What is your date of birth?", address: "What is your address?",
     email: "What is your email address?", phone: "What is your telephone number?",
-    safe_contact: "Is it safe to contact you by WhatsApp, telephone or email?",
+    safe_contact: "Is it okay to contact you via WhatsApp?",
     emergency_contact: "Who is your emergency contact, what is their relationship to you, and what is their telephone number?",
     relationship_context: "What is the present relationship situation?",
     what_happened: "Please tell me, in your own words, what has brought you to therapy.",
