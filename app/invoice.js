@@ -252,6 +252,146 @@
     }
   }
 
+  function createSimpleInvoicePdfBlob() {
+    const JsPdf = window.jspdf?.jsPDF;
+    if (!JsPdf) throw new Error("The fallback PDF tool could not load.");
+    const pdf = new JsPdf({ unit: "mm", format: "a4", orientation: "portrait" });
+    const pageWidth = 210;
+    const left = 18;
+    const right = 192;
+    const muted = [93, 70, 45];
+    const gold = [125, 84, 16];
+    const pink = [183, 19, 104];
+
+    pdf.setFillColor(230, 29, 141);
+    pdf.rect(0, 0, pageWidth, 5, "F");
+    pdf.setTextColor(...gold);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(18);
+    pdf.text(profile.issuer_name || "Ayesha Jane Therapy", left, 18);
+    pdf.setFontSize(26);
+    pdf.text("INVOICE", right, 18, { align: "right" });
+
+    pdf.setDrawColor(255, 201, 174);
+    pdf.line(left, 25, right, 25);
+    pdf.setFontSize(9);
+    pdf.setTextColor(...pink);
+    pdf.text("FROM", left, 34);
+    pdf.text("INVOICE FOR", 112, 34);
+    pdf.setFont("helvetica", "normal");
+    pdf.setTextColor(...muted);
+    pdf.setFontSize(10);
+    const issuerLines = [
+      profile.issuer_name,
+      profile.address_line_1,
+      profile.address_line_2,
+      profile.city_postcode,
+    ].filter(Boolean);
+    pdf.text(issuerLines, left, 41);
+    pdf.text([invoice.client_name, invoice.client_email].filter(Boolean), 112, 41);
+
+    pdf.setFillColor(255, 248, 238);
+    pdf.roundedRect(left, 62, 174, 22, 2, 2, "F");
+    const meta = [
+      ["INVOICE NUMBER", invoice.invoice_number],
+      ["INVOICE DATE", formatDate(displayedInvoiceDate)],
+      ["PAYMENT DUE", formatDate(displayedDueDate)],
+    ];
+    meta.forEach(([label, value], index) => {
+      const x = left + (index * 58);
+      pdf.setFont("helvetica", "bold");
+      pdf.setTextColor(...pink);
+      pdf.setFontSize(8);
+      pdf.text(label, x + 4, 70);
+      pdf.setTextColor(...gold);
+      pdf.setFontSize(10);
+      pdf.text(String(value || "-"), x + 4, 78);
+    });
+
+    let y = 96;
+    pdf.setFillColor(135, 91, 24);
+    pdf.rect(left, y, 174, 10, "F");
+    pdf.setTextColor(255, 250, 240);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(9);
+    pdf.text("DESCRIPTION", left + 4, y + 6.5);
+    pdf.text("AMOUNT", right - 4, y + 6.5, { align: "right" });
+    y += 15;
+    pdf.setTextColor(...muted);
+    lineItems.forEach((item) => {
+      const description = item.itemised
+        ? `${item.type === "Joint session" ? "80-minute" : "50-minute"} ${item.format} ${item.type.toLowerCase()}`
+        : sessionDescription;
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(10);
+      pdf.text(pdf.splitTextToSize(description, 125), left + 4, y);
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(8);
+      pdf.text(`Session date: ${formatDate(item.date)}`, left + 4, y + 5);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(10);
+      pdf.text(formatMoney(item.fee), right - 4, y, { align: "right" });
+      y += 14;
+    });
+    if (extraMinutes > 0 && extraAmount > 0) {
+      pdf.setFont("helvetica", "normal");
+      pdf.text(`Additional ${extraMinutes} minutes`, left + 4, y);
+      pdf.text(formatMoney(extraAmount), right - 4, y, { align: "right" });
+      y += 12;
+    }
+    pdf.line(left, y, right, y);
+    y += 9;
+    pdf.setFont("helvetica", "bold");
+    pdf.setTextColor(...pink);
+    pdf.setFontSize(11);
+    pdf.text("TOTAL DUE", 132, y);
+    pdf.setTextColor(...gold);
+    pdf.setFontSize(15);
+    pdf.text(formatMoney(Number(invoice.amount) + extraAmount), right - 4, y, { align: "right" });
+
+    y += 16;
+    pdf.setFillColor(255, 250, 240);
+    pdf.roundedRect(left, y, 174, paymentLink ? 62 : 49, 3, 3, "F");
+    pdf.setTextColor(...pink);
+    pdf.setFontSize(9);
+    pdf.text("BANK TRANSFER", left + 5, y + 8);
+    pdf.setTextColor(...muted);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(9);
+    pdf.text(`Account name: ${bank.account_name || "See account details provided"}`, left + 5, y + 16);
+    pdf.text(`Sort code: ${bank.sort_code || "-"}`, left + 5, y + 22);
+    pdf.text(`Account number: ${bank.account_number || "-"}`, 92, y + 22);
+    pdf.text(`Payment reference: ${invoice.invoice_number}`, left + 5, y + 28);
+    pdf.setTextColor(...pink);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("PAYPAL", left + 5, y + 38);
+    pdf.setTextColor(...muted);
+    pdf.setFont("helvetica", "normal");
+    pdf.text("ayeshajane67@gmail.com", left + 5, y + 45);
+    if (paymentLink) {
+      pdf.setTextColor(...pink);
+      pdf.setFont("helvetica", "bold");
+      pdf.text("PAYMENT LINK", 92, y + 38);
+      pdf.setTextColor(...muted);
+      pdf.setFont("helvetica", "normal");
+      pdf.textWithLink("Pay securely online", 92, y + 45, { url: paymentLink });
+    }
+    pdf.setTextColor(...muted);
+    pdf.setFontSize(8);
+    pdf.text("Thank you. Please use the invoice number as your payment reference.", 105, 282, { align: "center" });
+    pdf.text("Ayesha Jane Therapy | Counselling | Coaching", 105, 287, { align: "center" });
+    return pdf.output("blob");
+  }
+
+  async function createCompatibleInvoicePdfBlob() {
+    try {
+      return await createInvoicePdfBlob();
+    } catch (error) {
+      console.error("The styled invoice PDF could not be created; using the Safari fallback.", error);
+      return createSimpleInvoicePdfBlob();
+    }
+  }
+
   function downloadPdfBlob(blob, filename) {
     const downloadUrl = URL.createObjectURL(blob);
     const downloadLink = document.createElement("a");
@@ -277,7 +417,7 @@
     downloadButton.disabled = true;
     downloadButton.textContent = "Preparing PDF…";
     try {
-      const blob = await createInvoicePdfBlob();
+      const blob = await createCompatibleInvoicePdfBlob();
       downloadPdfBlob(blob, `${invoiceFilename}.pdf`);
       if (invoice.status === "Draft") {
         const sent = await confirmInvoiceWasSent();
@@ -349,7 +489,7 @@
     let blob = null;
     let file = null;
     try {
-      blob = await createInvoicePdfBlob();
+      blob = await createCompatibleInvoicePdfBlob();
       file = new File([blob], `${invoiceFilename}.pdf`, { type: "application/pdf" });
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
         await navigator.share({
