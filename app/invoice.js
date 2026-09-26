@@ -346,9 +346,11 @@
     }
     whatsappButton.disabled = true;
     whatsappButton.textContent = "Preparing PDF…";
+    let blob = null;
+    let file = null;
     try {
-      const blob = await createInvoicePdfBlob();
-      const file = new File([blob], `${invoiceFilename}.pdf`, { type: "application/pdf" });
+      blob = await createInvoicePdfBlob();
+      file = new File([blob], `${invoiceFilename}.pdf`, { type: "application/pdf" });
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
         await navigator.share({
           files: [file],
@@ -362,11 +364,16 @@
         window.location.assign(`https://wa.me/?text=${encodeURIComponent(message)}`);
       }
     } catch (error) {
-      if (error?.name !== "AbortError") {
-        console.error(error);
-        document.querySelector("#invoice-page-message").textContent =
-          "The invoice could not be shared. Please use Download PDF instead.";
+      if (error?.name === "AbortError") return;
+      console.error(error);
+      if (blob && file) {
+        downloadPdfBlob(blob, file.name);
+        await recordInvoiceAsSent("Invoice downloaded and WhatsApp opened.");
+        window.location.assign(`https://wa.me/?text=${encodeURIComponent(message)}`);
+        return;
       }
+      document.querySelector("#invoice-page-message").textContent =
+        "The invoice PDF could not be created. Please refresh the page and try again.";
     } finally {
       whatsappButton.disabled = false;
       whatsappButton.textContent = "Share PDF to WhatsApp";
