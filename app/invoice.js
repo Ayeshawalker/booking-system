@@ -252,6 +252,20 @@
     }
   }
 
+  function downloadPdfBlob(blob, filename) {
+    const downloadUrl = URL.createObjectURL(blob);
+    const downloadLink = document.createElement("a");
+    downloadLink.href = downloadUrl;
+    downloadLink.download = filename;
+    downloadLink.style.display = "none";
+    document.body.append(downloadLink);
+    downloadLink.click();
+    downloadLink.remove();
+    // Safari can finish handling blob downloads after the click has returned,
+    // so keep the object URL alive longer than the usual immediate cleanup.
+    window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 60000);
+  }
+
   const downloadButton = document.querySelector("#invoice-download");
   downloadButton.addEventListener("click", async () => {
     if (typeof window.html2pdf !== "function") {
@@ -263,11 +277,8 @@
     downloadButton.disabled = true;
     downloadButton.textContent = "Preparing PDF…";
     try {
-      invoiceDocument.classList.add("is-pdf-export");
-      await window.html2pdf()
-        .set(pdfOptions)
-        .from(invoiceDocument)
-        .save();
+      const blob = await createInvoicePdfBlob();
+      downloadPdfBlob(blob, `${invoiceFilename}.pdf`);
       if (invoice.status === "Draft") {
         const sent = await confirmInvoiceWasSent();
         if (sent) {
@@ -284,7 +295,6 @@
       document.querySelector("#invoice-page-message").textContent =
         "The PDF could not be downloaded. Please try again.";
     } finally {
-      invoiceDocument.classList.remove("is-pdf-export");
       downloadButton.disabled = false;
       downloadButton.textContent = "Download PDF";
     }
@@ -347,11 +357,7 @@
         });
         await recordInvoiceAsSent("Invoice shared and marked as sent.");
       } else {
-        const downloadLink = document.createElement("a");
-        downloadLink.href = URL.createObjectURL(blob);
-        downloadLink.download = file.name;
-        downloadLink.click();
-        setTimeout(() => URL.revokeObjectURL(downloadLink.href), 1000);
+        downloadPdfBlob(blob, file.name);
         await recordInvoiceAsSent("WhatsApp opened and the invoice was marked as sent.");
         window.location.assign(`https://wa.me/?text=${encodeURIComponent(message)}`);
       }
