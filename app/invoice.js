@@ -252,7 +252,7 @@
     }
   }
 
-  function createSimpleInvoicePdfBlob() {
+  async function createSimpleInvoicePdfBlob() {
     const JsPdf = window.jspdf?.jsPDF;
     if (!JsPdf) throw new Error("The fallback PDF tool could not load.");
     const pdf = new JsPdf({ unit: "mm", format: "a4", orientation: "portrait" });
@@ -264,20 +264,37 @@
     const pink = [183, 19, 104];
 
     pdf.setFillColor(230, 29, 141);
-    pdf.rect(0, 0, pageWidth, 5, "F");
-    pdf.setTextColor(...gold);
+    pdf.rect(0, 0, pageWidth, 4, "F");
+    pdf.setFillColor(255, 248, 238);
+    pdf.rect(0, 4, pageWidth, 43, "F");
+    try {
+      const logoResponse = await fetch("assets/aj-logo-medium-preview.png");
+      if (!logoResponse.ok) throw new Error("The invoice logo could not be loaded.");
+      const logoBytes = new Uint8Array(await logoResponse.arrayBuffer());
+      pdf.addImage(logoBytes, "PNG", left, 9, 65, 35);
+    } catch (logoError) {
+      console.error("The logo could not be added to the fallback PDF.", logoError);
+      pdf.setTextColor(...gold);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(18);
+      pdf.text(profile.issuer_name || "Ayesha Jane Therapy", left, 25);
+    }
+    pdf.setTextColor(...pink);
     pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(18);
-    pdf.text(profile.issuer_name || "Ayesha Jane Therapy", left, 18);
-    pdf.setFontSize(26);
-    pdf.text("INVOICE", right, 18, { align: "right" });
+    pdf.setFontSize(8);
+    pdf.text("PRIVATE CLIENT INVOICE", right, 16, { align: "right" });
+    pdf.setTextColor(...gold);
+    pdf.setFont("times", "bold");
+    pdf.setFontSize(28);
+    pdf.text("Invoice", right, 30, { align: "right" });
 
     pdf.setDrawColor(255, 201, 174);
-    pdf.line(left, 25, right, 25);
+    pdf.line(0, 47, pageWidth, 47);
     pdf.setFontSize(9);
     pdf.setTextColor(...pink);
-    pdf.text("FROM", left, 34);
-    pdf.text("INVOICE FOR", 112, 34);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("FROM", left, 58);
+    pdf.text("INVOICE FOR", 112, 58);
     pdf.setFont("helvetica", "normal");
     pdf.setTextColor(...muted);
     pdf.setFontSize(10);
@@ -287,11 +304,12 @@
       profile.address_line_2,
       profile.city_postcode,
     ].filter(Boolean);
-    pdf.text(issuerLines, left, 41);
-    pdf.text([invoice.client_name, invoice.client_email].filter(Boolean), 112, 41);
+    pdf.text(issuerLines, left, 65);
+    pdf.text([invoice.client_name, invoice.client_email].filter(Boolean), 112, 65);
 
     pdf.setFillColor(255, 248, 238);
-    pdf.roundedRect(left, 62, 174, 22, 2, 2, "F");
+    pdf.setDrawColor(255, 201, 174);
+    pdf.roundedRect(left, 87, 174, 22, 3, 3, "FD");
     const meta = [
       ["INVOICE NUMBER", invoice.invoice_number],
       ["INVOICE DATE", formatDate(displayedInvoiceDate)],
@@ -302,13 +320,13 @@
       pdf.setFont("helvetica", "bold");
       pdf.setTextColor(...pink);
       pdf.setFontSize(8);
-      pdf.text(label, x + 4, 70);
+      pdf.text(label, x + 4, 95);
       pdf.setTextColor(...gold);
       pdf.setFontSize(10);
-      pdf.text(String(value || "-"), x + 4, 78);
+      pdf.text(String(value || "-"), x + 4, 103);
     });
 
-    let y = 96;
+    let y = 120;
     pdf.setFillColor(135, 91, 24);
     pdf.rect(left, y, 174, 10, "F");
     pdf.setTextColor(255, 250, 240);
@@ -351,7 +369,10 @@
 
     y += 16;
     pdf.setFillColor(255, 250, 240);
-    pdf.roundedRect(left, y, 174, paymentLink ? 62 : 49, 3, 3, "F");
+    pdf.setDrawColor(210, 164, 78);
+    pdf.roundedRect(left, y, 174, paymentLink ? 62 : 49, 3, 3, "FD");
+    pdf.setFillColor(230, 29, 141);
+    pdf.rect(left, y, 2.2, paymentLink ? 62 : 49, "F");
     pdf.setTextColor(...pink);
     pdf.setFontSize(9);
     pdf.text("BANK TRANSFER", left + 5, y + 8);
@@ -388,7 +409,7 @@
       return await createInvoicePdfBlob();
     } catch (error) {
       console.error("The styled invoice PDF could not be created; using the Safari fallback.", error);
-      return createSimpleInvoicePdfBlob();
+      return await createSimpleInvoicePdfBlob();
     }
   }
 
