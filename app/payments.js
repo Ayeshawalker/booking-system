@@ -63,6 +63,15 @@
     ].join("-");
   }
 
+  function createUuid() {
+    if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+    const bytes = crypto.getRandomValues(new Uint8Array(16));
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0"));
+    return `${hex.slice(0, 4).join("")}-${hex.slice(4, 6).join("")}-${hex.slice(6, 8).join("")}-${hex.slice(8, 10).join("")}-${hex.slice(10).join("")}`;
+  }
+
   function clientName(client) {
     const first = [client.first_name, client.surname].filter(Boolean).join(" ").trim();
     const second = [client.second_first_name, client.second_surname]
@@ -1138,7 +1147,7 @@
     controls.createHistoryInvoice.disabled = true;
     controls.message.textContent = "Creating invoice…";
     try {
-      const bookingId = crypto.randomUUID();
+      const bookingId = createUuid();
       const booking = {
         id: bookingId,
         client_id: historyClient.id,
@@ -1167,6 +1176,7 @@
         consent_to_contact: true,
         status: "confirmed",
         calendar_sync_status: "synced",
+        email_notifications_enabled: false,
       };
       const { error: bookingError } = await supabaseClient
         .from("booking_requests").insert(booking);
@@ -1187,7 +1197,9 @@
       window.location.href = `invoice.html?id=${encodeURIComponent(invoiceId)}`;
     } catch (error) {
       console.error(error);
-      controls.message.textContent = `The invoice could not be created. ${error?.message || "Please try again."}`;
+      const message = `The invoice could not be created. ${error?.message || "Please try again."}`;
+      controls.message.textContent = message;
+      window.alert(message);
       controls.createHistoryInvoice.disabled = false;
     }
   }
