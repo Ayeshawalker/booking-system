@@ -108,6 +108,14 @@ Deno.serve(async (request) => {
     return jsonResponse({
       events: events
         .filter((event) => event.status !== "cancelled")
+        // Google remains connected for public availability checks, but the
+        // admin calendar is now driven by booking-system records. Only Google
+        // events created by this system carry a bookingRequestId; hiding every
+        // other Google event prevents stale manual copies from being shown as
+        // additional client sessions.
+        .filter((event) =>
+          Boolean(event.extendedProperties?.private?.bookingRequestId)
+        )
         .map(toCalendarEvent)
         .filter(Boolean),
     });
