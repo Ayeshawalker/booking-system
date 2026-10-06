@@ -109,12 +109,13 @@ Deno.serve(async (request) => {
       events: events
         .filter((event) => event.status !== "cancelled")
         // Google remains connected for public availability checks, but the
-        // admin calendar is now driven by booking-system records. Only Google
-        // events created by this system carry a bookingRequestId; hiding every
-        // other Google event prevents stale manual copies from being shown as
-        // additional client sessions.
+        // admin calendar is now driven by booking-system records. Client
+        // appointments carry a bookingRequestId and private events created in
+        // this calendar carry ayeshaEventType=personal. Hide every other
+        // Google event so stale manual copies cannot appear as extra sessions.
         .filter((event) =>
-          Boolean(event.extendedProperties?.private?.bookingRequestId)
+          Boolean(event.extendedProperties?.private?.bookingRequestId) ||
+          event.extendedProperties?.private?.ayeshaEventType === "personal"
         )
         .map(toCalendarEvent)
         .filter(Boolean),
