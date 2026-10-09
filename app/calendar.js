@@ -1894,7 +1894,10 @@
         loadClientNames(),
         loadBookingFees(),
       ]);
-      await loadCalendarNotes(range.start);
+      // Notes belong to the week containing the selected/focused date. In
+      // month view, range.start is the first grid cell and may be in a
+      // different week, which made correctly saved notes appear to vanish.
+      await loadCalendarNotes(startOfWeek(state.focusDate));
       const { data, error } = calendarResult;
       if (requestId !== state.requestId) return;
 
