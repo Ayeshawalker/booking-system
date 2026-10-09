@@ -1743,17 +1743,22 @@
         state.clientCheckNotes,
         ongoingNoteKey,
       );
-      note.value = hasLocalDraft
-        ? state.clientCheckNotes[noteKey]
-        : hasCarriedDraft
-          ? state.clientCheckNotes[ongoingNoteKey]
-        : state.calendarNotes[noteKey] ?? client.frequency_notes ?? "";
+      const savedValue = state.calendarNotes[noteKey] ?? client.frequency_notes ?? "";
+      const localDraft = hasLocalDraft ? state.clientCheckNotes[noteKey] : "";
+      const carriedDraft = hasCarriedDraft ? state.clientCheckNotes[ongoingNoteKey] : "";
+      // A failed/empty browser draft must not cover a verified database note.
+      // Non-empty local wording still wins so an unsaved draft can be rescued.
+      note.value = String(localDraft || "").trim()
+        ? localDraft
+        : String(carriedDraft || "").trim()
+          ? carriedDraft
+          : savedValue;
       note.placeholder = "Brief note — carries forward until cleared…";
       note.setAttribute("aria-label", `Ongoing calendar note for ${bookingClientDisplayName(client)}`);
       // Compare against the database value, rather than the displayed local
       // draft, so clicking Save uploads a recovered Safari-only note.
       let lastSavedValue = String(
-        state.calendarNotes[noteKey] ?? client.frequency_notes ?? "",
+        savedValue,
       ).trim();
       let automaticSaveTimer = null;
       const save = document.createElement("button");
