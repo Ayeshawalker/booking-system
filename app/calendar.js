@@ -1718,6 +1718,7 @@
 
     const rows = currentClients.map((client) => {
       const noteKey = `${localDateKey(weekStart)}:${client.id}`;
+      const ongoingNoteKey = `client:${client.id}`;
       const row = document.createElement("div");
       row.className = "calendar-client-check-row";
       const heading = document.createElement("div");
@@ -1738,12 +1739,22 @@
         state.clientCheckNotes,
         noteKey,
       );
+      const hasCarriedDraft = Object.prototype.hasOwnProperty.call(
+        state.clientCheckNotes,
+        ongoingNoteKey,
+      );
       note.value = hasLocalDraft
         ? state.clientCheckNotes[noteKey]
+        : hasCarriedDraft
+          ? state.clientCheckNotes[ongoingNoteKey]
         : state.calendarNotes[noteKey] ?? client.frequency_notes ?? "";
       note.placeholder = "Brief note — carries forward until cleared…";
       note.setAttribute("aria-label", `Ongoing calendar note for ${bookingClientDisplayName(client)}`);
-      let lastSavedValue = String(note.value || "").trim();
+      // Compare against the database value, rather than the displayed local
+      // draft, so clicking Save uploads a recovered Safari-only note.
+      let lastSavedValue = String(
+        state.calendarNotes[noteKey] ?? client.frequency_notes ?? "",
+      ).trim();
       let automaticSaveTimer = null;
       const save = document.createElement("button");
       save.type = "button";
@@ -1790,6 +1801,7 @@
         // Keep the verified value as this browser's display copy. The same
         // value is also stored in Supabase for other devices and future visits.
         state.clientCheckNotes[noteKey] = value;
+        state.clientCheckNotes[ongoingNoteKey] = value;
         localStorage.setItem(
           clientCheckNotesStorageKey,
           JSON.stringify(state.clientCheckNotes),
@@ -1800,6 +1812,7 @@
         // Keep even an empty draft until the database confirms the save. This
         // prevents an older saved note reappearing when the week is changed.
         state.clientCheckNotes[noteKey] = value;
+        state.clientCheckNotes[ongoingNoteKey] = value;
         localStorage.setItem(
           clientCheckNotesStorageKey,
           JSON.stringify(state.clientCheckNotes),
