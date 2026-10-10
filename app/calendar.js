@@ -1111,7 +1111,9 @@
       console.error("Could not load unsynced booking requests", error);
       return [];
     }
-    return (data || []).map(savedBookingEvent);
+    return (data || [])
+      .filter((booking) => booking.message !== "Invoice created from outstanding Payment History appointments.")
+      .map(savedBookingEvent);
   }
 
   function eventOccursOnDate(event, date) {
