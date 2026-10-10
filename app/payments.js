@@ -408,28 +408,21 @@
     );
     if (!confirmed) return;
     button.disabled = true;
-    const { data: deletedInvoices, error: deleteError } = await supabaseClient
+    // Keep a cancelled tombstone linked to the booking. Physically deleting
+    // the row lets the automatic booking trigger recreate the invoice later.
+    const { data: cancelledInvoice, error: cancelError } = await supabaseClient
       .from("invoices")
-      .delete()
+      .update({ status: "Cancelled" })
       .eq("id", invoice.id)
-      .select("id");
-    let removedPermanently = !deleteError && deletedInvoices?.length === 1;
-    if (!removedPermanently) {
-      const { data: cancelledInvoice, error: cancelError } = await supabaseClient
-        .from("invoices")
-        .update({ status: "Cancelled" })
-        .eq("id", invoice.id)
-        .select("id")
-        .maybeSingle();
-      if (cancelError || !cancelledInvoice) {
-        button.disabled = false;
-        const message = "The invoice could not be removed. Please try signing out and back in.";
-        controls.message.textContent = message;
-        window.alert(message);
-        console.error("Invoice removal failed.", deleteError || cancelError);
-        return;
-      }
-      removedPermanently = false;
+      .select("id")
+      .maybeSingle();
+    if (cancelError || !cancelledInvoice) {
+      button.disabled = false;
+      const message = "The invoice could not be removed. Please try signing out and back in.";
+      controls.message.textContent = message;
+      window.alert(message);
+      console.error("Invoice removal failed.", cancelError);
+      return;
     }
     await supabaseClient.from("manual_payments")
       .update({ invoice_sent_date: null })
@@ -441,9 +434,8 @@
         .in("session_date", sessionDates);
     }
     await loadData();
-    controls.message.textContent = removedPermanently
-      ? `${invoice.invoice_number} was deleted. The session records were kept.`
-      : `${invoice.invoice_number} was removed from the invoice list. The session records were kept.`;
+    controls.message.textContent =
+      `${invoice.invoice_number} was removed from the invoice list. The session records were kept.`;
   }
 
   function renderInvoiceRow(invoice, allowDelete = false) {
