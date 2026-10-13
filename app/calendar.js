@@ -51,6 +51,10 @@
     quickBookFormat: document.querySelector("#quick-book-format"),
     quickBookStatus: document.querySelector("#quick-book-status"),
     quickBookFee: document.querySelector("#quick-book-fee"),
+    quickBookRecurring: document.querySelector("#quick-book-recurring"),
+    quickBookRecurringFields: document.querySelector("#quick-book-recurring-fields"),
+    quickBookRecurrenceFrequency: document.querySelector("#quick-book-recurrence-frequency"),
+    quickBookRecurrenceCount: document.querySelector("#quick-book-recurrence-count"),
     quickBookNote: document.querySelector("#quick-book-note"),
     quickBookMessage: document.querySelector("#quick-book-message"),
     quickBookHeading: document.querySelector("#quick-book-heading"),
@@ -520,6 +524,34 @@
     return true;
   }
 
+  async function offerSeriesEmailConfirmation(client, bookings, successText) {
+    const emails = [...new Set([client?.email, client?.second_email]
+      .map((email) => String(email || "").trim()).filter(Boolean))];
+    const approved = window.confirm(
+      `Send one recurring-session confirmation to ${emails.join(" and ") || "the recorded client email address"}?\n\n` +
+      "It will list every session date and arrange the usual day-before reminders.",
+    );
+    if (!approved) {
+      controls.message.textContent = `${successText} No confirmation email was sent.`;
+      return false;
+    }
+    controls.message.textContent = `${successText} Sending recurring confirmation…`;
+    const { data, error } = await supabaseClient.functions.invoke(
+      window.BOOKING_CONFIG?.appointmentRemindersFunction || "appointment-reminders",
+      { body: {
+        action: "send_series_confirmation",
+        bookingIds: bookings.map((booking) => booking.id),
+      } },
+    );
+    if (error || data?.error) {
+      controls.message.textContent = `${successText} The recurring confirmation was not sent. ${data?.error || error?.message || "Please try again."}`;
+      return false;
+    }
+    const count = Number(data?.recipients?.length || data?.sent || 0);
+    controls.message.textContent = `${successText} One recurring confirmation was sent to ${count} ${count === 1 ? "address" : "addresses"}.`;
+    return true;
+  }
+
   function normalisePersonName(value) {
     return String(value || "")
       .toLowerCase()
@@ -661,6 +693,10 @@
       String(defaultEnd.getMinutes()).padStart(2, "0"),
     ].join(":");
     controls.quickBookStatus.value = "confirmed";
+    controls.quickBookRecurring.checked = false;
+    controls.quickBookRecurringFields.hidden = true;
+    controls.quickBookRecurrenceFrequency.value = "Weekly";
+    controls.quickBookRecurrenceCount.value = "6";
     controls.quickBookArrangementField.hidden = true;
     controls.quickBookDialog.showModal();
     window.lucide?.createIcons();
@@ -813,7 +849,7 @@
     const [bookingResult, paymentResult] = await Promise.all([
       supabaseClient
         .from("booking_requests")
-        .select("id, client_id, first_name, surname, second_first_name, second_surname, booking_type, session_type, session_format, duration, preferred_date, preferred_time, price, total_cost, status, message, block_session_count, block_date_pattern, block_frequency, exact_block_dates"),
+        .select("id, client_id, first_name, surname, second_first_name, second_surname, booking_type, session_type, session_format, duration, preferred_date, preferred_time, price, total_cost, status, message, block_session_count, block_date_pattern, block_frequency, exact_block_dates, recurring_series_id"),
       supabaseClient
         .from("manual_payments")
         .select("id, client_id, client_name, session_date, session_type, session_format, fee_due"),
@@ -844,8 +880,9 @@
         duration: booking.duration,
         preferredDate: booking.preferred_date,
         preferredTime: booking.preferred_time,
-        isRecurring: booking.booking_type === "Block booking" &&
-          booking.block_date_pattern === "Regular pattern",
+        isRecurring: Boolean(booking.recurring_series_id) ||
+          (booking.booking_type === "Block booking" &&
+            booking.block_date_pattern === "Regular pattern"),
       });
     });
   }
@@ -2129,6 +2166,10 @@
     input.addEventListener("change", () => setQuickBookKind(input.value));
   });
   controls.quickBookClient.addEventListener("change", applyQuickBookClientDefaults);
+  controls.quickBookRecurring.addEventListener("change", () => {
+    controls.quickBookRecurringFields.hidden = !controls.quickBookRecurring.checked;
+    controls.quickBookRecurrenceCount.required = controls.quickBookRecurring.checked;
+  });
   controls.quickBookFormat.addEventListener("change", () => {
     const client = selectedQuickBookClient();
     if (!client) return;
@@ -2223,6 +2264,12 @@
     const soloPartner = arrangement === "first-solo" || arrangement === "second-solo";
     const secondPartnerSolo = arrangement === "second-solo";
     const fee = Number(controls.quickBookFee.value || 0);
+    const recurring = controls.quickBookRecurring.checked;
+    const recurrenceFrequency = controls.quickBookRecurrenceFrequency.value;
+    const recurrenceCount = recurring
+      ? Math.min(20, Math.max(2, Number(controls.quickBookRecurrenceCount.value || 2)))
+      : 1;
+    const recurringSeriesId = recurring ? crypto.randomUUID() : null;
     const bookingId = crypto.randomUUID();
     const row = {
       id: bookingId,
@@ -2255,48 +2302,58 @@
       consent_to_contact: true,
       status: pending ? "contacted" : "confirmed",
       calendar_sync_status: "pending",
+      recurring_series_id: recurringSeriesId,
+      recurrence_frequency: recurring ? recurrenceFrequency : null,
+      recurrence_sequence: recurring ? 1 : null,
+      recurrence_total: recurring ? recurrenceCount : null,
     };
+    const gapDays = recurrenceFrequency === "Fortnightly" ? 14 : 7;
+    const bookingRows = Array.from({ length: recurrenceCount }, (_, index) => ({
+      ...row,
+      id: index === 0 ? bookingId : crypto.randomUUID(),
+      preferred_date: localDateKey(addDays(dateFromKey(row.preferred_date), gapDays * index)),
+      recurrence_sequence: recurring ? index + 1 : null,
+    }));
     saveButton.disabled = true;
-    controls.quickBookMessage.textContent = "Saving booking…";
+    controls.quickBookMessage.textContent = recurring ? "Saving recurring sessions…" : "Saving booking…";
     try {
       const { data: existingBooking, error: existingBookingError } = await supabaseClient
         .from("booking_requests")
-        .select("id")
+        .select("id, preferred_date, preferred_time")
         .eq("client_id", client.id)
-        .eq("preferred_date", row.preferred_date)
-        .eq("preferred_time", row.preferred_time)
+        .in("preferred_date", bookingRows.map((booking) => booking.preferred_date))
         .neq("status", "closed")
-        .limit(1);
+        .limit(50);
       if (existingBookingError) throw existingBookingError;
-      if (existingBooking?.[0]) {
-        throw new Error("This client already has a booking at this date and time.");
+      const duplicate = (existingBooking || []).find(
+        (booking) => String(booking.preferred_time).slice(0, 5) === row.preferred_time,
+      );
+      if (duplicate) {
+        throw new Error(`This client already has a booking on ${formatLongDate(dateFromKey(duplicate.preferred_date))} at this time.`);
       }
-      const { error } = await supabaseClient.from("booking_requests").insert(row);
+      const { error } = await supabaseClient.from("booking_requests").insert(bookingRows);
       if (error) throw error;
 
-      if (!pending && controls.quickBookFormat.value === "Online") {
-        const { data: zoomData, error: zoomError } = await supabaseClient.functions.invoke(
-          window.BOOKING_CONFIG?.zoomCreateMeetingFunction || "zoom-create-meeting",
-          { body: { bookingId } },
+      for (const savedBooking of bookingRows) {
+        if (!pending && controls.quickBookFormat.value === "Online") {
+          const { data: zoomData, error: zoomError } = await supabaseClient.functions.invoke(
+            window.BOOKING_CONFIG?.zoomCreateMeetingFunction || "zoom-create-meeting",
+            { body: { bookingId: savedBooking.id } },
+          );
+          if (zoomData?.joinUrl) savedBooking.zoom_join_url = zoomData.joinUrl;
+          if (zoomError) console.error("A recurring Zoom link needs attention.", zoomError);
+        }
+        if (!pending && fee > 0) {
+          const { error: invoiceError } = await supabaseClient.rpc(
+            "ensure_booking_invoice", { p_booking_id: savedBooking.id },
+          );
+          if (invoiceError) console.error("A recurring invoice could not be created.", invoiceError);
+        }
+        const { error: calendarError } = await supabaseClient.functions.invoke(
+          window.BOOKING_CONFIG?.calendarCreateFunction || "calendar-create-booking",
+          { body: { bookingId: savedBooking.id } },
         );
-        if (zoomData?.joinUrl) row.zoom_join_url = zoomData.joinUrl;
-        if (zoomError) console.error("The booking was saved but its unique Zoom link needs attention.", zoomError);
-      }
-
-      if (!pending && fee > 0) {
-        const { error: invoiceError } = await supabaseClient.rpc(
-          "ensure_booking_invoice",
-          { p_booking_id: bookingId },
-        );
-        if (invoiceError) console.error("The invoice could not be created.", invoiceError);
-      }
-
-      const { error: calendarError } = await supabaseClient.functions.invoke(
-        window.BOOKING_CONFIG?.calendarCreateFunction || "calendar-create-booking",
-        { body: { bookingId } },
-      );
-      if (calendarError) {
-        console.error("The booking was saved but Google Calendar needs attention.", calendarError);
+        if (calendarError) console.error("A recurring calendar session needs attention.", calendarError);
       }
       controls.quickBookDialog.close();
       await loadEvents();
@@ -2308,7 +2365,15 @@
         const confirmationClient = soloPartner
           ? { email: row.email, second_email: null }
           : client;
-        await offerEmailConfirmation(confirmationClient, row, `${bookedName} booked successfully${soloPartner ? " for a 60-minute solo session" : ""}${controls.quickBookFormat.value === "Online" && !row.zoom_join_url ? "; Zoom link needs attention" : ""}.`);
+        if (recurring) {
+          await offerSeriesEmailConfirmation(
+            confirmationClient,
+            bookingRows,
+            `${bookedName} booked for ${recurrenceCount} ${recurrenceFrequency.toLowerCase()} sessions.`,
+          );
+        } else {
+          await offerEmailConfirmation(confirmationClient, row, `${bookedName} booked successfully${soloPartner ? " for a 60-minute solo session" : ""}${controls.quickBookFormat.value === "Online" && !row.zoom_join_url ? "; Zoom link needs attention" : ""}.`);
+        }
       }
     } catch (error) {
       console.error(error);

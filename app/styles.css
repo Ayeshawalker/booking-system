@@ -2710,6 +2710,31 @@ dd {
   line-height: 1;
 }
 
+.calendar-recurring-choice > span {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-weight: 900;
+}
+
+.calendar-recurring-choice input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--pink);
+}
+
+.calendar-recurring-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding: 16px;
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  background: var(--cream);
+}
+
+.calendar-recurring-fields[hidden] { display: none; }
+
 .calendar-event-time {
   color: currentColor;
   font-size: 0.69rem;

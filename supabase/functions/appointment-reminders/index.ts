@@ -59,6 +59,16 @@ function confirmationMessage(booking:Booking,clientZone=timeZone) {
   const html=emailShell(intro,greeting(booking),`<p style="margin:0 0 14px">${escapeHtml(intro)}</p>${itemHtml}${accessHtml}<p style="margin:22px 0 16px">If you need to get in touch or rearrange your appointment, simply reply to this email. If you do need to make a change, if possible please give me at least 48 hours’ notice to avoid a cancellation charge.</p><p style="margin:0">I look forward to seeing you then.</p>`);
   return {subject:items.length>1?"Your sessions with Ayesha are confirmed":"Your session with Ayesha is confirmed",text,html};
 }
+function seriesConfirmationMessage(bookings:Booking[],clientZone=timeZone) {
+  const ordered=[...bookings].sort((a,b)=>a.preferred_date.localeCompare(b.preferred_date));
+  const first=ordered[0];
+  const intro=`Just confirming your recurring ${ordered.length > 1 ? "sessions" : "session"} with me:`;
+  const lines=ordered.map((booking)=>`• ${appointmentWhen(booking.preferred_date,time(booking.preferred_time),clientZone)}, ${formatLabel(booking.session_format)}.${booking.zoom_join_url&&["Online","Zoom call"].includes(booking.session_format)?` Your joining link is: ${booking.zoom_join_url}`:""}`);
+  const text=[greeting(first),"",intro,"",...lines,"","If you need to pause, stop or rearrange any session, simply reply to this email. If possible, please give me at least 48 hours’ notice to avoid a cancellation charge.","","I look forward to seeing you then.","","Warm wishes,","Ayesha"].join("\n");
+  const itemHtml=ordered.map((booking)=>{const detail=`${appointmentWhen(booking.preferred_date,time(booking.preferred_time),clientZone)}, ${formatLabel(booking.session_format)}.`;const zoom=booking.zoom_join_url&&["Online","Zoom call"].includes(booking.session_format)?booking.zoom_join_url:"";return `<div style="margin:12px 0;padding:16px;border-left:5px solid #f9a22c;border-radius:10px;background:#fff8ee"><strong>${escapeHtml(detail)}</strong>${zoom?`<p style="margin:10px 0 0">Your joining link is:</p>${zoomButton(zoom)}`:""}</div>`;}).join("");
+  const html=emailShell(intro,greeting(first),`<p style="margin:0 0 14px">${escapeHtml(intro)}</p>${itemHtml}<p style="margin:22px 0 16px">If you need to pause, stop or rearrange any session, simply reply to this email. If possible, please give me at least 48 hours’ notice to avoid a cancellation charge.</p><p style="margin:0">I look forward to seeing you then.</p>`);
+  return {subject:"Your recurring sessions with Ayesha are confirmed",text,html};
+}
 function cancellationMessage(booking:Booking,clientZone=timeZone) {
   const item=occurrences(booking)[0], line=`Just confirming that your session on ${appointmentWhen(item.date,item.time,clientZone)} has been cancelled.`;
   const text=[greeting(booking),"",line,"","If you haven’t already arranged another time and would like to, simply reply to this email.","","Warm wishes,","Ayesha"].join("\n");
@@ -114,6 +124,16 @@ Deno.serve(async(request)=>{
   try{
     const body=await request.json().catch(()=>({})), url=Deno.env.get("SUPABASE_URL")||"", key=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||""; if(!url||!key)throw new Error("Supabase service configuration is missing.");
     const db=createClient(url,key,{auth:{persistSession:false}}), now=londonParts();
+    if(body.action==="send_series_confirmation"){
+      const admin=await adminUser(request,db,body.adminAccessToken); if(!admin)return respond({error:"Not authorised"},403);
+      const ids=Array.isArray(body.bookingIds)?[...new Set(body.bookingIds.map(String))].slice(0,20):[]; if(ids.length<2)return respond({error:"At least two recurring sessions are required."},400);
+      const {data,error}=await db.from("booking_requests").select(bookingFields).in("id",ids); if(error||!data||data.length!==ids.length)return respond({error:"The recurring sessions could not be loaded."},400);
+      const bookings=data as Booking[]; if(bookings.some((booking)=>booking.status!=="confirmed"))return respond({error:"Every recurring session must be confirmed before emailing."},409);
+      const first=bookings[0],to=await recipients(db,first),clientZone=await bookingClientTimeZone(db,first); if(!to.length)return respond({error:"No valid client email address is recorded."},400);
+      const message=seriesConfirmationMessage(bookings,clientZone); for(const email of to)await send(email,message.subject,message.text,message.html);
+      await db.from("booking_requests").update({email_notifications_enabled:true}).in("id",ids);
+      return respond({sent:to.length,recipients:to,remindersEnabled:true});
+    }
     if(body.action==="process_job"){
       const {data:job}=await db.from("appointment_email_jobs").select("*").eq("id",String(body.jobId||"")).maybeSingle();
       if(!job)return respond({error:"Email job not found."},404);
