@@ -2694,6 +2694,22 @@ dd {
   letter-spacing: 0.05em;
 }
 
+.calendar-event-recurring-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: #7d5410;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
 .calendar-event-time {
   color: currentColor;
   font-size: 0.69rem;

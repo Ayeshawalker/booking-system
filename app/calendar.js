@@ -844,6 +844,8 @@
         duration: booking.duration,
         preferredDate: booking.preferred_date,
         preferredTime: booking.preferred_time,
+        isRecurring: booking.booking_type === "Block booking" &&
+          booking.block_date_pattern === "Regular pattern",
       });
     });
   }
@@ -1408,6 +1410,14 @@
     title.textContent = event.title;
     if (showTime) button.append(time);
     button.append(title);
+    if (event.isRecurring) {
+      const recurringBadge = document.createElement("span");
+      recurringBadge.className = "calendar-event-recurring-badge";
+      recurringBadge.textContent = "R";
+      recurringBadge.setAttribute("aria-label", "Recurring session");
+      recurringBadge.title = "Recurring session";
+      button.append(recurringBadge);
+    }
     if (isInPerson) {
       const formatTab = document.createElement("span");
       formatTab.className = "calendar-event-format-tab";
@@ -1954,6 +1964,7 @@
           bookingStatus: details.status,
           bookingNote: details.note,
           invoiceAmount: details.invoiceAmount,
+          isRecurring: details.isRecurring,
         };
       }).filter(Boolean));
       controls.message.textContent = error
