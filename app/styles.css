@@ -2711,15 +2711,22 @@ dd {
 }
 
 .calendar-recurring-choice > span {
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  width: fit-content;
+  max-width: 100%;
   gap: 9px;
   font-weight: 900;
 }
 
-.calendar-recurring-choice input {
-  width: 20px;
-  height: 20px;
+.calendar-quick-book-body .calendar-recurring-choice input[type="checkbox"] {
+  box-sizing: border-box;
+  flex: 0 0 20px;
+  width: 20px !important;
+  min-width: 20px;
+  height: 20px !important;
+  margin: 0;
+  padding: 0;
   accent-color: var(--pink);
 }
 
