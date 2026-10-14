@@ -528,14 +528,14 @@
     const emails = [...new Set([client?.email, client?.second_email]
       .map((email) => String(email || "").trim()).filter(Boolean))];
     const approved = window.confirm(
-      `Send one recurring-session confirmation to ${emails.join(" and ") || "the recorded client email address"}?\n\n` +
-      "It will list every session date and arrange the usual day-before reminders.",
+      `Send a short recurring-appointment notice to ${emails.join(" and ") || "the recorded client email address"}?\n\n` +
+      "It will show the first appointment and the individual session fee, not a block price. The usual day-before reminders will still be arranged.",
     );
     if (!approved) {
       controls.message.textContent = `${successText} No confirmation email was sent.`;
       return false;
     }
-    controls.message.textContent = `${successText} Sending recurring confirmation…`;
+    controls.message.textContent = `${successText} Sending recurring-appointment notice…`;
     const { data, error } = await supabaseClient.functions.invoke(
       window.BOOKING_CONFIG?.appointmentRemindersFunction || "appointment-reminders",
       { body: {
@@ -544,11 +544,11 @@
       } },
     );
     if (error || data?.error) {
-      controls.message.textContent = `${successText} The recurring confirmation was not sent. ${data?.error || error?.message || "Please try again."}`;
+      controls.message.textContent = `${successText} The recurring-appointment notice was not sent. ${data?.error || error?.message || "Please try again."}`;
       return false;
     }
     const count = Number(data?.recipients?.length || data?.sent || 0);
-    controls.message.textContent = `${successText} One recurring confirmation was sent to ${count} ${count === 1 ? "address" : "addresses"}.`;
+    controls.message.textContent = `${successText} The recurring-appointment notice was sent to ${count} ${count === 1 ? "address" : "addresses"}.`;
     return true;
   }
 

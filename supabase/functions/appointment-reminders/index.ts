@@ -6,10 +6,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
-type Booking = { id:string; client_id:string|null; status:string; email_notifications_enabled:boolean; booking_type:string; block_session_count:number|null; block_date_pattern:string|null; block_frequency:string|null; exact_block_dates:unknown; session_type:string; session_format:string; preferred_date:string; preferred_time:string; first_name:string|null; second_first_name:string|null; email:string; zoom_join_url:string|null; message:string|null };
+type Booking = { id:string; client_id:string|null; status:string; email_notifications_enabled:boolean; booking_type:string; block_session_count:number|null; block_date_pattern:string|null; block_frequency:string|null; exact_block_dates:unknown; session_type:string; session_format:string; preferred_date:string; preferred_time:string; first_name:string|null; second_first_name:string|null; email:string; zoom_join_url:string|null; message:string|null; price:number|null; recurrence_frequency:string|null };
 type Occurrence = { date:string; time:string; format:string };
 type Database = ReturnType<typeof createClient>;
-const bookingFields = "id,client_id,status,email_notifications_enabled,booking_type,block_session_count,block_date_pattern,block_frequency,exact_block_dates,session_type,session_format,preferred_date,preferred_time,first_name,second_first_name,email,zoom_join_url,message";
+const bookingFields = "id,client_id,status,email_notifications_enabled,booking_type,block_session_count,block_date_pattern,block_frequency,exact_block_dates,session_type,session_format,preferred_date,preferred_time,first_name,second_first_name,email,zoom_join_url,message,price,recurrence_frequency";
 
 function respond(body:unknown, status=200) { return new Response(JSON.stringify(body), { status, headers:{...corsHeaders,"Content-Type":"application/json"} }); }
 function londonParts(date=new Date()) {
@@ -62,12 +62,16 @@ function confirmationMessage(booking:Booking,clientZone=timeZone) {
 function seriesConfirmationMessage(bookings:Booking[],clientZone=timeZone) {
   const ordered=[...bookings].sort((a,b)=>a.preferred_date.localeCompare(b.preferred_date));
   const first=ordered[0];
-  const intro=`Just confirming your recurring ${ordered.length > 1 ? "sessions" : "session"} with me:`;
-  const lines=ordered.map((booking)=>`• ${appointmentWhen(booking.preferred_date,time(booking.preferred_time),clientZone)}, ${formatLabel(booking.session_format)}.${booking.zoom_join_url&&["Online","Zoom call"].includes(booking.session_format)?` Your joining link is: ${booking.zoom_join_url}`:""}`);
-  const text=[greeting(first),"",intro,"",...lines,"","If you need to pause, stop or rearrange any session, simply reply to this email. If possible, please give me at least 48 hours’ notice to avoid a cancellation charge.","","I look forward to seeing you then.","","Warm wishes,","Ayesha"].join("\n");
-  const itemHtml=ordered.map((booking)=>{const detail=`${appointmentWhen(booking.preferred_date,time(booking.preferred_time),clientZone)}, ${formatLabel(booking.session_format)}.`;const zoom=booking.zoom_join_url&&["Online","Zoom call"].includes(booking.session_format)?booking.zoom_join_url:"";return `<div style="margin:12px 0;padding:16px;border-left:5px solid #f9a22c;border-radius:10px;background:#fff8ee"><strong>${escapeHtml(detail)}</strong>${zoom?`<p style="margin:10px 0 0">Your joining link is:</p>${zoomButton(zoom)}`:""}</div>`;}).join("");
-  const html=emailShell(intro,greeting(first),`<p style="margin:0 0 14px">${escapeHtml(intro)}</p>${itemHtml}<p style="margin:22px 0 16px">If you need to pause, stop or rearrange any session, simply reply to this email. If possible, please give me at least 48 hours’ notice to avoid a cancellation charge.</p><p style="margin:0">I look forward to seeing you then.</p>`);
-  return {subject:"Your recurring sessions with Ayesha are confirmed",text,html};
+  const frequency=String(first.recurrence_frequency||"Weekly").toLowerCase();
+  const intro=`Just confirming that your appointment with me will be recurring ${frequency}.`;
+  const firstDetail=`Your first appointment is ${appointmentWhen(first.preferred_date,time(first.preferred_time),clientZone)}, ${formatLabel(first.session_format)}.`;
+  const fee=Number(first.price||0);
+  const feeLine=fee>0?`The fee is £${fee.toFixed(2).replace(/\.00$/,'')} per session.`:"";
+  const zoom=first.zoom_join_url&&["Online","Zoom call"].includes(first.session_format)?first.zoom_join_url:"";
+  const text=[greeting(first),"",intro,"",firstDetail,feeLine,zoom?`Your joining link is: ${zoom}`:"","","If you need to pause, stop or rearrange your recurring appointment, simply reply to this email. If possible, please give me at least 48 hours’ notice to avoid a cancellation charge.","","I look forward to seeing you then.","","Warm wishes,","Ayesha"].filter(Boolean).join("\n");
+  const detailHtml=`<div style="margin:12px 0;padding:16px;border-left:5px solid #f9a22c;border-radius:10px;background:#fff8ee"><strong>${escapeHtml(firstDetail)}</strong>${feeLine?`<p style="margin:10px 0 0;font-weight:700">${escapeHtml(feeLine)}</p>`:""}${zoom?`<p style="margin:10px 0 0">Your joining link is:</p>${zoomButton(zoom)}`:""}</div>`;
+  const html=emailShell(intro,greeting(first),`<p style="margin:0 0 14px">${escapeHtml(intro)}</p>${detailHtml}<p style="margin:22px 0 16px">If you need to pause, stop or rearrange your recurring appointment, simply reply to this email. If possible, please give me at least 48 hours’ notice to avoid a cancellation charge.</p><p style="margin:0">I look forward to seeing you then.</p>`);
+  return {subject:"Your recurring appointment with Ayesha",text,html};
 }
 function cancellationMessage(booking:Booking,clientZone=timeZone) {
   const item=occurrences(booking)[0], line=`Just confirming that your session on ${appointmentWhen(item.date,item.time,clientZone)} has been cancelled.`;
