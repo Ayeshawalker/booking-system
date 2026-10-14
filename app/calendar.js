@@ -1260,6 +1260,9 @@
     controls.cancelBooking.hidden = !canReschedule;
     controls.repeatBooking.hidden = !canReschedule;
     controls.emailBooking.hidden = !canReschedule;
+    controls.emailBooking.textContent = event.isRecurring
+      ? "Send recurring appointment notice"
+      : "Send email confirmation";
     controls.rescheduleMessage.textContent = "";
     controls.bookingDetailsMessage.textContent = "";
     controls.privateMessage.textContent = "";
@@ -2645,7 +2648,23 @@
         second_surname: booking.second_surname,
       };
       controls.dialog.close();
-      await offerEmailConfirmation(client, booking, `${bookingClientDisplayName(client)}. `);
+      if (booking.recurring_series_id) {
+        const { data: series, error: seriesError } = await supabaseClient
+          .from("booking_requests")
+          .select("*")
+          .eq("recurring_series_id", booking.recurring_series_id)
+          .eq("status", "confirmed")
+          .order("recurrence_sequence");
+        if (seriesError) throw seriesError;
+        if (!series?.length) throw new Error("The recurring appointments could not be loaded.");
+        await offerSeriesEmailConfirmation(
+          client,
+          series,
+          `${bookingClientDisplayName(client)} recurring appointments.`,
+        );
+      } else {
+        await offerEmailConfirmation(client, booking, `${bookingClientDisplayName(client)}. `);
+      }
     } catch (error) {
       controls.bookingDetailsMessage.textContent = error?.message || "The email could not be prepared.";
     } finally {
