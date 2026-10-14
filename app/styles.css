@@ -2710,16 +2710,33 @@ dd {
   line-height: 1;
 }
 
-.calendar-recurring-choice > span {
-  display: inline-flex;
+.calendar-quick-book-grid label.calendar-recurring-choice {
+  display: grid !important;
+  grid-template-columns: 20px minmax(0, 1fr);
   align-items: center;
-  width: fit-content;
-  max-width: 100%;
-  gap: 9px;
+  gap: 8px 10px;
+  width: 100%;
+  padding: 14px;
+  border: 2px solid #efd9bd;
+  border-radius: 12px;
+  background: var(--cream);
+  cursor: pointer;
+}
+
+.calendar-recurring-choice > strong {
+  grid-column: 2;
+  justify-self: start;
+  color: var(--text);
   font-weight: 900;
 }
 
+.calendar-recurring-choice > small {
+  grid-column: 1 / -1;
+}
+
 .calendar-quick-book-body .calendar-recurring-choice input[type="checkbox"] {
+  grid-column: 1;
+  justify-self: start;
   box-sizing: border-box;
   flex: 0 0 20px;
   width: 20px !important;
@@ -2728,6 +2745,11 @@ dd {
   margin: 0;
   padding: 0;
   accent-color: var(--pink);
+}
+
+.calendar-quick-book-grid label.calendar-recurring-choice:has(input:checked) {
+  border-color: var(--pink);
+  background: #fff2f8;
 }
 
 .calendar-recurring-fields {
