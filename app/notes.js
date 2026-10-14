@@ -47,6 +47,8 @@
   const impactByClient = new Map();
   const imageBucket = "clinical-note-images";
   const resourceBucket = "client-resources";
+  const recoveryStorageKey = `clinical-note-recovery:${admin.user.id}`;
+  let recoveryTimer = null;
 
   const name = (client) => [[client.first_name, client.surname].filter(Boolean).join(" "), [client.second_first_name, client.second_surname].filter(Boolean).join(" ")].filter(Boolean).join(" and ");
   const formatDate = (date) => date ? new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(new Date(`${date}T12:00:00`)) : "No date";
@@ -54,6 +56,87 @@
   const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"})[c]);
   const lines = (value) => String(value || "").split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
   const joinLines = (value) => Array.isArray(value) ? value.join("\n") : "";
+
+  function readRecoveryDrafts() {
+    try {
+      const stored = JSON.parse(window.localStorage.getItem(recoveryStorageKey) || "{}");
+      const cutoff = Date.now() - (30 * 24 * 60 * 60 * 1000);
+      return Object.fromEntries(Object.entries(stored).filter(([, draft]) =>
+        draft && Number(new Date(draft.savedAt)) >= cutoff
+      ));
+    } catch (error) {
+      console.warn("Note recovery drafts could not be read", error);
+      return {};
+    }
+  }
+
+  function recoveryDraftKey(clientId = ui.client.value, noteDate = ui.date.value, noteId = activeId) {
+    return noteId ? `note:${noteId}` : `new:${clientId || "no-client"}:${noteDate || "no-date"}`;
+  }
+
+  function recoveryDraft() {
+    return {
+      activeId, clientId: ui.client.value, noteDate: ui.date.value, noteType: ui.type.value,
+      reviewDate: ui.review.value, roughNote: ui.rough.value, finalNote: ui.final.value,
+      interventions: ui.interventions.value, resources: ui.resources.value,
+      needsSupervision: ui.needsSupervision.checked, supervisionQuestion: ui.supervisionQuestion.value,
+      aiUsed, aiModel, supervisionStatus, supervisionDiscussedAt,
+      savedAt: new Date().toISOString(),
+    };
+  }
+
+  function saveRecoveryDraft() {
+    window.clearTimeout(recoveryTimer);
+    if (!ui.rough.value.trim() && !ui.final.value.trim()) return;
+    try {
+      const drafts = readRecoveryDrafts();
+      drafts[recoveryDraftKey()] = recoveryDraft();
+      window.localStorage.setItem(recoveryStorageKey, JSON.stringify(drafts));
+    } catch (error) {
+      console.warn("Note recovery draft could not be saved", error);
+    }
+  }
+
+  function scheduleRecoveryDraft() {
+    window.clearTimeout(recoveryTimer);
+    recoveryTimer = window.setTimeout(saveRecoveryDraft, 500);
+  }
+
+  function removeRecoveryDraft(key = recoveryDraftKey()) {
+    try {
+      const drafts = readRecoveryDrafts();
+      delete drafts[key];
+      window.localStorage.setItem(recoveryStorageKey, JSON.stringify(drafts));
+    } catch (error) {
+      console.warn("Note recovery draft could not be cleared", error);
+    }
+  }
+
+  function restoreRecoveryDraft(draft) {
+    if (!draft) return false;
+    activeId = draft.activeId || null;
+    ui.client.value = draft.clientId || ""; ui.date.value = draft.noteDate || new Date().toISOString().slice(0, 10);
+    ui.type.value = draft.noteType || "Session note"; ui.review.value = draft.reviewDate || "";
+    ui.rough.value = draft.roughNote || ""; ui.final.value = draft.finalNote || "";
+    ui.interventions.value = draft.interventions || ""; ui.resources.value = draft.resources || "";
+    ui.needsSupervision.checked = Boolean(draft.needsSupervision);
+    ui.supervisionQuestion.value = draft.supervisionQuestion || ""; ui.supervisionWrap.hidden = !ui.needsSupervision.checked;
+    aiUsed = Boolean(draft.aiUsed); aiModel = draft.aiModel || null;
+    supervisionStatus = draft.supervisionStatus || (ui.needsSupervision.checked ? "Outstanding" : "Not required");
+    supervisionDiscussedAt = draft.supervisionDiscussedAt || null;
+    ui.save.textContent = activeId ? "Update unfinished draft" : "Save unfinished draft";
+    const savedTime = new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" }).format(new Date(draft.savedAt));
+    ui.message.classList.remove("note-save-error");
+    ui.message.textContent = `Recovered your unsaved note from ${savedTime}. Please save it when you are ready.`;
+    return true;
+  }
+
+  function restoreLatestRecoveryDraft() {
+    const latest = Object.values(readRecoveryDrafts())
+      .filter((draft) => draft?.roughNote?.trim() || draft?.finalNote?.trim())
+      .sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)))[0];
+    return restoreRecoveryDraft(latest);
+  }
 
   function intakeQuestion(key) {
     const importantLabels = {
@@ -540,7 +623,10 @@
         throw new Error(result.error || `The secure save service returned ${response.status}.`);
       }
       const data = result.note;
+      const recoveryKeyBeforeSave = recoveryDraftKey();
       activeId = data.id;
+      removeRecoveryDraft(recoveryKeyBeforeSave);
+      removeRecoveryDraft(recoveryDraftKey(data.client_id, data.note_date, data.id));
       let imageError = null;
       if (stagedImages.length) {
         ui.message.textContent = "Note saved securely. Saving its images…";
@@ -800,6 +886,7 @@
     setOptions(ui.client, false);
     setOptions(ui.filter, true);
     clearForm();
+    if (!new URLSearchParams(window.location.search).get("note")) restoreLatestRecoveryDraft();
     render();
     ui.clientStatus.textContent = clients.length
       ? `${clients.length} client${clients.length === 1 ? "" : "s"} available.`
@@ -835,7 +922,10 @@
     if (requestedNote) openNote(requestedNote);
   }
   ui.improve.addEventListener("click", improve); ui.save.addEventListener("click", () => save("Draft")); ui.finalise.addEventListener("click", () => save("Final"));
-  ui.clear.addEventListener("click", clearForm); ui.filter.addEventListener("change", render); ui.showArchived.addEventListener("change", render);
+  ui.clear.addEventListener("click", () => {
+    if ((ui.rough.value.trim() || ui.final.value.trim()) && !confirm("Clear this form and discard its automatic recovery copy?")) return;
+    removeRecoveryDraft(); clearForm();
+  }); ui.filter.addEventListener("change", render); ui.showArchived.addEventListener("change", render);
   ui.client.addEventListener("change", async () => {
     intakeByClient.delete(ui.client.value);
     impactByClient.delete(ui.client.value);
@@ -874,7 +964,14 @@
   ui.imageDropzone.addEventListener("dragleave", () => ui.imageDropzone.classList.remove("is-dragging"));
   ui.imageDropzone.addEventListener("drop", (event) => { event.preventDefault(); ui.imageDropzone.classList.remove("is-dragging"); stageFiles(event.dataTransfer.files); });
   document.querySelector("#close-note-history").addEventListener("click", () => ui.historyDialog.close());
+  [ui.client, ui.date, ui.type, ui.review, ui.rough, ui.final, ui.interventions, ui.resources, ui.needsSupervision, ui.supervisionQuestion]
+    .forEach((element) => {
+      element.addEventListener("input", scheduleRecoveryDraft);
+      element.addEventListener("change", scheduleRecoveryDraft);
+    });
+  window.addEventListener("pagehide", saveRecoveryDraft);
   window.addEventListener("beforeunload", (event) => {
+    saveRecoveryDraft();
     if (!ui.rough.value.trim() && !ui.final.value.trim()) return;
     const saved = notes.find((note) => note.id === activeId);
     const unchanged = saved && saved.rough_note === ui.rough.value.trim() && saved.final_note === ui.final.value.trim();
