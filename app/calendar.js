@@ -135,26 +135,10 @@
         const savedNotes = JSON.parse(
           localStorage.getItem(clientCheckNotesStorageKey) || "{}",
         );
-        // Older versions stored a separate note for every week. Keep the most
-        // recent one for each client and carry it forward until it is cleared.
-        const legacyNotes = Object.entries(savedNotes)
-          .filter(([key, value]) => /^\d{4}-\d{2}-\d{2}:/.test(key) && String(value).trim())
-          .sort(([firstKey], [secondKey]) => firstKey.localeCompare(secondKey));
-        const latestLegacyByClient = {};
-        legacyNotes.forEach(([key, value]) => {
-            const clientId = key.slice(11);
-            latestLegacyByClient[`client:${clientId}`] = value;
-        });
-        Object.entries(latestLegacyByClient).forEach(([currentKey, value]) => {
-          if (!Object.prototype.hasOwnProperty.call(savedNotes, currentKey)) {
-            savedNotes[currentKey] = value;
-          }
-        });
-        // Once converted, remove the old week-specific entries. Leaving them
-        // behind caused stale weekly notes to overwrite the ongoing note each
-        // time the Calendar page was reopened.
+        // Remove the old carry-forward entries. They allowed a September note
+        // to override the correct database note for the displayed week.
         Object.keys(savedNotes)
-          .filter((key) => /^\d{4}-\d{2}-\d{2}:/.test(key))
+          .filter((key) => key.startsWith("client:"))
           .forEach((key) => delete savedNotes[key]);
         localStorage.setItem(clientCheckNotesStorageKey, JSON.stringify(savedNotes));
         return savedNotes;
@@ -1770,7 +1754,6 @@
 
     const rows = currentClients.map((client) => {
       const noteKey = `${localDateKey(weekStart)}:${client.id}`;
-      const ongoingNoteKey = `client:${client.id}`;
       const row = document.createElement("div");
       row.className = "calendar-client-check-row";
       const heading = document.createElement("div");
@@ -1791,22 +1774,15 @@
         state.clientCheckNotes,
         noteKey,
       );
-      const hasCarriedDraft = Object.prototype.hasOwnProperty.call(
-        state.clientCheckNotes,
-        ongoingNoteKey,
-      );
       const savedValue = state.calendarNotes[noteKey] ?? client.frequency_notes ?? "";
       const localDraft = hasLocalDraft ? state.clientCheckNotes[noteKey] : "";
-      const carriedDraft = hasCarriedDraft ? state.clientCheckNotes[ongoingNoteKey] : "";
       // A failed/empty browser draft must not cover a verified database note.
       // Non-empty local wording still wins so an unsaved draft can be rescued.
       note.value = String(localDraft || "").trim()
         ? localDraft
-        : String(carriedDraft || "").trim()
-          ? carriedDraft
-          : savedValue;
-      note.placeholder = "Brief note — carries forward until cleared…";
-      note.setAttribute("aria-label", `Ongoing calendar note for ${bookingClientDisplayName(client)}`);
+        : savedValue;
+      note.placeholder = "Brief note for this week…";
+      note.setAttribute("aria-label", `Calendar note for ${bookingClientDisplayName(client)} for this week`);
       // Compare against the database value, rather than the displayed local
       // draft, so clicking Save uploads a recovered Safari-only note.
       let lastSavedValue = String(
@@ -1858,7 +1834,6 @@
         // Keep the verified value as this browser's display copy. The same
         // value is also stored in Supabase for other devices and future visits.
         state.clientCheckNotes[noteKey] = value;
-        state.clientCheckNotes[ongoingNoteKey] = value;
         localStorage.setItem(
           clientCheckNotesStorageKey,
           JSON.stringify(state.clientCheckNotes),
@@ -1869,7 +1844,6 @@
         // Keep even an empty draft until the database confirms the save. This
         // prevents an older saved note reappearing when the week is changed.
         state.clientCheckNotes[noteKey] = value;
-        state.clientCheckNotes[ongoingNoteKey] = value;
         localStorage.setItem(
           clientCheckNotesStorageKey,
           JSON.stringify(state.clientCheckNotes),
@@ -2865,4 +2839,9 @@
   window.lucide?.createIcons();
   render();
   loadEvents();
+  window.addEventListener("pageshow", (event) => {
+    if (!event.persisted) return;
+    state.focusDate = defaultCalendarFocusDate();
+    loadEvents();
+  });
 })();
