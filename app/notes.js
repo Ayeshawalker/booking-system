@@ -154,7 +154,7 @@
     return true;
   }
 
-  function restoreLatestRecoveryDraft() {
+  function latestRecoveryDraft() {
     const drafts = readRecoveryDrafts();
     Object.entries(drafts).forEach(([key, draft]) => {
       if (recoveryDraftIsAlreadySaved(draft)) delete drafts[key];
@@ -164,7 +164,22 @@
     const latest = Object.values(drafts)
       .filter((draft) => draft?.roughNote?.trim() || draft?.finalNote?.trim())
       .sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)))[0];
-    return restoreRecoveryDraft(latest);
+    return latest || null;
+  }
+
+  function offerRecoveryDraft() {
+    const draft = latestRecoveryDraft();
+    if (!draft) return;
+    ui.message.textContent = "An unsaved recovery copy is available, but the new-note form has been kept blank. ";
+    const recoverButton = document.createElement("button");
+    recoverButton.type = "button";
+    recoverButton.className = "secondary-button";
+    recoverButton.textContent = "Recover unsaved note";
+    recoverButton.addEventListener("click", () => {
+      restoreRecoveryDraft(draft);
+      renderClientReference();
+    });
+    ui.message.append(recoverButton);
   }
 
   function intakeQuestion(key) {
@@ -949,7 +964,7 @@
     const requestedId = new URLSearchParams(window.location.search).get("note");
     const requestedNote = notes.find((note) => note.id === requestedId);
     if (requestedNote) openNote(requestedNote);
-    else if (restoreLatestRecoveryDraft()) renderClientReference();
+    else offerRecoveryDraft();
   }
   ui.improve.addEventListener("click", improve); ui.save.addEventListener("click", () => save("Draft")); ui.finalise.addEventListener("click", () => save("Final"));
   ui.clear.addEventListener("click", () => {
