@@ -85,12 +85,35 @@
     };
   }
 
+  function draftMatchesSavedNote(draft, note) {
+    if (!draft || !note || draft.clientId !== note.client_id || draft.noteDate !== note.note_date) return false;
+    return String(draft.roughNote || "").trim() === String(note.rough_note || "").trim() &&
+      String(draft.finalNote || "").trim() === String(note.final_note || "").trim() &&
+      String(draft.interventions || "").trim() === joinLines(note.interventions).trim() &&
+      String(draft.resources || "").trim() === joinLines(note.resources_shared).trim() &&
+      Boolean(draft.needsSupervision) === Boolean(note.supervision_required) &&
+      String(draft.supervisionQuestion || "").trim() === String(note.supervision_question || "").trim();
+  }
+
+  function recoveryDraftIsAlreadySaved(draft) {
+    const savedNote = draft?.activeId
+      ? notes.find((note) => note.id === draft.activeId)
+      : notes.find((note) => draftMatchesSavedNote(draft, note));
+    if (!savedNote) return false;
+    if (draftMatchesSavedNote(draft, savedNote)) return true;
+    return Boolean(draft.activeId && draft.savedAt && savedNote.updated_at &&
+      new Date(draft.savedAt) <= new Date(savedNote.updated_at));
+  }
+
   function saveRecoveryDraft() {
     window.clearTimeout(recoveryTimer);
     if (!ui.rough.value.trim() && !ui.final.value.trim()) return;
     try {
       const drafts = readRecoveryDrafts();
-      drafts[recoveryDraftKey()] = recoveryDraft();
+      const key = recoveryDraftKey();
+      const draft = recoveryDraft();
+      if (recoveryDraftIsAlreadySaved(draft)) delete drafts[key];
+      else drafts[key] = draft;
       window.localStorage.setItem(recoveryStorageKey, JSON.stringify(drafts));
     } catch (error) {
       console.warn("Note recovery draft could not be saved", error);
@@ -132,7 +155,13 @@
   }
 
   function restoreLatestRecoveryDraft() {
-    const latest = Object.values(readRecoveryDrafts())
+    const drafts = readRecoveryDrafts();
+    Object.entries(drafts).forEach(([key, draft]) => {
+      if (recoveryDraftIsAlreadySaved(draft)) delete drafts[key];
+    });
+    try { window.localStorage.setItem(recoveryStorageKey, JSON.stringify(drafts)); }
+    catch (error) { console.warn("Old note recovery copies could not be cleared", error); }
+    const latest = Object.values(drafts)
       .filter((draft) => draft?.roughNote?.trim() || draft?.finalNote?.trim())
       .sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)))[0];
     return restoreRecoveryDraft(latest);
@@ -886,7 +915,6 @@
     setOptions(ui.client, false);
     setOptions(ui.filter, true);
     clearForm();
-    if (!new URLSearchParams(window.location.search).get("note")) restoreLatestRecoveryDraft();
     render();
     ui.clientStatus.textContent = clients.length
       ? `${clients.length} client${clients.length === 1 ? "" : "s"} available.`
@@ -911,8 +939,9 @@
     document.querySelector(".note-structured-fields").hidden = !structuredFieldsReady;
     document.querySelector(".note-supervision-fields").hidden = !structuredFieldsReady;
     ui.imageFields.hidden = !imageFieldsReady;
-    Promise.all([loadNotes(), loadResources(), loadResourceShares()]).catch((secondaryError) => {
-      console.error("A secondary Notes section could not be loaded", secondaryError);
+    const secondaryLoads = await Promise.allSettled([loadNotes(), loadResources(), loadResourceShares()]);
+    secondaryLoads.filter((result) => result.status === "rejected").forEach((result) => {
+      console.error("A secondary Notes section could not be loaded", result.reason);
     });
     if (!structuredFieldsReady) ui.message.textContent = "Your existing notes are working. The new interventions and supervision fields still need the one-time Supabase update.";
     else if (!imageFieldsReady) ui.message.textContent = "Your notes are working. Images and diagrams need the one-time Supabase attachment update before they appear.";
@@ -920,6 +949,7 @@
     const requestedId = new URLSearchParams(window.location.search).get("note");
     const requestedNote = notes.find((note) => note.id === requestedId);
     if (requestedNote) openNote(requestedNote);
+    else if (restoreLatestRecoveryDraft()) renderClientReference();
   }
   ui.improve.addEventListener("click", improve); ui.save.addEventListener("click", () => save("Draft")); ui.finalise.addEventListener("click", () => save("Final"));
   ui.clear.addEventListener("click", () => {
