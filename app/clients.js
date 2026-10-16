@@ -21,6 +21,7 @@
     saveButton: document.querySelector("#save-client"),
     deleteButton: document.querySelector("#delete-client"),
     firstPersonLegend: document.querySelector("#first-person-legend"),
+    linkedPartnerFields: document.querySelector("#linked-partner-fields"),
     secondPersonFields: document.querySelector("#second-person-fields"),
     agreedFeeLabel: document.querySelector("#agreed-fee-label"),
     contractDateField: document.querySelector("#contract-date-field"),
@@ -66,6 +67,8 @@
   const selectedColumns = [
     "id",
     "record_type",
+    "partner_one_client_id",
+    "partner_two_client_id",
     "status",
     "first_name",
     "surname",
@@ -210,6 +213,9 @@
         "No email recorded",
     );
     appendText(typeCell, "span", client.record_type);
+    if (client.record_type === "Couple" && (client.partner_one_client_id || client.partner_two_client_id)) {
+      appendText(typeCell, "small", "Linked to individual records");
+    }
 
     appendText(
       paperworkCell,
@@ -666,12 +672,19 @@
 
   function updateCounts() {
     const formerCount = clients.filter((client) => client.status === "Former").length;
-    counts.all.textContent = String(clients.length);
+    const personKeys = (client) => client.record_type === "Individual"
+      ? [client.id]
+      : [
+          client.partner_one_client_id || `couple:${client.id}:one`,
+          client.partner_two_client_id || `couple:${client.id}:two`,
+        ];
+    const countPeople = (rows) => new Set(rows.flatMap(personKeys)).size;
+    counts.all.textContent = String(countPeople(clients));
     counts.active.textContent = String(
-      clients.filter((client) => client.status === "Active").length,
+      countPeople(clients.filter((client) => client.status === "Active")),
     );
     counts.paused.textContent = String(
-      clients.filter((client) => client.status === "Paused").length,
+      countPeople(clients.filter((client) => client.status === "Paused")),
     );
     counts.individuals.textContent = String(
       clients.filter((client) => client.record_type === "Individual").length,
@@ -767,6 +780,7 @@
   function updateConditionalFields() {
     const isCouple = controls.form.elements.recordType.value === "Couple";
     controls.secondPersonFields.hidden = !isCouple;
+    controls.linkedPartnerFields.hidden = !isCouple;
     controls.firstPersonLegend.textContent = isCouple
       ? "First person in couple"
       : "Individual";
@@ -802,12 +816,40 @@
     if (field) field.value = value || "";
   }
 
+  function populateLinkedPartnerChoices(client = null) {
+    const individualClients = clients.filter((item) =>
+      item.record_type === "Individual" && item.id !== client?.id,
+    );
+    ["partnerOneClientId", "partnerTwoClientId"].forEach((name) => {
+      const select = controls.form.elements[name];
+      select.replaceChildren(new Option("Not linked", ""));
+      individualClients.forEach((item) => {
+        select.add(new Option(`${clientNames(item)} (${item.status})`, item.id));
+      });
+    });
+  }
+
+  function copyLinkedPerson(clientId, position) {
+    const source = clients.find((client) => client.id === clientId);
+    if (!source) return;
+    const first = position === "first";
+    setFormValue(first ? "firstName" : "secondFirstName", source.first_name);
+    setFormValue(first ? "surname" : "secondSurname", source.surname);
+    setFormValue(first ? "email" : "secondEmail", source.email);
+    setFormValue(first ? "phone" : "secondPhone", source.phone);
+    if (first) {
+      setFormValue("clientTimeZone", source.client_time_zone || "Europe/London");
+      setFormValue("bankPaymentName", source.bank_payment_name);
+    }
+  }
+
   function openClientEditor(client = null) {
     controls.form.reset();
     controls.formMessage.textContent = "";
     editingClientId = client?.id || null;
     controls.dialogTitle.textContent = client ? "Edit client" : "Add client";
     controls.deleteButton.hidden = !client;
+    populateLinkedPartnerChoices(client);
 
     if (client) {
       const typeInput = controls.form.querySelector(
@@ -823,6 +865,8 @@
       setFormValue("secondSurname", client.second_surname);
       setFormValue("secondEmail", client.second_email);
       setFormValue("secondPhone", client.second_phone);
+      setFormValue("partnerOneClientId", client.partner_one_client_id);
+      setFormValue("partnerTwoClientId", client.partner_two_client_id);
       setFormValue("contractStatus", client.contract_status);
       setFormValue("contractSignedDate", client.contract_signed_date);
       setFormValue("intakeStatus", client.intake_status);
@@ -866,6 +910,12 @@
 
     return {
       record_type: formData.get("recordType"),
+      partner_one_client_id: isCouple
+        ? formData.get("partnerOneClientId") || null
+        : null,
+      partner_two_client_id: isCouple
+        ? formData.get("partnerTwoClientId") || null
+        : null,
       status: formData.get("status"),
       first_name: String(formData.get("firstName") || "").trim(),
       surname: String(formData.get("surname") || "").trim(),
@@ -917,6 +967,14 @@
   controls.form.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (!controls.form.reportValidity()) return;
+
+    if (
+      controls.form.elements.partnerOneClientId.value &&
+      controls.form.elements.partnerOneClientId.value === controls.form.elements.partnerTwoClientId.value
+    ) {
+      controls.formMessage.textContent = "Please choose two different individual records.";
+      return;
+    }
 
     controls.saveButton.disabled = true;
     controls.saveButton.textContent = "Saving...";
@@ -1048,6 +1106,12 @@
     .forEach((field) => {
       field.addEventListener("change", updateConditionalFields);
     });
+  controls.form.elements.partnerOneClientId.addEventListener("change", (event) => {
+    copyLinkedPerson(event.target.value, "first");
+  });
+  controls.form.elements.partnerTwoClientId.addEventListener("change", (event) => {
+    copyLinkedPerson(event.target.value, "second");
+  });
   [
     controls.search,
     controls.statusFilter,

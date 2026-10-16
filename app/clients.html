@@ -48,11 +48,11 @@
       </header>
 
       <section class="client-stats" aria-label="Client totals">
-        <div><strong id="client-count-all">0</strong><span>All clients</span></div>
-        <div><strong id="client-count-active">0</strong><span>Active</span></div>
-        <div><strong id="client-count-paused">0</strong><span>Paused</span></div>
-        <div><strong id="client-count-individuals">0</strong><span>Individuals</span></div>
-        <div><strong id="client-count-couples">0</strong><span>Couples</span></div>
+        <div><strong id="client-count-all">0</strong><span>People</span></div>
+        <div><strong id="client-count-active">0</strong><span>Active people</span></div>
+        <div><strong id="client-count-paused">0</strong><span>Paused people</span></div>
+        <div><strong id="client-count-individuals">0</strong><span>Individual records</span></div>
+        <div><strong id="client-count-couples">0</strong><span>Couple records</span></div>
         <div><strong id="client-count-weekly">0</strong><span>Weekly</span></div>
         <div><strong id="client-count-fortnightly">0</strong><span>Fortnightly</span></div>
         <div><strong id="client-count-other-frequency">0</strong><span>Other frequency</span></div>
@@ -172,6 +172,25 @@
               <label>
                 <input type="radio" name="recordType" value="Couple" />
                 <span>Couple</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset id="linked-partner-fields" class="client-form-section" hidden>
+            <legend>Link the existing individual records</legend>
+            <p class="form-help">Optional, but recommended when both people already have their own records. Their solo histories remain separate and they are not counted twice.</p>
+            <div class="form-grid">
+              <label>
+                First person’s individual record
+                <select name="partnerOneClientId">
+                  <option value="">Not linked</option>
+                </select>
+              </label>
+              <label>
+                Second person’s individual record
+                <select name="partnerTwoClientId">
+                  <option value="">Not linked</option>
+                </select>
               </label>
             </div>
           </fieldset>
@@ -464,6 +483,6 @@
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="admin-auth.js?v=20260813-ten-hour-session"></script>
-    <script src="clients.js?v=20260922-whatsapp-wording"></script>
+    <script src="clients.js?v=20261016-linked-couples"></script>
   </body>
 </html>
