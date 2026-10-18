@@ -408,34 +408,39 @@
     );
     if (!confirmed) return;
     button.disabled = true;
+    const originalButtonText = button.textContent;
+    button.textContent = "Removing…";
     // Keep a cancelled tombstone linked to the booking. Physically deleting
     // the row lets the automatic booking trigger recreate the invoice later.
-    const { data: cancelledInvoice, error: cancelError } = await supabaseClient
-      .from("invoices")
-      .update({ status: "Cancelled" })
-      .eq("id", invoice.id)
-      .select("id")
-      .maybeSingle();
-    if (cancelError || !cancelledInvoice) {
+    try {
+      const { data: cancelledInvoice, error: cancelError } = await supabaseClient
+        .from("invoices")
+        .update({ status: "Cancelled" })
+        .eq("id", invoice.id)
+        .select("id")
+        .maybeSingle();
+      if (cancelError || !cancelledInvoice) throw cancelError || new Error("Invoice was not updated");
+
+      await supabaseClient.from("manual_payments")
+        .update({ invoice_sent_date: null })
+        .eq("source_reference", `invoice:${invoice.id}`);
+      if (invoice.client_id && sessionDates.length) {
+        await supabaseClient.from("manual_payments")
+          .update({ invoice_sent_date: null })
+          .eq("client_id", invoice.client_id)
+          .in("session_date", sessionDates);
+      }
+      await loadData();
+      controls.message.textContent =
+        `${invoice.invoice_number} was removed from the invoice list. The session record was kept.`;
+    } catch (error) {
       button.disabled = false;
+      button.textContent = originalButtonText;
       const message = "The invoice could not be removed. Please try signing out and back in.";
       controls.message.textContent = message;
       window.alert(message);
-      console.error("Invoice removal failed.", cancelError);
-      return;
+      console.error("Invoice removal failed.", error);
     }
-    await supabaseClient.from("manual_payments")
-      .update({ invoice_sent_date: null })
-      .eq("source_reference", `invoice:${invoice.id}`);
-    if (invoice.client_id && sessionDates.length) {
-      await supabaseClient.from("manual_payments")
-        .update({ invoice_sent_date: null })
-        .eq("client_id", invoice.client_id)
-        .in("session_date", sessionDates);
-    }
-    await loadData();
-    controls.message.textContent =
-      `${invoice.invoice_number} was removed from the invoice list. The session records were kept.`;
   }
 
   function renderInvoiceRow(invoice, allowDelete = false) {
