@@ -84,6 +84,10 @@
   const colourStorageKey = "ayesha-admin-calendar-colours";
   const titleStorageKey = "ayesha-admin-calendar-personal-titles";
   const clientCheckNotesStorageKey = "ayesha-admin-calendar-client-check-notes";
+  // Sidebar notes stay the same whichever calendar week is displayed.
+  // A reserved date lets the existing secure notes table hold one persistent
+  // note per client while retaining all older week-specific records.
+  const persistentCalendarNoteDate = "1970-01-05";
   const privateEventStorageKey = "ayesha-admin-private-calendar-events";
   const zoomLinkStorageKey = "ayesha-whatsapp-zoom-link";
   const validViews = new Set(["day", "week", "month"]);
@@ -590,19 +594,18 @@
     });
   }
 
-  async function loadCalendarNotes(weekStart) {
-    const weekKey = localDateKey(weekStart);
+  async function loadCalendarNotes() {
     const { data, error } = await supabaseClient
       .from("client_calendar_notes")
       .select("client_id, note")
-      .eq("week_start", weekKey);
+      .eq("week_start", persistentCalendarNoteDate);
     if (error) {
-      console.error("Could not load weekly calendar notes", error);
+      console.error("Could not load persistent calendar notes", error);
       state.calendarNotes = {};
       return;
     }
     state.calendarNotes = Object.fromEntries(
-      (data || []).map((item) => [`${weekKey}:${item.client_id}`, item.note || ""]),
+      (data || []).map((item) => [item.client_id, item.note || ""]),
     );
   }
 
@@ -1753,7 +1756,7 @@
       ));
 
     const rows = currentClients.map((client) => {
-      const noteKey = `${localDateKey(weekStart)}:${client.id}`;
+      const noteKey = client.id;
       const row = document.createElement("div");
       row.className = "calendar-client-check-row";
       const heading = document.createElement("div");
@@ -1781,8 +1784,8 @@
       note.value = String(localDraft || "").trim()
         ? localDraft
         : savedValue;
-      note.placeholder = "Brief note for this week…";
-      note.setAttribute("aria-label", `Calendar note for ${bookingClientDisplayName(client)} for this week`);
+      note.placeholder = "Brief ongoing note…";
+      note.setAttribute("aria-label", `Ongoing calendar note for ${bookingClientDisplayName(client)}`);
       // Compare against the database value, rather than the displayed local
       // draft, so clicking Save uploads a recovered Safari-only note.
       let lastSavedValue = String(
@@ -1805,7 +1808,7 @@
           .from("client_calendar_notes")
           .upsert({
             client_id: client.id,
-            week_start: localDateKey(weekStart),
+            week_start: persistentCalendarNoteDate,
             note: value || null,
             updated_by: admin.user.id,
           }, { onConflict: "client_id,week_start" })
@@ -1925,10 +1928,8 @@
         loadClientNames(),
         loadBookingFees(),
       ]);
-      // Notes belong to the week containing the selected/focused date. In
-      // month view, range.start is the first grid cell and may be in a
-      // different week, which made correctly saved notes appear to vanish.
-      await loadCalendarNotes(startOfWeek(state.focusDate));
+      // Sidebar notes are deliberately independent of the displayed week.
+      await loadCalendarNotes();
       const { data, error } = calendarResult;
       if (requestId !== state.requestId) return;
 
