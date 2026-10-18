@@ -915,20 +915,32 @@
   }
 
   async function deletePayment(payment, button) {
+    const hasLinkedInvoice = String(payment.source_reference || "").startsWith("invoice:");
     const confirmed = window.confirm(
-      `Delete the ${displayDate(payment.session_date)} payment record for ${payment.client_name}?\n\nThis cannot be undone.`,
+      `Delete the ${displayDate(payment.session_date)} payment record for ${payment.client_name}?\n\n` +
+      (hasLinkedInvoice
+        ? "Its linked invoice will also be removed from the invoice lists. The calendar booking will be kept."
+        : "The calendar booking will be kept.") +
+      "\n\nThis cannot be undone.",
     );
     if (!confirmed) return;
     button.disabled = true;
-    const { error } = await supabaseClient
-      .from("manual_payments")
-      .delete()
-      .eq("id", payment.id);
-    if (error) {
+    const originalButtonText = button.textContent;
+    button.textContent = "Removing…";
+    const { data: deleted, error } = await supabaseClient
+      .rpc("delete_payment_history_record", { p_payment_id: payment.id });
+    if (error || !deleted) {
       button.disabled = false;
+      button.textContent = originalButtonText;
       controls.message.textContent = "The payment record could not be deleted.";
       console.error(error);
       return;
+    }
+    if (hasLinkedInvoice) {
+      const invoiceId = String(payment.source_reference).slice("invoice:".length);
+      invoices = invoices.map((invoice) =>
+        invoice.id === invoiceId ? { ...invoice, status: "Cancelled" } : invoice
+      );
     }
     payments = payments.filter((record) => record.id !== payment.id);
     controls.message.textContent = `Deleted the ${displayDate(payment.session_date)} record for ${payment.client_name}.`;
