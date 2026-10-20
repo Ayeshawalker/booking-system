@@ -752,8 +752,9 @@
     await loadIntoForm(note);
     renderClientReference();
     ui.message.textContent = `${statusLabel(note.status)} opened. You can read the improved note below or make changes and save again.`;
-    document.querySelector("#client-notes-panel").scrollIntoView({ behavior: "smooth", block: "start" });
-    window.setTimeout(() => (note.status === "Final" ? ui.final : ui.rough).focus({ preventScroll: true }), 450);
+    const preferredVersion = String(ui.final.value || "").trim() ? ui.final : ui.rough;
+    preferredVersion.scrollIntoView({ behavior: "smooth", block: "center" });
+    window.setTimeout(() => preferredVersion.focus({ preventScroll: true }), 450);
   }
   async function archive(note) {
     if (!confirm("Archive this note? It will disappear from the active list but remain in the audit record.")) return;
