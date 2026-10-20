@@ -490,8 +490,10 @@
       window.alert(`The email confirmation was not sent.\n\n${detail}\n\nYou can use “Try email again” on the Calendar page.`);
       return false;
     }
-    const count = Number(data?.recipients?.length || data?.sent || 0);
-    controls.message.textContent = `${successText} Email confirmation sent to ${count} ${count === 1 ? "address" : "addresses"}; the day-before reminder is arranged.`;
+    const count = Number(data?.sent || 0);
+    controls.message.textContent = count > 0
+      ? `${successText} Email confirmation sent to ${count} ${count === 1 ? "address" : "addresses"}; the day-before reminder is arranged.`
+      : `${successText} No new email was sent because this confirmation had already been delivered.`;
     const testButton = document.createElement("button");
     testButton.type = "button";
     testButton.className = "calendar-whatsapp-confirmation";
@@ -524,18 +526,15 @@
       return false;
     }
     controls.message.textContent = `${successText} Sending recurring-appointment notice…`;
-    const { data, error } = await supabaseClient.functions.invoke(
-      window.BOOKING_CONFIG?.appointmentRemindersFunction || "appointment-reminders",
-      { body: {
-        action: "send_series_confirmation",
-        bookingIds: bookings.map((booking) => booking.id),
-      } },
-    );
+    const { data, error } = await invokeAppointmentReminder({
+      action: "send_series_confirmation",
+      bookingId: bookings[0]?.id,
+    });
     if (error || data?.error) {
       controls.message.textContent = `${successText} The recurring-appointment notice was not sent. ${data?.error || error?.message || "Please try again."}`;
       return false;
     }
-    const count = Number(data?.recipients?.length || data?.sent || 0);
+    const count = Number(data?.sent || 0);
     controls.message.textContent = `${successText} The recurring-appointment notice was sent to ${count} ${count === 1 ? "address" : "addresses"}.`;
     return true;
   }
@@ -1353,7 +1352,17 @@
       );
       if (error) throw error;
       await loadEvents();
-      controls.message.textContent = data?.message || "Booking moved.";
+      controls.message.textContent = `${data?.message || "Booking moved."} Sending rearrangement email…`;
+      const { data: emailData, error: emailError } = await invokeAppointmentReminder({
+        action: "send_reschedule",
+        bookingId: booking.bookingRequestId,
+      });
+      if (emailError || emailData?.error) {
+        controls.message.textContent = `${data?.message || "Booking moved."} The rearrangement email was not sent: ${emailData?.error || emailError?.message || "please try again."}`;
+      } else {
+        const sent = Number(emailData?.sent || 0);
+        controls.message.textContent = `${data?.message || "Booking moved."} Rearrangement email sent to ${sent} ${sent === 1 ? "address" : "addresses"}.`;
+      }
     } catch (error) {
       console.error(error);
       controls.message.textContent = "The booking could not be moved. No changes were made.";

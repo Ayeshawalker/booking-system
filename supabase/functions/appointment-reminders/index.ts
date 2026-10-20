@@ -6,10 +6,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
-type Booking = { id:string; client_id:string|null; status:string; email_notifications_enabled:boolean; booking_type:string; block_session_count:number|null; block_date_pattern:string|null; block_frequency:string|null; exact_block_dates:unknown; session_type:string; session_format:string; preferred_date:string; preferred_time:string; first_name:string|null; second_first_name:string|null; email:string; zoom_join_url:string|null; message:string|null; price:number|null; recurrence_frequency:string|null };
+type Booking = { id:string; client_id:string|null; status:string; email_notifications_enabled:boolean; booking_type:string; block_session_count:number|null; block_date_pattern:string|null; block_frequency:string|null; exact_block_dates:unknown; session_type:string; session_format:string; preferred_date:string; preferred_time:string; first_name:string|null; second_first_name:string|null; email:string; zoom_join_url:string|null; message:string|null; price:number|null; recurring_series_id:string|null; recurrence_frequency:string|null };
 type Occurrence = { date:string; time:string; format:string };
 type Database = ReturnType<typeof createClient>;
-const bookingFields = "id,client_id,status,email_notifications_enabled,booking_type,block_session_count,block_date_pattern,block_frequency,exact_block_dates,session_type,session_format,preferred_date,preferred_time,first_name,second_first_name,email,zoom_join_url,message,price,recurrence_frequency";
+const bookingFields = "id,client_id,status,email_notifications_enabled,booking_type,block_session_count,block_date_pattern,block_frequency,exact_block_dates,session_type,session_format,preferred_date,preferred_time,first_name,second_first_name,email,zoom_join_url,message,price,recurring_series_id,recurrence_frequency";
 
 function respond(body:unknown, status=200) { return new Response(JSON.stringify(body), { status, headers:{...corsHeaders,"Content-Type":"application/json"} }); }
 function londonParts(date=new Date()) {
@@ -152,6 +152,13 @@ Deno.serve(async(request)=>{
           const item=occurrences(booking).find((entry)=>entry.date>=now.date)||occurrences(booking)[0],message=reminderMessage(booking,item,clientZone);
           if(!job.requested_email)throw new Error("Your administrator email address is missing.");
           await send(job.requested_email,`[TEST] ${message.subject}`,message.text,message.html); result={sent:1,recipients:[job.requested_email],test:true};
+        }else if(job.action==="send_series_confirmation"){
+          if(!booking.recurring_series_id)throw new Error("This booking is not part of a recurring series.");
+          const seriesResult=await db.from("booking_requests").select(bookingFields).eq("recurring_series_id",booking.recurring_series_id).eq("status","confirmed").order("recurrence_sequence");
+          if(seriesResult.error||!seriesResult.data||seriesResult.data.length<2)throw seriesResult.error||new Error("The recurring sessions could not be loaded.");
+          const series=seriesResult.data as Booking[],message=seriesConfirmationMessage(series,clientZone); for(const email of to)await send(email,message.subject,message.text,message.html);
+          await db.from("booking_requests").update({email_notifications_enabled:true}).eq("recurring_series_id",booking.recurring_series_id);
+          result={sent:to.length,recipients:to,remindersEnabled:true,seriesSize:series.length};
         }else if(job.action==="send_cancellation") result={sent:await sendChangeNotice(booking,to,"cancel",clientZone),recipients:to};
         else if(job.action==="send_reschedule") result={sent:await sendChangeNotice(booking,to,"reschedule",clientZone),recipients:to};
         else result={sent:await sendConfirmation(db,booking,to,clientZone),recipients:to,remindersEnabled:true};
@@ -159,12 +166,20 @@ Deno.serve(async(request)=>{
         return respond(result);
       }catch(error){const detail=error instanceof Error?error.message:String(error);await db.from("appointment_email_jobs").update({status:"failed",last_error:detail.slice(0,1000),updated_at:new Date().toISOString()}).eq("id",job.id);return respond({error:detail},500);}
     }
-    if(["send_confirmation","test_reminder","send_cancellation","send_reschedule"].includes(body.action)){
+    if(["send_confirmation","send_series_confirmation","test_reminder","send_cancellation","send_reschedule"].includes(body.action)){
       const admin=await adminUser(request,db,body.adminAccessToken); if(!admin)return respond({error:"Not authorised"},403);
       const booking=await loadBooking(db,String(body.bookingId||""));
       if(body.action==="send_cancellation"?booking.status!=="closed":booking.status!=="confirmed")return respond({error:"The booking status does not match this email."},409);
       const to=await recipients(db,booking),clientZone=await bookingClientTimeZone(db,booking); if(!to.length)return respond({error:"No valid client email address is recorded."},400);
       if(body.action==="test_reminder"){const item=occurrences(booking).find((entry)=>entry.date>=now.date)||occurrences(booking)[0],message=reminderMessage(booking,item,clientZone);await send(admin.email||"",`[TEST] ${message.subject}`,message.text,message.html);return respond({sent:1,recipients:[admin.email],test:true});}
+      if(body.action==="send_series_confirmation"){
+        if(!booking.recurring_series_id)return respond({error:"This booking is not part of a recurring series."},400);
+        const seriesResult=await db.from("booking_requests").select(bookingFields).eq("recurring_series_id",booking.recurring_series_id).eq("status","confirmed").order("recurrence_sequence");
+        if(seriesResult.error||!seriesResult.data||seriesResult.data.length<2)return respond({error:"The recurring sessions could not be loaded."},400);
+        const series=seriesResult.data as Booking[],message=seriesConfirmationMessage(series,clientZone);for(const email of to)await send(email,message.subject,message.text,message.html);
+        await db.from("booking_requests").update({email_notifications_enabled:true}).eq("recurring_series_id",booking.recurring_series_id);
+        return respond({sent:to.length,recipients:to,remindersEnabled:true,seriesSize:series.length});
+      }
       if(body.action==="send_cancellation")return respond({sent:await sendChangeNotice(booking,to,"cancel",clientZone),recipients:to});
       if(body.action==="send_reschedule")return respond({sent:await sendChangeNotice(booking,to,"reschedule",clientZone),recipients:to});
       return respond({sent:await sendConfirmation(db,booking,to,clientZone),recipients:to,remindersEnabled:true});
