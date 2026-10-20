@@ -65,11 +65,9 @@ function seriesConfirmationMessage(bookings:Booking[],clientZone=timeZone) {
   const frequency=String(first.recurrence_frequency||"Weekly").toLowerCase();
   const intro=`Just confirming that your appointment with me will be recurring ${frequency}.`;
   const firstDetail=`Your first appointment is ${appointmentWhen(first.preferred_date,time(first.preferred_time),clientZone)}, ${formatLabel(first.session_format)}.`;
-  const fee=Number(first.price||0);
-  const feeLine=fee>0?`The fee is £${fee.toFixed(2).replace(/\.00$/,'')} per session.`:"";
   const zoom=first.zoom_join_url&&["Online","Zoom call"].includes(first.session_format)?first.zoom_join_url:"";
-  const text=[greeting(first),"",intro,"",firstDetail,feeLine,zoom?`Your joining link is: ${zoom}`:"","","If you need to pause, stop or rearrange your recurring appointment, simply reply to this email. If possible, please give me at least 48 hours’ notice to avoid a cancellation charge.","","I look forward to seeing you then.","","Warm wishes,","Ayesha"].filter(Boolean).join("\n");
-  const detailHtml=`<div style="margin:12px 0;padding:16px;border-left:5px solid #f9a22c;border-radius:10px;background:#fff8ee"><strong>${escapeHtml(firstDetail)}</strong>${feeLine?`<p style="margin:10px 0 0;font-weight:700">${escapeHtml(feeLine)}</p>`:""}${zoom?`<p style="margin:10px 0 0">Your joining link is:</p>${zoomButton(zoom)}`:""}</div>`;
+  const text=[greeting(first),"",intro,"",firstDetail,zoom?`Your joining link is: ${zoom}`:"","","If you need to pause, stop or rearrange your recurring appointment, simply reply to this email. If possible, please give me at least 48 hours’ notice to avoid a cancellation charge.","","I look forward to seeing you then.","","Warm wishes,","Ayesha"].filter(Boolean).join("\n");
+  const detailHtml=`<div style="margin:12px 0;padding:16px;border-left:5px solid #f9a22c;border-radius:10px;background:#fff8ee"><strong>${escapeHtml(firstDetail)}</strong>${zoom?`<p style="margin:10px 0 0">Your joining link is:</p>${zoomButton(zoom)}`:""}</div>`;
   const html=emailShell(intro,greeting(first),`<p style="margin:0 0 14px">${escapeHtml(intro)}</p>${detailHtml}<p style="margin:22px 0 16px">If you need to pause, stop or rearrange your recurring appointment, simply reply to this email. If possible, please give me at least 48 hours’ notice to avoid a cancellation charge.</p><p style="margin:0">I look forward to seeing you then.</p>`);
   return {subject:"Your recurring appointment with Ayesha",text,html};
 }
