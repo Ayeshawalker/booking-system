@@ -53,6 +53,7 @@
   let historyClient = null;
   let historyReturnScrollY = null;
   let historyReturnClientId = null;
+  let historyReturnRowTop = null;
   let sentInvoiceOutstandingTotal = 0;
   let sentInvoiceUnpaidCount = 0;
   const selectedInvoicePaymentIds = new Set();
@@ -1218,6 +1219,7 @@
   function openHistory(client, trigger) {
     historyReturnScrollY = window.scrollY;
     historyReturnClientId = client.id;
+    historyReturnRowTop = trigger?.closest("tr")?.getBoundingClientRect().top ?? null;
     trigger?.setAttribute("aria-expanded", "true");
     renderHistory(client, true);
   }
@@ -1450,18 +1452,29 @@
   controls.closeHistory.addEventListener("click", () => {
     const returnScrollY = historyReturnScrollY;
     const returnClientId = historyReturnClientId;
+    const returnRowTop = historyReturnRowTop;
     historyClient = null;
     controls.historyPanel.hidden = true;
     historyReturnScrollY = null;
     historyReturnClientId = null;
+    historyReturnRowTop = null;
     window.requestAnimationFrame(() => {
-      const returnRow = [...controls.clientTableBody.rows]
-        .find((row) => row.dataset.clientId === returnClientId);
-      const returnButton = returnRow?.querySelector('[aria-controls="payment-history-panel"]');
-      returnButton?.setAttribute("aria-expanded", "false");
-      returnButton?.focus({ preventScroll: true });
-      if (returnScrollY !== null) window.scrollTo({ top: returnScrollY, behavior: "auto" });
-      else returnRow?.scrollIntoView({ block: "center" });
+      window.requestAnimationFrame(() => {
+        const returnRow = [...controls.clientTableBody.rows]
+          .find((row) => row.dataset.clientId === returnClientId);
+        const returnButton = returnRow?.querySelector('[aria-controls="payment-history-panel"]');
+        returnButton?.setAttribute("aria-expanded", "false");
+        returnButton?.focus({ preventScroll: true });
+        if (returnRow && returnRowTop !== null) {
+          const correctedScrollY = window.scrollY +
+            returnRow.getBoundingClientRect().top - returnRowTop;
+          window.scrollTo(0, correctedScrollY);
+        } else if (returnScrollY !== null) {
+          window.scrollTo(0, returnScrollY);
+        } else {
+          returnRow?.scrollIntoView({ block: "center" });
+        }
+      });
     });
   });
   controls.createHistoryInvoice.addEventListener("click", createInvoiceFromSelectedPayments);
