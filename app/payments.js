@@ -51,6 +51,8 @@
   let invoices = [];
   let editingId = null;
   let historyClient = null;
+  let historyReturnScrollY = null;
+  let historyReturnClientId = null;
   let sentInvoiceOutstandingTotal = 0;
   let sentInvoiceUnpaidCount = 0;
   const selectedInvoicePaymentIds = new Set();
@@ -1213,13 +1215,17 @@
     }
   }
 
-  function openHistory(client) {
+  function openHistory(client, trigger) {
+    historyReturnScrollY = window.scrollY;
+    historyReturnClientId = client.id;
+    trigger?.setAttribute("aria-expanded", "true");
     renderHistory(client, true);
   }
 
   function renderClientRow(client, periodPayments) {
     const { records, outstanding, credit, position } = clientFinancials(client, periodPayments);
     const row = document.createElement("tr");
+    row.dataset.clientId = client.id;
     const nameCell = appendCell(row, clientName(client));
     appendBankPaymentEditor(nameCell, client);
     const onlineFee = client.agreed_online_fee_gbp ?? client.agreed_session_fee_gbp;
@@ -1246,7 +1252,9 @@
     history.type = "button";
     history.className = "payment-edit-button";
     history.textContent = "History";
-    history.addEventListener("click", () => openHistory(client));
+    history.setAttribute("aria-expanded", "false");
+    history.setAttribute("aria-controls", "payment-history-panel");
+    history.addEventListener("click", () => openHistory(client, history));
     const add = document.createElement("button");
     add.type = "button";
     add.className = "payment-edit-button";
@@ -1440,8 +1448,21 @@
   document.querySelector("#close-payment-dialog").addEventListener("click", () => controls.dialog.close());
   document.querySelector("#cancel-payment").addEventListener("click", () => controls.dialog.close());
   controls.closeHistory.addEventListener("click", () => {
+    const returnScrollY = historyReturnScrollY;
+    const returnClientId = historyReturnClientId;
     historyClient = null;
     controls.historyPanel.hidden = true;
+    historyReturnScrollY = null;
+    historyReturnClientId = null;
+    window.requestAnimationFrame(() => {
+      const returnRow = [...controls.clientTableBody.rows]
+        .find((row) => row.dataset.clientId === returnClientId);
+      const returnButton = returnRow?.querySelector('[aria-controls="payment-history-panel"]');
+      returnButton?.setAttribute("aria-expanded", "false");
+      returnButton?.focus({ preventScroll: true });
+      if (returnScrollY !== null) window.scrollTo({ top: returnScrollY, behavior: "auto" });
+      else returnRow?.scrollIntoView({ block: "center" });
+    });
   });
   controls.createHistoryInvoice.addEventListener("click", createInvoiceFromSelectedPayments);
   controls.invoicePeriodFilter.addEventListener("change", async () => {
