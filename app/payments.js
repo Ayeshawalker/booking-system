@@ -264,6 +264,11 @@
     return [...new Set(dates)].sort();
   }
 
+  function invoiceSessionHasPassed(invoice) {
+    const latestSessionDate = invoiceSessionDates(invoice).slice().sort().at(-1);
+    return !latestSessionDate || latestSessionDate < isoDate(new Date());
+  }
+
   function invoicePeriodBounds() {
     const today = new Date();
     today.setHours(12, 0, 0, 0);
@@ -739,7 +744,9 @@
         )
       );
     const sentUnpaidInvoices = allInvoices.filter((invoice) =>
-      invoice.status === "Sent" && invoiceOutstanding(invoice) > 0.009
+      invoice.status === "Sent" &&
+      invoiceOutstanding(invoice) > 0.009 &&
+      invoiceSessionHasPassed(invoice)
     ).sort((first, second) =>
       String(first.due_date || "").localeCompare(String(second.due_date || ""))
     );
