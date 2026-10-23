@@ -558,6 +558,32 @@
     };
   }
 
+  async function repairNatalieSeptemberPaymentDates() {
+    const invoiceByReference = new Map(
+      invoices.map((invoice) => [`invoice:${invoice.id}`, invoice]),
+    );
+    const payment = payments.find((item) =>
+      item.id === "091d7671-4ea4-47b0-bb9c-599be06ba43f" &&
+      item.client_name === "Natalie Nash" &&
+      item.session_date === "2026-09-08" &&
+      Number(item.amount_received || 0) === 0
+    );
+    if (!payment) return;
+    const linkedInvoice = invoiceByReference.get(payment.source_reference);
+    if (linkedInvoice?.status !== "Draft") return;
+    const { data, error } = await supabaseClient
+      .from("manual_payments")
+      .update({ payment_date: null, invoice_sent_date: null })
+      .eq("id", payment.id)
+      .select("*")
+      .single();
+    if (error) {
+      console.error("Natalie's invalid unpaid payment dates could not be cleared.", error);
+      return;
+    }
+    payments = payments.map((item) => item.id === data.id ? data : item);
+  }
+
   function sourceBookingForInvoice(invoice) {
     return bookingRequests.find((booking) => booking.id === invoice.booking_id) || null;
   }
@@ -679,6 +705,7 @@
     }
     const allInvoices = data || [];
     invoices = allInvoices;
+    await repairNatalieSeptemberPaymentDates();
     const nonInvoiceableBookingIds = new Set(
       bookingRequests
         .filter((booking) => ["contacted", "closed"].includes(booking.status))
