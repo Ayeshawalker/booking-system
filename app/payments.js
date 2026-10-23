@@ -959,7 +959,7 @@
         Number(payment.amount_received || 0) >= Number(payment.fee_due || 0)) return false;
       const invoiceMatch = String(payment.source_reference || "").match(/^invoice:(.+)$/);
       if (!invoiceMatch) return true;
-      return invoices.find((invoice) => invoice.id === invoiceMatch[1])?.status === "Sent";
+      return Boolean(payment.invoice_sent_date);
     });
     const outstanding = outstandingRecords.reduce(
       (total, payment) => total +
