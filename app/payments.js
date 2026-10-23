@@ -57,6 +57,7 @@
   let sentInvoiceOutstandingTotal = 0;
   let sentInvoiceUnpaidCount = 0;
   const selectedInvoicePaymentIds = new Set();
+  const invoiceReturnStorageKey = "payment-list-return-after-invoice";
 
   function isoDate(date) {
     return [
@@ -80,6 +81,34 @@
     const second = [client.second_first_name, client.second_surname]
       .filter(Boolean).join(" ").trim();
     return [first, second].filter(Boolean).join(" and ");
+  }
+
+  function rememberInvoiceReturnPosition(client) {
+    window.sessionStorage.setItem(invoiceReturnStorageKey, JSON.stringify({
+      clientId: client.id,
+      clientName: clientName(client),
+    }));
+  }
+
+  function restoreInvoiceReturnPosition() {
+    if (new URLSearchParams(window.location.search).get("return") !== "invoice") return;
+    let saved = null;
+    try {
+      saved = JSON.parse(window.sessionStorage.getItem(invoiceReturnStorageKey) || "null");
+    } catch (error) {
+      console.warn("The saved payment-list position could not be read.", error);
+    }
+    window.sessionStorage.removeItem(invoiceReturnStorageKey);
+    window.history.replaceState({}, "", "payments.html");
+    if (!saved) return;
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+      const row = [...controls.clientTableBody.rows].find((item) =>
+        item.dataset.clientId === saved.clientId ||
+        item.cells[0]?.textContent?.includes(saved.clientName)
+      );
+      row?.scrollIntoView({ block: "center", behavior: "auto" });
+      row?.querySelector('[aria-controls="payment-history-panel"]')?.focus({ preventScroll: true });
+    }));
   }
 
   function normalisedName(value) {
@@ -1240,6 +1269,7 @@
         payment_reference: invoiceReferenceForDate(dates[0]),
       }).eq("id", invoiceId);
       if (updateError) throw updateError;
+      rememberInvoiceReturnPosition(historyClient);
       window.location.href = `invoice.html?id=${encodeURIComponent(invoiceId)}`;
     } catch (error) {
       console.error(error);
@@ -1440,6 +1470,7 @@
     fillClientOptions();
     render();
     await loadInvoices();
+    restoreInvoiceReturnPosition();
   }
 
   controls.form.addEventListener("submit", async (event) => {
