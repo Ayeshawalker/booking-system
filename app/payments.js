@@ -956,9 +956,12 @@
     const today = isoDate(new Date());
     const outstandingRecords = billableRecords.filter((payment) => {
       if (payment.session_date >= today ||
+        payment.payment_date ||
         Number(payment.amount_received || 0) >= Number(payment.fee_due || 0)) return false;
       const invoiceMatch = String(payment.source_reference || "").match(/^invoice:(.+)$/);
       if (!invoiceMatch) return true;
+      const linkedInvoice = invoices.find((invoice) => invoice.id === invoiceMatch[1]);
+      if (linkedInvoice?.status === "Cancelled") return false;
       return Boolean(payment.invoice_sent_date);
     });
     const outstanding = outstandingRecords.reduce(
