@@ -953,25 +953,36 @@
   function clientFinancials(client, periodPayments) {
     const records = paymentsForClient(client, periodPayments);
     const billableRecords = records.filter((payment) => !isNonBillablePayment(payment));
-    const net = billableRecords.reduce(
-      (total, payment) => total + Number(payment.amount_received || 0) - Number(payment.fee_due || 0),
+    const today = isoDate(new Date());
+    const outstandingRecords = billableRecords.filter((payment) => {
+      if (payment.session_date >= today ||
+        Number(payment.amount_received || 0) >= Number(payment.fee_due || 0)) return false;
+      const invoiceMatch = String(payment.source_reference || "").match(/^invoice:(.+)$/);
+      if (!invoiceMatch) return true;
+      return invoices.find((invoice) => invoice.id === invoiceMatch[1])?.status === "Sent";
+    });
+    const outstanding = outstandingRecords.reduce(
+      (total, payment) => total +
+        Number(payment.fee_due || 0) - Number(payment.amount_received || 0),
+      0,
+    );
+    const credit = billableRecords.reduce(
+      (total, payment) => total + Math.max(
+        0,
+        Number(payment.amount_received || 0) - Number(payment.fee_due || 0),
+      ),
       0,
     );
     const position = billableRecords.length === 0
       ? "No records"
-      : net < 0
+      : outstanding > 0
         ? "Outstanding"
-        : net > 0
+        : credit > 0
           ? "In credit"
           : "Up to date";
     let positionLabel = position;
     if (position === "Outstanding") {
-      const today = isoDate(new Date());
-      const oldestOverdueDate = billableRecords
-        .filter((payment) =>
-          payment.session_date < today &&
-          Number(payment.fee_due || 0) > Number(payment.amount_received || 0)
-        )
+      const oldestOverdueDate = outstandingRecords
         .map((payment) => payment.session_date)
         .sort()[0];
       if (oldestOverdueDate) {
@@ -986,8 +997,8 @@
     }
     return {
       records,
-      outstanding: Math.max(0, -net),
-      credit: Math.max(0, net),
+      outstanding,
+      credit,
       position,
       positionLabel,
     };
