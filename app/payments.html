@@ -187,7 +187,12 @@
           <label>Fee charged (£)<input name="feeDue" type="number" min="0" step="0.01" required /></label>
           <label>Amount received (£)<input name="amountReceived" type="number" min="0" step="0.01" value="0" required /></label>
           <label>Invoice sent date<input name="invoiceSentDate" type="date" /></label>
-          <label>Payment received date<input name="paymentDate" type="date" /></label>
+          <label>Payment received date
+            <span class="payment-date-control">
+              <input name="paymentDate" type="date" />
+              <button id="clear-payment-date" type="button" class="secondary-button">Clear date</button>
+            </span>
+          </label>
           <label class="payment-notes-field">Notes<textarea name="notes" rows="3"></textarea></label>
         </div>
         <footer class="dialog-actions">
@@ -201,6 +206,6 @@
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="admin-auth.js?v=20260813-ten-hour-session"></script>
-    <script src="payments.js?v=20261022-history-return-clicked-row"></script>
+    <script src="payments.js?v=20261023-clear-unpaid-date"></script>
   </body>
 </html>

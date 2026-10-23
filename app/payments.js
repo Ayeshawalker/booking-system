@@ -1365,6 +1365,7 @@
   function payloadFromForm() {
     const data = new FormData(controls.form);
     const option = controls.clientSelect.selectedOptions[0];
+    const amountReceived = Number(data.get("amountReceived"));
     return {
       client_id: data.get("clientId"),
       client_name: option?.dataset.name || option?.textContent || "Client",
@@ -1372,9 +1373,9 @@
       session_type: data.get("sessionType"),
       session_format: data.get("sessionFormat"),
       fee_due: Number(data.get("feeDue")),
-      amount_received: Number(data.get("amountReceived")),
+      amount_received: amountReceived,
       invoice_sent_date: data.get("invoiceSentDate") || null,
-      payment_date: data.get("paymentDate") || null,
+      payment_date: amountReceived > 0 ? data.get("paymentDate") || null : null,
       notes: String(data.get("notes") || "").trim() || null,
       source: "Manual",
     };
@@ -1423,12 +1424,17 @@
       if (error) throw error;
       if (originalPayment?.source_reference?.startsWith("invoice:")) {
         const invoiceId = originalPayment.source_reference.slice("invoice:".length);
+        const linkedInvoice = invoices.find((invoice) => invoice.id === invoiceId);
+        const invoiceChanges = {
+          session_date: payload.session_date,
+          payment_reference: invoiceReferenceForDate(payload.session_date),
+        };
+        if (payload.amount_received <= 0 && linkedInvoice?.status === "Paid") {
+          invoiceChanges.status = "Sent";
+        }
         const { error: invoiceError } = await supabaseClient
           .from("invoices")
-          .update({
-            session_date: payload.session_date,
-            payment_reference: invoiceReferenceForDate(payload.session_date),
-          })
+          .update(invoiceChanges)
           .eq("id", invoiceId);
         if (invoiceError) throw invoiceError;
       }
@@ -1485,6 +1491,15 @@
   });
   controls.clientSelect.addEventListener("change", applyClientDefaults);
   controls.form.elements.sessionFormat.addEventListener("change", applyClientDefaults);
+  document.querySelector("#clear-payment-date").addEventListener("click", () => {
+    controls.form.elements.paymentDate.value = "";
+    controls.form.elements.paymentDate.focus();
+  });
+  controls.form.elements.amountReceived.addEventListener("input", () => {
+    if (Number(controls.form.elements.amountReceived.value || 0) <= 0) {
+      controls.form.elements.paymentDate.value = "";
+    }
+  });
   [
     controls.periodFilter,
     controls.dateFrom,
