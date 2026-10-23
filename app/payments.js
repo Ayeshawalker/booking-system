@@ -1493,7 +1493,9 @@
   controls.form.elements.sessionFormat.addEventListener("change", applyClientDefaults);
   document.querySelector("#clear-payment-date").addEventListener("click", () => {
     controls.form.elements.paymentDate.value = "";
+    controls.form.elements.invoiceSentDate.value = "";
     controls.form.elements.paymentDate.focus();
+    controls.formMessage.textContent = "Payment and invoice-sent dates cleared. Save the payment to keep this change.";
   });
   controls.form.elements.amountReceived.addEventListener("input", () => {
     if (Number(controls.form.elements.amountReceived.value || 0) <= 0) {
