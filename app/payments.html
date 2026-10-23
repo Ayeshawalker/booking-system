@@ -43,7 +43,7 @@
         <div><strong id="payments-unpaid-count">0</strong><span>Sent invoices unpaid</span></div>
       </section>
 
-      <section class="admin-workspace invoice-list-panel" aria-labelledby="invoice-list-title">
+      <section id="payment-invoice-lists" class="admin-workspace invoice-list-panel" aria-labelledby="invoice-list-title">
         <div class="invoice-list-heading sent-unpaid-heading">
           <div><p class="admin-kicker">Needs attention</p><h2>Sent and unpaid</h2></div>
           <strong id="sent-unpaid-summary" class="sent-unpaid-summary">£0 outstanding</strong>
@@ -95,7 +95,7 @@
         </details>
       </section>
 
-      <section class="admin-workspace">
+      <section id="payment-client-list" class="admin-workspace">
         <div class="payment-toolbar">
           <label>
             <span>Period</span>
@@ -206,6 +206,6 @@
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="admin-auth.js?v=20260813-ten-hour-session"></script>
-    <script src="payments.js?v=20261023-outstanding-days"></script>
+    <script src="payments.js?v=20261023-client-list-first"></script>
   </body>
 </html>

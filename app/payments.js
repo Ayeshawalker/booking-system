@@ -1,6 +1,9 @@
 (async function setupPaymentsPage() {
   const admin = await window.ADMIN_READY;
   const supabaseClient = admin.client;
+  const clientListPanel = document.querySelector("#payment-client-list");
+  const invoiceListsPanel = document.querySelector("#payment-invoice-lists");
+  if (clientListPanel && invoiceListsPanel) invoiceListsPanel.before(clientListPanel);
   const controls = {
     addButton: document.querySelector("#add-payment"),
     periodFilter: document.querySelector("#payment-period-filter"),
