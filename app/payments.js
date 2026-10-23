@@ -954,17 +954,39 @@
       (total, payment) => total + Number(payment.amount_received || 0) - Number(payment.fee_due || 0),
       0,
     );
+    const position = billableRecords.length === 0
+      ? "No records"
+      : net < 0
+        ? "Outstanding"
+        : net > 0
+          ? "In credit"
+          : "Up to date";
+    let positionLabel = position;
+    if (position === "Outstanding") {
+      const today = isoDate(new Date());
+      const oldestOverdueDate = billableRecords
+        .filter((payment) =>
+          payment.session_date < today &&
+          Number(payment.fee_due || 0) > Number(payment.amount_received || 0)
+        )
+        .map((payment) => payment.session_date)
+        .sort()[0];
+      if (oldestOverdueDate) {
+        const days = Math.round(
+          (new Date(`${today}T12:00:00`) - new Date(`${oldestOverdueDate}T12:00:00`)) /
+          86400000,
+        );
+        positionLabel = `Outstanding by ${days} day${days === 1 ? "" : "s"}`;
+      } else {
+        positionLabel = "Not due yet";
+      }
+    }
     return {
       records,
       outstanding: Math.max(0, -net),
       credit: Math.max(0, net),
-      position: billableRecords.length === 0
-        ? "No records"
-        : net < 0
-          ? "Outstanding"
-          : net > 0
-            ? "In credit"
-            : "Up to date",
+      position,
+      positionLabel,
     };
   }
 
@@ -1289,7 +1311,7 @@
   }
 
   function renderClientRow(client, periodPayments) {
-    const { records, outstanding, credit, position } = clientFinancials(client, periodPayments);
+    const { records, outstanding, credit, position, positionLabel } = clientFinancials(client, periodPayments);
     const row = document.createElement("tr");
     row.dataset.clientId = client.id;
     const nameCell = appendCell(row, clientName(client));
@@ -1310,7 +1332,7 @@
     appendCell(row, currency(credit), credit > 0 ? "payment-credit" : "");
     appendCell(
       row,
-      position,
+      positionLabel,
       `payment-status payment-position-${position.toLowerCase().replaceAll(" ", "-")}`,
     );
     const actions = document.createElement("td");
