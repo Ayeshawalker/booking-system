@@ -1191,6 +1191,11 @@ dd {
   padding: 8px 12px;
 }
 
+.overdue-reminder-dialog { width: min(620px, calc(100% - 28px)); }
+.overdue-reminder-dialog ul { display: grid; gap: 10px; margin: 0; padding-left: 22px; }
+.overdue-reminder-dialog li { color: var(--ink); }
+.overdue-reminder-dialog li span { display: block; margin-top: 3px; color: #9f1f2f; font-size: 0.9rem; font-weight: 700; }
+
 .payment-notes-field {
   grid-column: 1 / -1;
 }

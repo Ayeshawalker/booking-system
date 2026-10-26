@@ -6,6 +6,8 @@
   const list = document.querySelector("#reminder-list");
   const filter = document.querySelector("#reminder-filter");
   const clientSelect = form.elements.clientId;
+  const overdueDialog = document.querySelector("#overdue-reminder-dialog");
+  const overdueList = document.querySelector("#overdue-reminder-list");
   let reminders = [];
   let clients = [];
 
@@ -36,6 +38,21 @@
     document.querySelector("#reminder-completed-count").textContent = reminders.filter((item) => item.status === "Completed").length;
   }
 
+  function showOverdueAlert() {
+    const today = dateKey();
+    const overdue = reminders.filter((item) =>
+      item.status !== "Completed" && item.due_date && item.due_date < today
+    );
+    const alertKey = `reminder-overdue-alert-${today}`;
+    if (!overdue.length || window.sessionStorage.getItem(alertKey)) return;
+    overdueList.innerHTML = overdue.map((item) => {
+      const client = clients.find((candidate) => candidate.id === item.client_id);
+      return `<li><strong>${escapeHtml(item.title)}</strong><span>Target was ${escapeHtml(formatDate(item.due_date))}${client ? ` · ${escapeHtml(clientName(client))}` : ""}</span></li>`;
+    }).join("");
+    window.sessionStorage.setItem(alertKey, "shown");
+    overdueDialog.showModal();
+  }
+
   function render() {
     const today = dateKey();
     const visible = selectedReminders();
@@ -57,7 +74,7 @@
       message.textContent = error.message.includes("admin_reminders") ? "Reminders need the one-time Supabase setup before they can be saved." : "Reminders could not be loaded.";
       return;
     }
-    reminders = data || []; render();
+    reminders = data || []; render(); showOverdueAlert();
   }
 
   form.addEventListener("submit", async (event) => {
@@ -88,6 +105,13 @@
   });
 
   filter.addEventListener("change", render);
+  document.querySelector("#close-overdue-reminders").addEventListener("click", () => overdueDialog.close());
+  document.querySelector("#dismiss-overdue-reminders").addEventListener("click", () => {
+    overdueDialog.close();
+    filter.value = "due";
+    render();
+    document.querySelector("#reminder-list-title").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
   document.querySelector("#clear-reminder").addEventListener("click", () => { form.reset(); form.elements.priority.value = "Normal"; message.textContent = ""; });
   const { data: clientData } = await db.from("clients").select("id,first_name,surname,second_first_name,second_surname,status").neq("status", "Former").order("first_name");
   clients = clientData || [];

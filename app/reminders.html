@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Reminders | Ayesha Jane</title>
-    <link rel="stylesheet" href="styles.css?v=20260817-reminders" />
+    <link rel="stylesheet" href="styles.css?v=20261026-overdue-reminder-alert" />
   </head>
   <body>
     <header class="site-header">
@@ -37,7 +37,7 @@
             <label>Related client <span class="optional">(optional)</span><select name="clientId"><option value="">No client</option></select></label>
           </div>
           <div class="form-grid">
-            <label>Due date <span class="optional">(optional)</span><input name="dueDate" type="date" /></label>
+            <label>Target completion date <span class="optional">(optional)</span><input name="dueDate" type="date" /></label>
             <label>Status<select name="status"><option value="Pending">To do</option><option value="Waiting">Waiting to hear back</option></select></label>
           </div>
           <div class="form-grid">
@@ -54,9 +54,23 @@
         <div id="reminder-list" class="reminder-list"></div>
       </section>
     </main>
+
+    <dialog id="overdue-reminder-dialog" class="client-dialog overdue-reminder-dialog">
+      <section>
+        <header class="dialog-header">
+          <div><p class="admin-kicker">Reminders needing attention</p><h2>These target dates have passed</h2></div>
+          <button id="close-overdue-reminders" class="dialog-close" type="button" aria-label="Close">×</button>
+        </header>
+        <div class="client-form-body">
+          <p>These reminders are still unfinished:</p>
+          <ul id="overdue-reminder-list"></ul>
+        </div>
+        <footer class="dialog-actions"><button id="dismiss-overdue-reminders" type="button">View reminders</button></footer>
+      </section>
+    </dialog>
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="admin-auth.js?v=20260813-ten-hour-session"></script>
-    <script src="reminders.js?v=20260817-reminders"></script>
+    <script src="reminders.js?v=20261026-overdue-alert"></script>
   </body>
 </html>
