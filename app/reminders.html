@@ -38,13 +38,14 @@
           </div>
           <div class="form-grid">
             <label>Target completion date <span class="optional">(optional)</span><input name="dueDate" type="date" /></label>
+            <label>Target time <span class="optional">(optional)</span><input name="dueTime" type="time" /></label>
             <label>Status<select name="status"><option value="Pending">To do</option><option value="Waiting">Waiting to hear back</option></select></label>
           </div>
           <div class="form-grid">
             <label>Priority<select name="priority"><option>Normal</option><option>High</option><option>Low</option></select></label>
           </div>
           <label>Brief note <span class="optional">(optional)</span><textarea name="details" rows="3" placeholder="Add any short information you need to remember."></textarea></label>
-          <div class="settings-button-row"><button type="submit">Add reminder</button><button id="clear-reminder" class="secondary-button" type="button">Clear</button></div>
+          <div class="settings-button-row"><button type="submit">Add reminder</button><button id="clear-reminder" class="secondary-button" type="button">Clear</button><button id="enable-reminder-alerts" class="secondary-button" type="button">Enable Safari alerts</button></div>
           <p id="reminder-message" class="admin-message" role="status"></p>
         </form>
       </section>
@@ -70,7 +71,7 @@
     </dialog>
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="admin-auth.js?v=20260813-ten-hour-session"></script>
-    <script src="reminders.js?v=20261026-overdue-alert"></script>
+    <script src="admin-auth.js?v=20261026-reminder-notifications"></script>
+    <script src="reminders.js?v=20261026-timed-alerts"></script>
   </body>
 </html>

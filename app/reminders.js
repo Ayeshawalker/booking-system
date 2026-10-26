@@ -15,6 +15,7 @@
   const dateKey = () => new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });
   const clientName = (client) => [[client?.first_name, client?.surname].filter(Boolean).join(" "), [client?.second_first_name, client?.second_surname].filter(Boolean).join(" ")].filter(Boolean).join(" and ");
   const formatDate = (value) => value ? new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" }).format(new Date(`${value}T12:00:00`)) : "No due date";
+  const formatTime = (value) => value ? String(value).slice(0, 5) : "";
 
   function selectedReminders() {
     const today = dateKey();
@@ -63,7 +64,7 @@
       const overdue = item.status !== "Completed" && item.due_date && item.due_date < today;
       const dueToday = item.status !== "Completed" && item.due_date === today;
       const waiting = item.status === "Waiting";
-      return `<article class="reminder-card ${item.status === "Completed" ? "is-completed" : ""} ${waiting ? "is-waiting" : ""} ${overdue ? "is-overdue" : ""}" data-reminder-id="${item.id}"><div class="reminder-card-main"><div class="reminder-card-heading"><strong>${escapeHtml(item.title)}</strong>${waiting ? '<span class="reminder-status-waiting">Waiting to hear back</span>' : ''}<span class="reminder-priority reminder-priority-${item.priority.toLowerCase()}">${escapeHtml(item.priority)}</span></div><small>${overdue ? "Overdue · " : dueToday ? "Due today · " : ""}${escapeHtml(formatDate(item.due_date))}${client ? ` · ${escapeHtml(clientName(client))}` : ""}</small>${item.details ? `<p>${escapeHtml(item.details)}</p>` : ""}</div><div class="settings-list-actions">${item.status === "Completed" ? '<button type="button" data-action="reopen">Reopen</button>' : waiting ? '<button type="button" data-action="pending">Move to to-do</button><button type="button" data-action="complete">Complete</button>' : '<button type="button" data-action="waiting">Waiting</button><button type="button" data-action="complete">Complete</button>'}<button class="secondary-button" type="button" data-action="delete">Delete</button></div></article>`;
+      return `<article class="reminder-card ${item.status === "Completed" ? "is-completed" : ""} ${waiting ? "is-waiting" : ""} ${overdue ? "is-overdue" : ""}" data-reminder-id="${item.id}"><div class="reminder-card-main"><div class="reminder-card-heading"><strong>${escapeHtml(item.title)}</strong>${waiting ? '<span class="reminder-status-waiting">Waiting to hear back</span>' : ''}<span class="reminder-priority reminder-priority-${item.priority.toLowerCase()}">${escapeHtml(item.priority)}</span></div><small>${overdue ? "Overdue · " : dueToday ? "Due today · " : ""}${escapeHtml(formatDate(item.due_date))}${item.due_time ? ` at ${escapeHtml(formatTime(item.due_time))}` : ""}${client ? ` · ${escapeHtml(clientName(client))}` : ""}</small>${item.details ? `<p>${escapeHtml(item.details)}</p>` : ""}</div><div class="settings-list-actions">${item.status === "Completed" ? '<button type="button" data-action="reopen">Reopen</button>' : waiting ? '<button type="button" data-action="pending">Move to to-do</button><button type="button" data-action="complete">Complete</button>' : '<button type="button" data-action="waiting">Waiting</button><button type="button" data-action="complete">Complete</button>'}<button class="secondary-button" type="button" data-action="delete">Delete</button></div></article>`;
     }).join("");
   }
 
@@ -80,7 +81,7 @@
   form.addEventListener("submit", async (event) => {
     event.preventDefault(); if (!form.reportValidity()) return;
     const submit = form.querySelector('[type="submit"]'); submit.disabled = true; submit.textContent = "Adding…"; message.textContent = "";
-    const payload = { title: form.elements.title.value.trim(), details: form.elements.details.value.trim(), client_id: form.elements.clientId.value || null, due_date: form.elements.dueDate.value || null, priority: form.elements.priority.value, status: form.elements.status.value, created_by: admin.user.id };
+    const payload = { title: form.elements.title.value.trim(), details: form.elements.details.value.trim(), client_id: form.elements.clientId.value || null, due_date: form.elements.dueDate.value || null, due_time: form.elements.dueTime.value || null, priority: form.elements.priority.value, status: form.elements.status.value, created_by: admin.user.id };
     const { error } = await db.from("admin_reminders").insert(payload);
     if (error) message.textContent = error.message.includes("admin_reminders") ? "Please run the one-time Reminders setup in Supabase first." : "The reminder could not be saved.";
     else { form.reset(); form.elements.priority.value = "Normal"; message.textContent = "Reminder added."; await load(); }
@@ -105,6 +106,19 @@
   });
 
   filter.addEventListener("change", render);
+  document.querySelector("#enable-reminder-alerts").addEventListener("click", async (event) => {
+    const button = event.currentTarget;
+    if (!("Notification" in window)) {
+      message.textContent = "Safari notifications are not available in this browser.";
+      return;
+    }
+    const permission = await Notification.requestPermission();
+    if (permission === "granted") window.startReminderNotificationChecks?.();
+    button.textContent = permission === "granted" ? "Safari alerts enabled" : "Safari alerts blocked";
+    message.textContent = permission === "granted"
+      ? "Safari alerts are enabled for reminders while the booking system is open."
+      : "Safari has not allowed notifications. You can change this in Safari website settings.";
+  });
   document.querySelector("#close-overdue-reminders").addEventListener("click", () => overdueDialog.close());
   document.querySelector("#dismiss-overdue-reminders").addEventListener("click", () => {
     overdueDialog.close();
