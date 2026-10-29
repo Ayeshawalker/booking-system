@@ -1094,6 +1094,19 @@
       ? 0
       : Math.max(0, Number(payment.fee_due) - Number(payment.amount_received));
     const status = paymentStatus(payment);
+    const invoiceId = String(payment.source_reference || "").startsWith("invoice:")
+      ? String(payment.source_reference).slice("invoice:".length)
+      : "";
+    const paymentName = normalisedName(payment.client_name);
+    const relatedInvoice = invoiceId
+      ? invoices.find((invoice) => invoice.id === invoiceId)
+      : invoices.find((invoice) =>
+        invoiceSessionDates(invoice).includes(payment.session_date) &&
+        (
+          (invoice.client_id && invoice.client_id === payment.client_id) ||
+          normalisedName(invoice.client_name) === paymentName
+        )
+      );
     appendCell(row, displayDate(payment.session_date));
     appendCell(row, payment.client_name);
     appendCell(row, `${payment.session_type} · ${payment.session_format}`);
@@ -1105,6 +1118,7 @@
       status,
       `payment-status payment-status-${status.toLowerCase().replaceAll(" ", "-")}`,
     );
+    appendCell(row, relatedInvoice?.invoice_number || "—");
     appendCell(
       row,
       payment.invoice_sent_date ? `Sent ${displayDate(payment.invoice_sent_date)}` : "Not sent",
@@ -1147,12 +1161,6 @@
       selectLabel.append(select, document.createTextNode("Include in invoice"));
       actions.append(selectLabel);
     }
-    const invoiceId = String(payment.source_reference || "").startsWith("invoice:")
-      ? String(payment.source_reference).slice("invoice:".length)
-      : "";
-    const relatedInvoice = invoiceId
-      ? invoices.find((invoice) => invoice.id === invoiceId)
-      : null;
     if (
       relatedInvoice?.status === "Sent" &&
       invoiceOutstanding(relatedInvoice) > 0.009 &&
