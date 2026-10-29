@@ -962,7 +962,10 @@
       if (!invoiceMatch) return true;
       const linkedInvoice = invoices.find((invoice) => invoice.id === invoiceMatch[1]);
       if (linkedInvoice?.status === "Cancelled") return false;
-      return Boolean(payment.invoice_sent_date);
+      // Once the session date has passed, an unpaid session is outstanding even
+      // if its invoice has not yet been marked as sent. The sent date belongs to
+      // invoice delivery; it must not hide a genuine client balance.
+      return true;
     });
     const outstanding = outstandingRecords.reduce(
       (total, payment) => total +
