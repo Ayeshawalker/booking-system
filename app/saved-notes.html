@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en" class="admin-auth-checking">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ayesha Jane Saved Notes</title>
+    <link rel="stylesheet" href="styles.css?v=20261029-saved-notes-page" />
+  </head>
+  <body class="notes-page">
+    <header class="site-header">
+      <a class="brand" href="https://ayeshajane.com/">Ayesha Jane</a>
+      <nav class="admin-nav" aria-label="Private admin links">
+        <a href="clients.html">Clients</a><a href="calendar.html">Calendar</a><a href="ayesha.html">Bookings</a>
+        <a href="payments.html">Payments</a><a href="settings.html">Settings</a><a href="notes.html" aria-current="page">Notes</a>
+        <a href="supervision.html">Supervision</a><a href="reminders.html">Reminders</a><a href="index.html">Public page</a>
+        <span class="admin-user-email" data-admin-email></span><button class="nav-signout" type="button" data-admin-sign-out>Sign out</button>
+      </nav>
+    </header>
+    <main class="settings-shell">
+      <section class="booking-panel" aria-labelledby="page-title">
+        <div class="intro">
+          <p class="eyebrow">Private client notes</p>
+          <h1 id="page-title">Saved notes</h1>
+          <p>Find and open an earlier note without scrolling through the note-writing form.</p>
+          <p><a class="button-link" href="notes.html">Write a fresh note</a></p>
+        </div>
+        <section class="admin-control-panel client-notes-panel" aria-labelledby="saved-notes-title">
+          <div class="notes-list-heading">
+            <h2 id="saved-notes-title">Saved notes</h2>
+            <label>Show client<select id="saved-note-client"><option value="">All clients</option></select></label>
+            <label><input id="saved-note-archived" type="checkbox" /> Show archived notes</label>
+          </div>
+          <p id="saved-note-message" class="field-note" aria-live="polite">Loading saved notes…</p>
+          <ul id="saved-note-list" class="settings-list client-notes-list"></ul>
+        </section>
+      </section>
+    </main>
+    <dialog id="saved-note-history-dialog" class="client-dialog">
+      <header class="dialog-header"><div><p class="admin-kicker">Audit history</p><h2>Earlier versions</h2></div><button id="close-saved-note-history" class="dialog-close" type="button">×</button></header>
+      <div id="saved-note-history-list" class="client-form-body"></div>
+    </dialog>
+    <script src="config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="admin-auth.js?v=20261026-reminder-notifications"></script>
+    <script src="saved-notes.js?v=20261029-saved-notes-page"></script>
+  </body>
+</html>

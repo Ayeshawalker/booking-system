@@ -1858,6 +1858,29 @@ dd {
   color: var(--gold-dark);
 }
 
+.button-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  border: 0;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--orange), var(--pink));
+  padding: 13px 22px;
+  color: #ffffff;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.86rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.button-link:hover {
+  color: #ffffff;
+  filter: brightness(1.04);
+}
+
 .client-dialog .admin-message {
   margin: 0;
   padding: 0 24px 16px;

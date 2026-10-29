@@ -35,6 +35,7 @@
             Keep client notes separately from booking settings and tidy rough
             notes into a clearer version before saving.
           </p>
+          <p><a class="button-link" href="saved-notes.html">Open saved notes</a></p>
         </div>
 
         <section
@@ -237,12 +238,12 @@
             </section>
           </aside>
 
-          <div class="notes-list-heading">
-            <h3>Saved notes</h3>
-            <label>Show client<select id="client-note-list-filter"><option value="">All clients</option></select></label>
-            <label><input id="show-archived-notes" type="checkbox" /> Show archived notes</label>
+          <div hidden aria-hidden="true">
+            <select id="client-note-list-filter"><option value="">All clients</option></select>
+            <input id="show-archived-notes" type="checkbox" />
+            <ul id="client-notes-list"></ul>
           </div>
-          <ul id="client-notes-list" class="settings-list client-notes-list"></ul>
+
         </section>
       </section>
     </main>
