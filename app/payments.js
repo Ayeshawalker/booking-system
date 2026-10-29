@@ -1373,6 +1373,20 @@
     return row;
   }
 
+  function clientMatchesSearch(client, query) {
+    if (!query) return true;
+    if (clientName(client).toLowerCase().includes(query)) return true;
+    const relatedIds = client._relatedClientIds || [client.id];
+    const name = normalisedName(clientName(client));
+    return invoices.some((invoice) =>
+      String(invoice.invoice_number || "").toLowerCase().includes(query) &&
+      (
+        relatedIds.includes(invoice.client_id) ||
+        normalisedName(invoice.client_name) === name
+      )
+    );
+  }
+
   function render() {
     controls.customDates.hidden = controls.periodFilter.value !== "custom";
     const periodPayments = paymentsForPeriod();
@@ -1380,7 +1394,7 @@
     const positionFilter = controls.statusFilter.value;
     const visibleClients = clients
       .filter((client) => ["Active", "Paused"].includes(client.status))
-      .filter((client) => !query || clientName(client).toLowerCase().includes(query))
+      .filter((client) => clientMatchesSearch(client, query))
       .filter((client) =>
         !positionFilter || clientPosition(client, periodPayments) === positionFilter,
       )
