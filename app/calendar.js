@@ -556,7 +556,7 @@
     const { data, error } = await supabaseClient
       .from("clients")
       .select(
-        "id, record_type, status, first_name, surname, second_first_name, second_surname, email, second_email, phone, preferred_format, client_time_zone, session_frequency, frequency_notes, agreed_session_fee_gbp, agreed_online_fee_gbp, agreed_in_person_fee_gbp",
+        "id, record_type, status, first_name, surname, second_first_name, second_surname, email, second_email, phone, preferred_format, client_time_zone, session_frequency, frequency_notes, agreed_session_fee_gbp, agreed_online_fee_gbp, agreed_in_person_fee_gbp, couple_individual_online_fee_gbp, couple_individual_in_person_fee_gbp",
       );
 
     if (error) {
@@ -638,6 +638,19 @@
     return state.bookingClients.find((client) => client.id === controls.quickBookClient.value);
   }
 
+  function selectedQuickBookFee(client) {
+    const soloWithinCouple = client?.record_type === "Couple" &&
+      ["first-solo", "second-solo"].includes(controls.quickBookArrangement.value);
+    if (controls.quickBookFormat.value === "In person") {
+      return soloWithinCouple
+        ? client.couple_individual_in_person_fee_gbp ?? client.agreed_in_person_fee_gbp ?? client.agreed_session_fee_gbp
+        : client.agreed_in_person_fee_gbp ?? client.agreed_session_fee_gbp;
+    }
+    return soloWithinCouple
+      ? client.couple_individual_online_fee_gbp ?? client.agreed_online_fee_gbp ?? client.agreed_session_fee_gbp
+      : client.agreed_online_fee_gbp ?? client.agreed_session_fee_gbp;
+  }
+
   function applyQuickBookClientDefaults() {
     const client = selectedQuickBookClient();
     if (!client) {
@@ -656,9 +669,7 @@
     }
     const format = client.preferred_format === "In person" ? "In person" : "Online";
     controls.quickBookFormat.value = format;
-    const fee = format === "In person"
-      ? client.agreed_in_person_fee_gbp ?? client.agreed_session_fee_gbp
-      : client.agreed_online_fee_gbp ?? client.agreed_session_fee_gbp;
+    const fee = selectedQuickBookFee(client);
     controls.quickBookFee.value = fee ?? "";
   }
 
@@ -2153,6 +2164,10 @@
     input.addEventListener("change", () => setQuickBookKind(input.value));
   });
   controls.quickBookClient.addEventListener("change", applyQuickBookClientDefaults);
+  controls.quickBookArrangement.addEventListener("change", () => {
+    const client = selectedQuickBookClient();
+    if (client) controls.quickBookFee.value = selectedQuickBookFee(client) ?? "";
+  });
   controls.quickBookRecurring.addEventListener("change", () => {
     controls.quickBookRecurringFields.hidden = !controls.quickBookRecurring.checked;
     controls.quickBookRecurrenceCount.required = controls.quickBookRecurring.checked;
@@ -2160,9 +2175,7 @@
   controls.quickBookFormat.addEventListener("change", () => {
     const client = selectedQuickBookClient();
     if (!client) return;
-    const fee = controls.quickBookFormat.value === "In person"
-      ? client.agreed_in_person_fee_gbp ?? client.agreed_session_fee_gbp
-      : client.agreed_online_fee_gbp ?? client.agreed_session_fee_gbp;
+    const fee = selectedQuickBookFee(client);
     controls.quickBookFee.value = fee ?? "";
   });
   controls.closeQuickBook.addEventListener("click", () => controls.quickBookDialog.close());

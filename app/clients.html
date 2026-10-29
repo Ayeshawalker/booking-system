@@ -371,6 +371,17 @@
                 />
               </label>
             </div>
+            <div id="couple-individual-fees" class="form-grid" hidden>
+              <label>
+                <span>Individual online session fee (£) <span class="optional">(optional)</span></span>
+                <input name="coupleIndividualOnlineFee" type="number" min="0" step="0.01" inputmode="decimal" />
+              </label>
+              <label>
+                <span>Individual in-person session fee (£) <span class="optional">(optional)</span></span>
+                <input name="coupleIndividualInPersonFee" type="number" min="0" step="0.01" inputmode="decimal" />
+              </label>
+              <p class="form-help">Used when either partner is booked for a solo session. The couple-session fees above remain unchanged.</p>
+            </div>
             <div class="form-grid">
               <label>
                 Fee arrangement
@@ -483,6 +494,6 @@
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="admin-auth.js?v=20261026-reminder-notifications"></script>
-    <script src="clients.js?v=20261016-linked-couples"></script>
+    <script src="clients.js?v=20261029-couple-individual-fees"></script>
   </body>
 </html>

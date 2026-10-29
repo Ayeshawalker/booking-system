@@ -24,6 +24,7 @@
     linkedPartnerFields: document.querySelector("#linked-partner-fields"),
     secondPersonFields: document.querySelector("#second-person-fields"),
     agreedFeeLabel: document.querySelector("#agreed-fee-label"),
+    coupleIndividualFees: document.querySelector("#couple-individual-fees"),
     contractDateField: document.querySelector("#contract-date-field"),
     intakeDateField: document.querySelector("#intake-date-field"),
     specialityOtherToggle: document.querySelector("#speciality-other-toggle"),
@@ -92,6 +93,8 @@
     "agreed_session_fee_gbp",
     "agreed_online_fee_gbp",
     "agreed_in_person_fee_gbp",
+    "couple_individual_online_fee_gbp",
+    "couple_individual_in_person_fee_gbp",
     "fee_arrangement",
     "fee_notes",
     "created_at",
@@ -781,6 +784,7 @@
     const isCouple = controls.form.elements.recordType.value === "Couple";
     controls.secondPersonFields.hidden = !isCouple;
     controls.linkedPartnerFields.hidden = !isCouple;
+    controls.coupleIndividualFees.hidden = !isCouple;
     controls.firstPersonLegend.textContent = isCouple
       ? "First person in couple"
       : "Individual";
@@ -884,6 +888,8 @@
         "agreedInPersonFee",
         client.agreed_in_person_fee_gbp ?? client.agreed_session_fee_gbp,
       );
+      setFormValue("coupleIndividualOnlineFee", client.couple_individual_online_fee_gbp);
+      setFormValue("coupleIndividualInPersonFee", client.couple_individual_in_person_fee_gbp);
       setFormValue("feeArrangement", client.fee_arrangement);
       setFormValue("feeNotes", client.fee_notes);
       setFormValue("status", client.status);
@@ -907,6 +913,10 @@
     const onlineFeeInput = String(formData.get("agreedOnlineFee") || "").trim();
     const inPersonFeeInput =
       String(formData.get("agreedInPersonFee") || "").trim();
+    const individualOnlineFeeInput =
+      String(formData.get("coupleIndividualOnlineFee") || "").trim();
+    const individualInPersonFeeInput =
+      String(formData.get("coupleIndividualInPersonFee") || "").trim();
 
     return {
       record_type: formData.get("recordType"),
@@ -959,6 +969,14 @@
           : inPersonFeeInput
             ? Number(inPersonFeeInput)
             : null,
+      couple_individual_online_fee_gbp:
+        isCouple && feeArrangement !== "Complimentary" && individualOnlineFeeInput
+          ? Number(individualOnlineFeeInput)
+          : isCouple && feeArrangement === "Complimentary" ? 0 : null,
+      couple_individual_in_person_fee_gbp:
+        isCouple && feeArrangement !== "Complimentary" && individualInPersonFeeInput
+          ? Number(individualInPersonFeeInput)
+          : isCouple && feeArrangement === "Complimentary" ? 0 : null,
       fee_arrangement: feeArrangement,
       fee_notes: String(formData.get("feeNotes") || "").trim() || null,
     };
