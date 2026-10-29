@@ -1328,6 +1328,57 @@ dd {
   margin: 4px 0 0;
 }
 
+.payment-history-panel .payment-table {
+  font-size: 0.78rem;
+}
+
+.payment-history-panel .payment-table th {
+  padding: 8px 6px;
+  font-size: 0.64rem;
+  letter-spacing: 0.025em;
+  white-space: nowrap;
+}
+
+.payment-history-panel .payment-table td {
+  min-width: 0;
+  padding: 9px 6px;
+}
+
+.payment-history-panel .payment-table th:first-child,
+.payment-history-panel .payment-table td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  min-width: 82px;
+  white-space: nowrap;
+}
+
+.payment-history-panel .payment-table th:first-child {
+  z-index: 4;
+  background: #fff0d2;
+}
+
+.payment-history-panel .payment-table td:first-child {
+  background: #ffffff;
+  box-shadow: 7px 0 10px rgba(87, 47, 23, 0.05);
+}
+
+.payment-history-panel .payment-table td:nth-child(2) { min-width: 118px; }
+.payment-history-panel .payment-table td:nth-child(3) { min-width: 78px; }
+.payment-history-panel .payment-table td:nth-child(8) { min-width: 92px; }
+.payment-history-panel .payment-table td:nth-child(9) { min-width: 86px; }
+
+.payment-history-panel .payment-edit-button,
+.payment-history-panel .payment-delete-button {
+  padding: 6px 8px;
+  font-size: 0.7rem;
+}
+
+.payment-history-panel .payment-history-actions,
+.payment-history-panel .payment-history-actions-heading {
+  min-width: 150px;
+}
+
 .payment-client-table td:last-child {
   display: flex;
   flex-wrap: nowrap;
