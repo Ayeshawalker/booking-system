@@ -33,8 +33,6 @@ Deno.serve(async (request) => {
     if (bookingError || !booking) return respond({ error: "Booking not found" }, 404);
     if (String(booking.session_format).toLowerCase() !== "online") return respond({ status: "not_required" });
     if (booking.status !== "confirmed") return respond({ status: "pending_booking" });
-    if (booking.zoom_join_url && !forceNew) return respond({ status: "created", joinUrl: booking.zoom_join_url, meetingId: booking.zoom_meeting_id });
-
     await db.from("booking_requests").update({ zoom_sync_status: "pending", zoom_sync_error: null }).eq("id", bookingId);
     const credentials = btoa(`${clientId}:${clientSecret}`);
     const tokenResponse = await fetch(`https://zoom.us/oauth/token?grant_type=account_credentials&account_id=${encodeURIComponent(accountId)}`, {
@@ -55,6 +53,27 @@ Deno.serve(async (request) => {
       .filter(Boolean)
       .join(" and ") || "Online appointment";
     const zoomHost = Deno.env.get("ZOOM_HOST_EMAIL") || userData.user.email || "me";
+    if (booking.zoom_join_url && booking.zoom_meeting_id && !forceNew) {
+      const updateResponse = await fetch(`https://api.zoom.us/v2/meetings/${encodeURIComponent(booking.zoom_meeting_id)}`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${tokenBody.access_token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topic: meetingTitle,
+          start_time: `${booking.preferred_date}T${String(booking.preferred_time).slice(0, 8)}`,
+          duration,
+          timezone: "Europe/London",
+          settings: { auto_recording: "none" },
+        }),
+      });
+      if (!updateResponse.ok) {
+        const updateBody = await updateResponse.json().catch(() => ({}));
+        const updateMessage = String(updateBody?.message || "Zoom could not disable automatic recording for the existing meeting.");
+        await db.from("booking_requests").update({ zoom_sync_status: "failed", zoom_sync_error: updateMessage }).eq("id", bookingId);
+        throw new Error(`Zoom said: ${updateMessage}`);
+      }
+      await db.from("booking_requests").update({ zoom_sync_status: "created", zoom_sync_error: null }).eq("id", bookingId);
+      return respond({ status: "updated", joinUrl: booking.zoom_join_url, meetingId: booking.zoom_meeting_id, autoRecording: "none" });
+    }
     const meetingResponse = await fetch(`https://api.zoom.us/v2/users/${encodeURIComponent(zoomHost)}/meetings`, {
       method: "POST",
       headers: { Authorization: `Bearer ${tokenBody.access_token}`, "Content-Type": "application/json" },
@@ -88,7 +107,7 @@ Deno.serve(async (request) => {
         headers: { Authorization: `Bearer ${tokenBody.access_token}` },
       }).catch((error) => console.error("The previous Zoom meeting could not be removed", error));
     }
-    return respond({ status: "created", joinUrl: meeting.join_url, meetingId: String(meeting.id) });
+    return respond({ status: "created", joinUrl: meeting.join_url, meetingId: String(meeting.id), autoRecording: "none" });
   } catch (error) {
     console.error(error);
     return respond({ error: error instanceof Error ? error.message : "Zoom meeting creation failed." }, 502);
