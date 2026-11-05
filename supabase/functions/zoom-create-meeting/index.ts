@@ -62,7 +62,7 @@ Deno.serve(async (request) => {
           start_time: `${booking.preferred_date}T${String(booking.preferred_time).slice(0, 8)}`,
           duration,
           timezone: "Europe/London",
-          settings: { auto_recording: "none" },
+          settings: { auto_recording: "none", disable_recording_control: "all" },
         }),
       });
       if (updateResponse.ok) {
@@ -90,7 +90,14 @@ Deno.serve(async (request) => {
         duration,
         timezone: "Europe/London",
         agenda: "Private online appointment",
-        settings: { waiting_room: true, join_before_host: false, mute_upon_entry: true, auto_recording: "none", approval_type: 2 },
+        settings: {
+          waiting_room: true,
+          join_before_host: false,
+          mute_upon_entry: true,
+          auto_recording: "none",
+          disable_recording_control: "all",
+          approval_type: 2,
+        },
       }),
     });
     const meeting = await meetingResponse.json();
