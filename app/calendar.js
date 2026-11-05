@@ -2687,9 +2687,21 @@
       }
       event.zoom_join_url = data.joinUrl;
       event.zoomJoinUrl = data.joinUrl;
-      controls.bookingDetailsMessage.textContent = data.status === "created"
-        ? "The missing Zoom meeting was recreated and its link was updated."
-        : "The Zoom meeting is present and its settings were refreshed.";
+      if (data.status === "created") {
+        controls.bookingDetailsMessage.textContent = "The missing Zoom meeting was recreated and its link was updated.";
+        if (window.confirm("The Zoom meeting was missing and a replacement link has been created. Send the updated link to the client now?")) {
+          controls.bookingDetailsMessage.textContent = "Sending the replacement Zoom link…";
+          const { data: emailData, error: emailError } = await invokeAppointmentReminder({
+            action: "send_reschedule",
+            bookingId: event.bookingRequestId,
+          });
+          controls.bookingDetailsMessage.textContent = emailError || emailData?.error
+            ? `The meeting was repaired, but the updated link could not be emailed: ${emailData?.error || emailError?.message || "please try again."}`
+            : "The missing Zoom meeting was recreated and the updated link was emailed to the client.";
+        }
+      } else {
+        controls.bookingDetailsMessage.textContent = "The Zoom meeting is present and its settings were refreshed.";
+      }
       await loadEvents();
     } catch (error) {
       controls.bookingDetailsMessage.textContent = error?.message || "The Zoom meeting could not be checked.";
