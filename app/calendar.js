@@ -39,6 +39,7 @@
     bookingNote: document.querySelector("#event-booking-note"),
     bookingDetailsMessage: document.querySelector("#event-booking-details-message"),
     emailBooking: document.querySelector("#email-event-booking"),
+    repairZoom: document.querySelector("#repair-event-zoom"),
     quickBookDialog: document.querySelector("#calendar-quick-book-dialog"),
     quickBookForm: document.querySelector("#calendar-quick-book-form"),
     closeQuickBook: document.querySelector("#close-quick-book-dialog"),
@@ -1257,6 +1258,8 @@
     controls.cancelBooking.hidden = !canReschedule;
     controls.repeatBooking.hidden = !canReschedule;
     controls.emailBooking.hidden = !canReschedule;
+    controls.repairZoom.hidden = !canReschedule ||
+      String(event.sessionFormat || "").toLowerCase() !== "online";
     controls.emailBooking.textContent = event.isRecurring
       ? "Send recurring appointment notice"
       : "Send email confirmation";
@@ -2666,6 +2669,32 @@
       controls.bookingDetailsMessage.textContent = error?.message || "The email could not be prepared.";
     } finally {
       controls.emailBooking.disabled = false;
+    }
+  });
+
+  controls.repairZoom.addEventListener("click", async () => {
+    const event = state.selectedEvent;
+    if (!event?.bookingRequestId) return;
+    controls.repairZoom.disabled = true;
+    controls.bookingDetailsMessage.textContent = "Checking this meeting with Zoom…";
+    try {
+      const { data, error } = await supabaseClient.functions.invoke(
+        window.BOOKING_CONFIG?.zoomCreateMeetingFunction || "zoom-create-meeting",
+        { body: { bookingId: event.bookingRequestId } },
+      );
+      if (error || data?.error || !data?.joinUrl) {
+        throw new Error(await zoomErrorMessage(error, data));
+      }
+      event.zoom_join_url = data.joinUrl;
+      event.zoomJoinUrl = data.joinUrl;
+      controls.bookingDetailsMessage.textContent = data.status === "created"
+        ? "The missing Zoom meeting was recreated and its link was updated."
+        : "The Zoom meeting is present and its settings were refreshed.";
+      await loadEvents();
+    } catch (error) {
+      controls.bookingDetailsMessage.textContent = error?.message || "The Zoom meeting could not be checked.";
+    } finally {
+      controls.repairZoom.disabled = false;
     }
   });
 

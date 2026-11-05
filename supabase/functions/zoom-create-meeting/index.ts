@@ -65,14 +65,20 @@ Deno.serve(async (request) => {
           settings: { auto_recording: "none" },
         }),
       });
-      if (!updateResponse.ok) {
-        const updateBody = await updateResponse.json().catch(() => ({}));
-        const updateMessage = String(updateBody?.message || "Zoom could not disable automatic recording for the existing meeting.");
+      if (updateResponse.ok) {
+        await db.from("booking_requests").update({ zoom_sync_status: "created", zoom_sync_error: null }).eq("id", bookingId);
+        return respond({ status: "updated", joinUrl: booking.zoom_join_url, meetingId: booking.zoom_meeting_id, autoRecording: "none" });
+      }
+      const updateBody = await updateResponse.json().catch(() => ({}));
+      const missingMeeting = updateResponse.status === 404 || Number(updateBody?.code) === 3001;
+      if (!missingMeeting) {
+        const updateMessage = String(updateBody?.message || "Zoom could not update the existing meeting.");
         await db.from("booking_requests").update({ zoom_sync_status: "failed", zoom_sync_error: updateMessage }).eq("id", bookingId);
         throw new Error(`Zoom said: ${updateMessage}`);
       }
-      await db.from("booking_requests").update({ zoom_sync_status: "created", zoom_sync_error: null }).eq("id", bookingId);
-      return respond({ status: "updated", joinUrl: booking.zoom_join_url, meetingId: booking.zoom_meeting_id, autoRecording: "none" });
+      // The database can retain a link after a meeting has been removed from
+      // Zoom. Continue below and create a replacement instead of returning the
+      // stale link.
     }
     const meetingResponse = await fetch(`https://api.zoom.us/v2/users/${encodeURIComponent(zoomHost)}/meetings`, {
       method: "POST",
@@ -95,7 +101,7 @@ Deno.serve(async (request) => {
       }).eq("id", bookingId);
       throw new Error(`Zoom said: ${zoomMessage}`);
     }
-    const previousMeetingId = forceNew ? String(booking.zoom_meeting_id || "") : "";
+    const previousMeetingId = String(booking.zoom_meeting_id || "");
     const { error: updateError } = await db.from("booking_requests").update({
       zoom_meeting_id: String(meeting.id), zoom_join_url: meeting.join_url,
       zoom_sync_status: "created", zoom_sync_error: null, zoom_created_at: new Date().toISOString(),
