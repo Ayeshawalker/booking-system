@@ -2860,6 +2860,9 @@
           window.BOOKING_CONFIG?.zoomCreateMeetingFunction || "zoom-create-meeting",
           { body: { bookingId: booking.bookingRequestId } },
         );
+        if (zoomData?.status === "pending_booking") {
+          throw new Error("The appointment was rearranged successfully, but it is still marked Pending. Change its status to Confirmed and save it before creating the Zoom link or sending the confirmation email.");
+        }
         if (zoomError || !zoomData?.joinUrl) {
           throw new Error("The appointment was rearranged, but its Zoom meeting could not be updated, so no email was sent. Please try rearranging it again.");
         }
