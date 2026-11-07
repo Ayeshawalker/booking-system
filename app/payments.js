@@ -1319,6 +1319,26 @@
         payment_reference: invoiceReferenceForDate(dates[0]),
       }).eq("id", invoiceId);
       if (updateError) throw updateError;
+      const replacedInvoiceIds = [...new Set(selected
+        .map((payment) => String(payment.source_reference || "").match(/^invoice:(.+)$/)?.[1])
+        .filter((id) => id && id !== invoiceId))];
+      const { error: paymentLinkError } = await supabaseClient
+        .from("manual_payments")
+        .update({ source_reference: `invoice:${invoiceId}` })
+        .in("id", selected.map((payment) => payment.id));
+      if (paymentLinkError) throw paymentLinkError;
+      if (replacedInvoiceIds.length) {
+        const { data: linkedCount, error: replacementError } = await supabaseClient.rpc(
+          "set_invoice_replacements",
+          {
+            p_replacement_invoice_id: invoiceId,
+            p_replaced_invoice_ids: replacedInvoiceIds,
+          },
+        );
+        if (replacementError || Number(linkedCount) !== replacedInvoiceIds.length) {
+          throw replacementError || new Error("The earlier draft invoice could not be linked");
+        }
+      }
       rememberInvoiceReturnPosition(historyClient);
       window.location.href = `invoice.html?id=${encodeURIComponent(invoiceId)}`;
     } catch (error) {
@@ -1384,15 +1404,18 @@
   function clientMatchesSearch(client, query) {
     if (!query) return true;
     if (clientName(client).toLowerCase().includes(query)) return true;
+    const compactQuery = query.replace(/[^a-z0-9]+/g, "");
     const relatedIds = client._relatedClientIds || [client.id];
     const name = normalisedName(clientName(client));
-    return invoices.some((invoice) =>
-      String(invoice.invoice_number || "").toLowerCase().includes(query) &&
-      (
+    return invoices.some((invoice) => {
+      const number = String(invoice.invoice_number || "").toLowerCase()
+        .replace(/[^a-z0-9]+/g, "");
+      const aliases = [number, number.replace(/^aj/, "a"), number.replace(/^aj/, "")];
+      return aliases.some((alias) => alias.includes(compactQuery)) && (
         relatedIds.includes(invoice.client_id) ||
         normalisedName(invoice.client_name) === name
-      )
-    );
+      );
+    });
   }
 
   function render() {
