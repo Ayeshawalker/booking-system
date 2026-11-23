@@ -1322,11 +1322,9 @@
       const replacedInvoiceIds = [...new Set(selected
         .map((payment) => String(payment.source_reference || "").match(/^invoice:(.+)$/)?.[1])
         .filter((id) => id && id !== invoiceId))];
-      const { error: paymentLinkError } = await supabaseClient
-        .from("manual_payments")
-        .update({ source_reference: `invoice:${invoiceId}` })
-        .in("id", selected.map((payment) => payment.id));
-      if (paymentLinkError) throw paymentLinkError;
+      // Keep each payment's unique source reference. Multiple selected payments
+      // cannot share one source_reference; the invoice replacement links below
+      // associate their original invoices with this combined invoice.
       if (replacedInvoiceIds.length) {
         const { data: linkedCount, error: replacementError } = await supabaseClient.rpc(
           "set_invoice_replacements",
@@ -1666,3 +1664,4 @@
   });
   loadData();
 })();
+
