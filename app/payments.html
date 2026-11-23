@@ -30,6 +30,7 @@
           <h1>Payments</h1>
           <p>Temporarily record payments after checking your bank account.</p>
         </div>
+        <button id="create-company-invoice" class="secondary-button" type="button">Create company invoice</button>
         <button id="add-payment" class="admin-primary-action" type="button">
           Add payment record
         </button>
@@ -203,9 +204,28 @@
       </form>
     </dialog>
 
+    <dialog id="company-invoice-dialog" class="client-dialog">
+      <form id="company-invoice-form">
+        <header class="dialog-header"><h2>Create company invoice</h2></header>
+        <div class="client-form-body payment-form-grid">
+          <label>Company name<input name="companyName" required maxlength="200" /></label>
+          <label>Contact email<input name="email" type="email" /></label>
+          <label>Billing address<textarea name="billingAddress" rows="3" maxlength="300"></textarea></label>
+          <label>Purchase order number (optional)<input name="purchaseOrder" maxlength="100" /></label>
+          <label>Workshop description<input name="description" required maxlength="300" /></label>
+          <label>Workshop date<input name="workshopDate" type="date" required /></label>
+          <label>Fixed fee (£)<input name="amount" type="number" min="0.01" max="99999999.99" step="0.01" required /></label>
+        </div>
+        <p id="company-invoice-message" class="admin-message" role="status"></p>
+        <footer class="dialog-actions">
+          <button id="cancel-company-invoice" type="button" class="secondary-button">Cancel</button>
+          <button type="submit">Create invoice</button>
+        </footer>
+      </form>
+    </dialog>
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="admin-auth.js?v=20261026-reminder-notifications"></script>
-    <script src="payments.js?v=20261029-history-invoice-number"></script>
+    <script src="payments.js?v=20261123-company-invoices"></script>
   </body>
 </html>

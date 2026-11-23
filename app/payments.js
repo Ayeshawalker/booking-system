@@ -346,6 +346,7 @@
   }
 
   function invoiceOutstanding(invoice) {
+    if (invoice.invoice_kind === "Company") return invoice.status === "Paid" ? 0 : Number(invoice.amount);
     const { direct, dated } = paymentsLinkedToInvoice(invoice);
     const received = Math.max(
       direct.reduce((sum, payment) => sum + Number(payment.amount_received || 0), 0),
@@ -488,7 +489,7 @@
     appendCell(row, invoice.invoice_number);
     appendCell(row, invoice.client_name);
     appendCell(row, invoiceSessionDates(invoice).map(displayDate).join(" · "));
-    appendCell(row, invoice.status === "Draft" ? "Set when sent" : displayDate(invoice.due_date));
+    appendCell(row, invoice.invoice_kind === "Company" ? "—" : invoice.status === "Draft" ? "Set when sent" : displayDate(invoice.due_date));
     appendCell(row, currency(Number(invoice.amount) + Number(invoice.extra_amount || 0)));
     appendCell(
       row,
@@ -626,6 +627,7 @@
   }
 
   function invoiceSourceIssue(invoice) {
+    if (invoice.invoice_kind === "Company") return "";
     const booking = sourceBookingForInvoice(invoice);
     if (!booking) return "The source booking could not be found.";
     if (booking.status !== "confirmed") {
@@ -640,6 +642,7 @@
   async function syncInvoicesToPaymentHistory(invoices) {
     let changed = false;
     for (const invoice of invoices.filter((item) => item.status !== "Cancelled")) {
+      if (invoice.invoice_kind === "Company") continue;
       const payload = invoicePaymentPayload(invoice);
       const linkedRecord = payments.find(
         (payment) => payment.source_reference === payload.source_reference,
@@ -733,7 +736,7 @@
   async function loadInvoices() {
     const { data, error } = await supabaseClient
       .from("invoices")
-      .select("id,booking_id,client_id,invoice_number,client_name,invoice_date,due_date,session_date,description,amount,extra_amount,status,updated_at")
+      .select("id,booking_id,client_id,invoice_number,client_name,invoice_date,due_date,session_date,description,amount,extra_amount,status,updated_at,invoice_kind")
       .order("invoice_date", { ascending: false })
       .limit(500);
     if (error) {
@@ -778,7 +781,7 @@
     const sentUnpaidInvoices = allInvoices.filter((invoice) =>
       invoice.status === "Sent" &&
       invoiceOutstanding(invoice) > 0.009 &&
-      invoiceSessionHasPassed(invoice)
+      (invoice.invoice_kind === "Company" || invoiceSessionHasPassed(invoice))
     ).sort((first, second) =>
       String(first.due_date || "").localeCompare(String(second.due_date || ""))
     );
@@ -1661,6 +1664,37 @@
   ].forEach((field) => {
     field.addEventListener("input", render);
     field.addEventListener("change", render);
+  });
+  const companyDialog = document.querySelector("#company-invoice-dialog");
+  const companyForm = document.querySelector("#company-invoice-form");
+  const companyMessage = document.querySelector("#company-invoice-message");
+  document.querySelector("#create-company-invoice").addEventListener("click", () => {
+    companyForm.reset();
+    companyMessage.textContent = "";
+    companyDialog.showModal();
+  });
+  document.querySelector("#cancel-company-invoice").addEventListener("click", () => companyDialog.close());
+  companyForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const button = companyForm.querySelector('[type="submit"]');
+    if (button.disabled) return;
+    button.disabled = true;
+    companyMessage.textContent = "Creating invoice…";
+    const data = new FormData(companyForm);
+    try {
+      const { data: id, error } = await supabaseClient.rpc("create_company_invoice", {
+        p_company_name: data.get("companyName"), p_email: data.get("email"),
+        p_billing_address: data.get("billingAddress"), p_description: data.get("description"),
+        p_workshop_date: data.get("workshopDate"), p_amount: Number(data.get("amount")),
+        p_purchase_order: data.get("purchaseOrder"),
+      });
+      if (error || !id) throw error || new Error("Invoice was not created.");
+      window.location.href = `invoice.html?id=${encodeURIComponent(id)}`;
+    } catch (error) {
+      companyMessage.textContent = `The invoice could not be created. ${error.message || "Please try again."}`;
+    } finally {
+      button.disabled = false;
+    }
   });
   loadData();
 })();

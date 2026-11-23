@@ -158,19 +158,26 @@
   }
 
   const invoice = invoiceResult.data;
+  const isCompany = invoice.invoice_kind === "Company";
   const profile = profileResult.data;
   const bank = bankResult.data?.[0] || {};
   setText("#invoice-issuer", profile.issuer_name);
   setText("#invoice-address", [profile.address_line_1, profile.address_line_2, profile.city_postcode].filter(Boolean).join("\n"));
   setText("#invoice-client", invoice.client_name);
-  setText("#invoice-client-contact", invoice.client_email || "");
+  setText("#invoice-client-contact", [invoice.billing_address, invoice.client_email, invoice.purchase_order ? `Purchase order: ${invoice.purchase_order}` : ""].filter(Boolean).join("\n"));
   setText("#invoice-number", invoice.invoice_number);
   const displayedInvoiceDate = invoice.status === "Draft" ? localIsoDate() : invoice.invoice_date;
-  const displayedDueDate = invoice.status === "Draft"
+  const displayedDueDate = isCompany ? null : invoice.status === "Draft"
     ? addDays(displayedInvoiceDate, profile.payment_terms_days ?? 2)
     : invoice.due_date;
   setText("#invoice-date", formatDate(displayedInvoiceDate));
-  setText("#invoice-due", formatDate(displayedDueDate));
+  setText("#invoice-due", displayedDueDate ? formatDate(displayedDueDate) : "");
+  document.querySelector("#invoice-due").parentElement.hidden = isCompany;
+  if (isCompany) {
+    document.querySelector("#invoice-edit-details").hidden = true;
+    document.querySelector("#invoice-extra-form").hidden = true;
+  }
+  document.querySelector("#invoice-heading-label").textContent = isCompany ? "Company invoice" : "Private client invoice";
   const sessionDates = invoiceSessionDates(invoice);
   const lineItems = invoiceLineItems(invoice);
   const durationText = invoice.session_duration
@@ -190,10 +197,10 @@
       description.textContent = item.itemised
         ? `${item.type === "Joint session" ? "80-minute " : "50-minute "}${item.format} ${item.type.toLowerCase()}`
         : sessionDescription;
-      date.textContent = `Session date: ${formatDate(item.date)}`;
+      date.textContent = `${isCompany ? "Workshop" : "Session"} date: ${formatDate(item.date)}`;
       descriptionCell.append(description, date);
       const quantityCell = document.createElement("td");
-      quantityCell.textContent = "1 session";
+      quantityCell.textContent = isCompany ? "1 workshop" : "1 session";
       const amountCell = document.createElement("td");
       amountCell.textContent = formatMoney(item.fee);
       row.append(descriptionCell, quantityCell, amountCell);
@@ -282,7 +289,7 @@
     pdf.setTextColor(...pink);
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(8);
-    pdf.text("PRIVATE CLIENT INVOICE", right, 16, { align: "right" });
+    pdf.text(isCompany ? "COMPANY INVOICE" : "PRIVATE CLIENT INVOICE", right, 16, { align: "right" });
     pdf.setTextColor(...gold);
     pdf.setFont("times", "bold");
     pdf.setFontSize(28);
@@ -305,28 +312,30 @@
       profile.city_postcode,
     ].filter(Boolean);
     pdf.text(issuerLines, left, 65);
-    pdf.text([invoice.client_name, invoice.client_email].filter(Boolean), 112, 65);
+    const recipientLines = pdf.splitTextToSize([invoice.client_name, invoice.billing_address, invoice.client_email, invoice.purchase_order ? `PO: ${invoice.purchase_order}` : ""].filter(Boolean).join("\n"), 80);
+    pdf.text(recipientLines, 112, 65);
+    const metaTop = Math.max(87, 65 + recipientLines.length * 5 + 8);
 
     pdf.setFillColor(255, 248, 238);
     pdf.setDrawColor(255, 201, 174);
-    pdf.roundedRect(left, 87, 174, 22, 3, 3, "FD");
+    pdf.roundedRect(left, metaTop, 174, 22, 3, 3, "FD");
     const meta = [
       ["INVOICE NUMBER", invoice.invoice_number],
       ["INVOICE DATE", formatDate(displayedInvoiceDate)],
-      ["PAYMENT DUE", formatDate(displayedDueDate)],
+      ...(displayedDueDate ? [["PAYMENT DUE", formatDate(displayedDueDate)]] : []),
     ];
     meta.forEach(([label, value], index) => {
       const x = left + (index * 58);
       pdf.setFont("helvetica", "bold");
       pdf.setTextColor(...pink);
       pdf.setFontSize(8);
-      pdf.text(label, x + 4, 95);
+      pdf.text(label, x + 4, metaTop + 8);
       pdf.setTextColor(...gold);
       pdf.setFontSize(10);
-      pdf.text(String(value || "-"), x + 4, 103);
+      pdf.text(String(value || "-"), x + 4, metaTop + 16);
     });
 
-    let y = 120;
+    let y = metaTop + 33;
     pdf.setFillColor(135, 91, 24);
     pdf.rect(left, y, 174, 10, "F");
     pdf.setTextColor(255, 250, 240);
@@ -345,7 +354,7 @@
       pdf.text(pdf.splitTextToSize(description, 125), left + 4, y);
       pdf.setFont("helvetica", "normal");
       pdf.setFontSize(8);
-      pdf.text(`Session date: ${formatDate(item.date)}`, left + 4, y + 5);
+      pdf.text(`${isCompany ? "Workshop" : "Session"} date: ${formatDate(item.date)}`, left + 4, y + 5);
       pdf.setFont("helvetica", "bold");
       pdf.setFontSize(10);
       pdf.text(formatMoney(item.fee), right - 4, y, { align: "right" });
@@ -480,7 +489,7 @@
     invoice.invoice_date = sentInvoice.invoice_date;
     invoice.due_date = sentInvoice.due_date;
     setText("#invoice-date", formatDate(invoice.invoice_date));
-    setText("#invoice-due", formatDate(invoice.due_date));
+    setText("#invoice-due", invoice.due_date ? formatDate(invoice.due_date) : "");
     await client.from("manual_payments")
       .update({ invoice_sent_date: sentDate })
       .eq("source_reference", `invoice:${invoice.id}`);
