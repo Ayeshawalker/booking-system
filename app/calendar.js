@@ -68,6 +68,7 @@
     quickBookPrivateEndDate: document.querySelector("#quick-book-private-end-date"),
     quickBookPrivateEndTime: document.querySelector("#quick-book-private-end-time"),
     cancelBooking: document.querySelector("#cancel-event-booking"),
+    cancelSeries: document.querySelector("#cancel-recurring-series"),
     repeatBooking: document.querySelector("#repeat-event-booking"),
     colourForm: document.querySelector("#event-colour-form"),
     displayColour: document.querySelector("#event-display-colour"),
@@ -1256,6 +1257,7 @@
       input.required = canEditPrivate;
     });
     controls.cancelBooking.hidden = !canReschedule;
+    controls.cancelSeries.hidden = !canReschedule || !event.isRecurring;
     controls.repeatBooking.hidden = !canReschedule;
     controls.emailBooking.hidden = !canReschedule;
     controls.repairZoom.hidden = !canReschedule ||
@@ -2384,6 +2386,83 @@
         `The booking could not be saved. ${error?.message || "Please try again."}`;
     } finally {
       saveButton.disabled = false;
+    }
+  });
+
+  function remainingSeriesBookings(bookings, selected, now = new Date()) {
+    const parts = Object.fromEntries(new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/London", year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+    }).formatToParts(now).map((part) => [part.type, part.value]));
+    const today = `${parts.year}-${parts.month}-${parts.day}`;
+    const currentTime = `${parts.hour}:${parts.minute}`;
+    return bookings.filter((item) =>
+      item.recurring_series_id === selected.recurring_series_id &&
+      ["confirmed", "pending"].includes(item.status) &&
+      item.preferred_date >= selected.preferred_date &&
+      (item.preferred_date > selected.preferred_date ||
+        String(item.preferred_time || "") >= String(selected.preferred_time || "")) &&
+      (item.preferred_date > today ||
+        (item.preferred_date === today && String(item.preferred_time || "").slice(0, 5) >= currentTime))
+    ).sort((a, b) => `${a.preferred_date}T${a.preferred_time}`.localeCompare(`${b.preferred_date}T${b.preferred_time}`));
+  }
+
+  controls.cancelSeries.addEventListener("click", async () => {
+    const event = state.selectedEvent;
+    if (!event?.bookingRequestId || controls.cancelSeries.disabled) return;
+    controls.cancelSeries.disabled = true;
+    controls.cancelBooking.disabled = true;
+    controls.bookingDetailsMessage.textContent = "Loading remaining bookings…";
+    let cancelled = 0;
+    try {
+      const { data: selected, error: selectedError } = await supabaseClient
+        .from("booking_requests")
+        .select("id, recurring_series_id, preferred_date, preferred_time")
+        .eq("id", event.bookingRequestId).single();
+      if (selectedError) throw selectedError;
+      if (!selected?.recurring_series_id) {
+        throw new Error("This booking is not linked to a recurring series. Please cancel its sessions individually.");
+      }
+      const { data: series, error: seriesError } = await supabaseClient
+        .from("booking_requests")
+        .select("id, recurring_series_id, preferred_date, preferred_time, status")
+        .eq("recurring_series_id", selected.recurring_series_id)
+        .gte("preferred_date", selected.preferred_date);
+      if (seriesError) throw seriesError;
+      const remaining = remainingSeriesBookings(series || [], selected);
+      if (!remaining.length) {
+        controls.bookingDetailsMessage.textContent = "There are no remaining bookings to cancel in this series.";
+        return;
+      }
+      const dates = remaining.map((item) => `${item.preferred_date} at ${String(item.preferred_time).slice(0, 5)}`).join("\n");
+      if (!window.confirm(
+        `Cancel ${remaining.length} remaining booking${remaining.length === 1 ? "" : "s"} for ${event.title}?\n\n${dates}\n\nUnpaid invoices linked to these bookings will also be cancelled. Paid invoices will be kept. No client emails will be sent.`,
+      )) {
+        controls.bookingDetailsMessage.textContent = "No bookings were cancelled.";
+        return;
+      }
+      for (const item of remaining) {
+        controls.bookingDetailsMessage.textContent = `Cancelling booking ${cancelled + 1} of ${remaining.length}…`;
+        const { data, error } = await supabaseClient.functions.invoke(
+          window.BOOKING_CONFIG?.calendarRescheduleFunction || "calendar-reschedule-booking",
+          { body: { action: "cancel", bookingId: item.id } },
+        );
+        if (error || data?.error || data?.status !== "cancelled") {
+          throw new Error(data?.error || error?.message || "A booking could not be cancelled. Please refresh the calendar before retrying.");
+        }
+        cancelled += 1;
+      }
+      controls.dialog.close();
+      await loadEvents();
+      controls.message.textContent = `${cancelled} recurring booking${cancelled === 1 ? "" : "s"} cancelled. No client emails were sent.`;
+    } catch (error) {
+      await loadEvents();
+      const message = `Cancellation stopped after ${cancelled} completed booking${cancelled === 1 ? "" : "s"}. ${error.message || "Please check the calendar before retrying."}`;
+      controls.bookingDetailsMessage.textContent = message;
+      controls.message.textContent = message;
+    } finally {
+      controls.cancelSeries.disabled = false;
+      controls.cancelBooking.disabled = false;
     }
   });
 
